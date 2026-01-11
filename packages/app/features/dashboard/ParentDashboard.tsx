@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { View, Text, Platform } from 'react-native';
 import { SchoolConfig, UserRole } from '../../../../types.js';
 import ParentPayments from '../../../../apps/expo/app/parent/payments.js';
 import TransportTracking from '../../../../apps/expo/app/parent/transport.js';
@@ -213,14 +214,20 @@ export const ParentDashboard: React.FC<Props> = ({ school, activeModule, role })
       )}
 
       {/* THUMB ZONE ACTION BAR (Mobile Only) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden flex gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50">
-        <SovereignButton className="flex-1 py-3 text-sm" variant="secondary" icon={<Bus className="w-4 h-4" />}>
-          Track Bus
-        </SovereignButton>
-        <SovereignButton className="flex-1 py-3 text-sm shadow-xl shadow-indigo-500/20" icon={<Wallet className="w-4 h-4" />}>
-          Pay Fees
-        </SovereignButton>
-      </div>
+      {/* 
+          FIX: Only render if NOT web and (optionally) if user is a student. 
+          Using Platform.OS vs 'web' check. 
+      */}
+      {Platform.OS !== 'web' && isStudent && (
+        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex-row gap-3 shadow-xl z-50">
+          <SovereignButton className="flex-1 py-3" variant="secondary" icon={<Bus className="w-4 h-4" />}>
+            Track Bus
+          </SovereignButton>
+          <SovereignButton className="flex-1 py-3 shadow-xl shadow-indigo-500/20" icon={<Wallet className="w-4 h-4" />}>
+            Pay Fees
+          </SovereignButton>
+        </View>
+      )}
 
       {/* Submission Modal */}
       <ActionModal

@@ -1,14 +1,16 @@
 
 import React, { useState } from 'react';
+import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useInteraction } from '../../provider/InteractionContext';
 import { SovereignButton, SovereignInput, SovereignTable, SovereignBadge, PageHeader } from '../../components/SovereignComponents';
 import { ActionModal } from '../../components/ActionModal';
+import { Row, Col } from '../../components/Layout';
 import { Plus, BookOpen, RotateCcw } from 'lucide-react';
 
 export const LibraryManagement = () => {
   const { books, students, addBook, issueBook, returnBook } = useInteraction();
   const [returnIsbn, setReturnIsbn] = useState('');
-  
+
   // Modal States
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [isIssueModalOpen, setIssueModalOpen] = useState(false);
@@ -35,7 +37,7 @@ export const LibraryManagement = () => {
     const book = books.find(b => b.isbn === returnIsbn);
     if (!book) return alert("Book not found");
     if (book.status === 'AVAILABLE') return alert("Book is already available");
-    
+
     returnBook(returnIsbn);
     alert(`Returned: ${book.title}. No Fine.`);
     setReturnIsbn('');
@@ -51,90 +53,112 @@ export const LibraryManagement = () => {
 
   const availableBooks = books.filter(b => b.status === 'AVAILABLE');
 
+  // Helper for rendering select lists
+  const SelectList = ({ label, items, selectedId, onSelect, displayKey = 'name', idKey = 'id', subKey }: any) => (
+    <View className="mb-4">
+      <Text className="text-xs font-bold text-gray-500 uppercase mb-2">{label}</Text>
+      <ScrollView className="max-h-40 border border-gray-200 rounded-lg">
+        {items.map((item: any) => {
+          const id = item[idKey];
+          return (
+            <Pressable
+              key={id}
+              onPress={() => onSelect(id)}
+              className={`p-3 border-b border-gray-100 ${selectedId === id ? 'bg-indigo-50' : 'bg-white'}`}
+            >
+              <Text className={`text-sm ${selectedId === id ? 'text-indigo-700 font-bold' : 'text-gray-700'}`}>
+                {item[displayKey]} {subKey && `(${item[subKey]})`}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <PageHeader 
-        title="Library Circulation" 
-        subtitle="Catalog & Issue Desk" 
-        action={
-            <div className="flex gap-2">
-                <SovereignButton variant="secondary" icon={<BookOpen className="w-4 h-4"/>} onClick={() => setIssueModalOpen(true)}>Issue Book</SovereignButton>
-                <SovereignButton icon={<Plus className="w-4 h-4"/>} onClick={() => setAddModalOpen(true)}>Add Book</SovereignButton>
-            </div>
-        }
-      />
+    <ScrollView className="flex-1 bg-white">
+      <View className="p-4 md:p-6 max-w-7xl mx-auto w-full">
+        <PageHeader
+          title="Library Circulation"
+          subtitle="Catalog & Issue Desk"
+          action={
+            <View className="flex-row gap-2">
+              <SovereignButton variant="secondary" icon={<BookOpen className="w-4 h-4" />} onClick={() => setIssueModalOpen(true)}>Issue Book</SovereignButton>
+              <SovereignButton icon={<Plus className="w-4 h-4" />} onClick={() => setAddModalOpen(true)}>Add Book</SovereignButton>
+            </View>
+          }
+        />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl border shadow-sm h-fit space-y-4">
-          <h3 className="font-bold flex items-center gap-2">
-              <RotateCcw className="w-4 h-4 text-indigo-600" /> Return Processor
-          </h3>
-          <SovereignInput label="Scan ISBN" value={returnIsbn} onChange={e => setReturnIsbn(e.target.value)} placeholder="e.g. 978-01" />
-          <div className="mt-4">
-            <SovereignButton onClick={handleReturn} className="w-full">
-              Process Return
-            </SovereignButton>
-          </div>
-        </div>
-        
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200">
-           <SovereignTable data={books} columns={columns} />
-        </div>
-      </div>
+        <Row>
+          <Col className="w-full lg:w-1/3">
+            <View className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-full space-y-4">
+              <Text className="font-bold text-gray-800 flex-row items-center gap-2">
+                <RotateCcw className="w-4 h-4 text-indigo-600" /> <Text>Return Processor</Text>
+              </Text>
+              <SovereignInput label="Scan ISBN" value={returnIsbn} onChangeText={setReturnIsbn} placeholder="e.g. 978-01" />
+              <View className="mt-4">
+                <SovereignButton onClick={handleReturn} className="w-full">
+                  Process Return
+                </SovereignButton>
+              </View>
+            </View>
+          </Col>
 
-      {/* MODAL: Add Book */}
-      <ActionModal
-        isOpen={isAddModalOpen}
-        onClose={() => setAddModalOpen(false)}
-        title="Add New Book"
-        onConfirm={handleAddBook}
-        confirmLabel="Add to Inventory"
-      >
-        <div className="space-y-4">
-           <SovereignInput label="Book Title" value={newBook.title} onChange={e => setNewBook({...newBook, title: e.target.value})} />
-           <SovereignInput label="Author" value={newBook.author} onChange={e => setNewBook({...newBook, author: e.target.value})} />
-           <SovereignInput label="ISBN / Barcode" value={newBook.isbn} onChange={e => setNewBook({...newBook, isbn: e.target.value})} />
-        </div>
-      </ActionModal>
+          <Col className="w-full lg:w-2/3">
+            <View className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full">
+              <SovereignTable data={books} columns={columns} />
+            </View>
+          </Col>
+        </Row>
 
-      {/* MODAL: Issue Book */}
-      <ActionModal
-        isOpen={isIssueModalOpen}
-        onClose={() => setIssueModalOpen(false)}
-        title="Issue Book to Student"
-        onConfirm={handleIssueBook}
-        confirmLabel="Confirm Issue"
-      >
-        <div className="space-y-4">
-           <div>
-             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Select Book</label>
-             <select 
-               className="w-full border p-2 rounded bg-white"
-               value={issueForm.isbn}
-               onChange={e => setIssueForm({...issueForm, isbn: e.target.value})}
-             >
-                <option value="">Choose Available Book...</option>
-                {availableBooks.map(b => (
-                    <option key={b.isbn} value={b.isbn}>{b.title} ({b.isbn})</option>
-                ))}
-             </select>
-           </div>
+        {/* MODAL: Add Book */}
+        <ActionModal
+          isOpen={isAddModalOpen}
+          onClose={() => setAddModalOpen(false)}
+          title="Add New Book"
+          onConfirm={handleAddBook}
+          confirmLabel="Add to Inventory"
+        >
+          <View className="space-y-4">
+            <SovereignInput label="Book Title" value={newBook.title} onChangeText={t => setNewBook({ ...newBook, title: t })} />
+            <SovereignInput label="Author" value={newBook.author} onChangeText={t => setNewBook({ ...newBook, author: t })} />
+            <SovereignInput label="ISBN / Barcode" value={newBook.isbn} onChangeText={t => setNewBook({ ...newBook, isbn: t })} />
+          </View>
+        </ActionModal>
 
-           <div>
-             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Select Student</label>
-             <select 
-               className="w-full border p-2 rounded bg-white"
-               value={issueForm.studentId}
-               onChange={e => setIssueForm({...issueForm, studentId: e.target.value})}
-             >
-                <option value="">Choose Student...</option>
-                {students.map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.class})</option>
-                ))}
-             </select>
-           </div>
-        </div>
-      </ActionModal>
-    </div>
+        {/* MODAL: Issue Book */}
+        <ActionModal
+          isOpen={isIssueModalOpen}
+          onClose={() => setIssueModalOpen(false)}
+          title="Issue Book to Student"
+          onConfirm={handleIssueBook}
+          confirmLabel="Confirm Issue"
+        >
+          <View className="space-y-4">
+            {/* Book Select */}
+            <SelectList
+              label="Select Book"
+              items={availableBooks}
+              selectedId={issueForm.isbn}
+              onSelect={(id: string) => setIssueForm({ ...issueForm, isbn: id })}
+              displayKey="title"
+              idKey="isbn"
+              subKey="isbn"
+            />
+
+            {/* Student Select */}
+            <SelectList
+              label="Select Student"
+              items={students}
+              selectedId={issueForm.studentId}
+              onSelect={(id: string) => setIssueForm({ ...issueForm, studentId: id })}
+              displayKey="name"
+              subKey="class"
+            />
+          </View>
+        </ActionModal>
+      </View>
+    </ScrollView>
   );
 };

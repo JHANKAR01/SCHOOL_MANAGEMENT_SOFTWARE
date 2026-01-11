@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
+import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useInteraction, LiveBus } from '../../provider/InteractionContext';
 import { SovereignButton, SovereignTable, SovereignBadge, SovereignInput, StatCard, PageHeader, Column } from '../../components/SovereignComponents';
 import { ActionModal } from '../../components/ActionModal';
+import { Row, Col } from '../../components/Layout';
 import { Bus, MapPin, Fuel, UserPlus, PlayCircle, StopCircle } from 'lucide-react';
 
 export const BusFleet = () => {
   const { buses, updateBusStatus, assignBusDriver, addExpense } = useInteraction();
-  
+
   const [driverModalOpen, setDriverModalOpen] = useState(false);
   const [fuelModalOpen, setFuelModalOpen] = useState(false);
-  
+
   const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
   const [driverForm, setDriverForm] = useState('');
   const [fuelForm, setFuelForm] = useState({ liters: '', amount: '' });
@@ -59,80 +61,103 @@ export const BusFleet = () => {
   const columns: Column<LiveBus>[] = [
     { header: "Bus No", accessor: "plateNumber" },
     { header: "Route", accessor: "routeId" },
-    { header: "Driver", accessor: (row: LiveBus) => (
-        <div className="flex items-center justify-between">
-           <span>{row.driverName || 'Unassigned'}</span>
-           <button onClick={() => openDriverModal(row.id)} className="text-gray-400 hover:text-indigo-600"><UserPlus className="w-3 h-3"/></button>
-        </div>
-    )},
-    { header: "Live Speed", accessor: (row: LiveBus) => <span className="font-mono">{row.speed} km/h</span> },
+    {
+      header: "Driver", accessor: (row: LiveBus) => (
+        <View className="flex-row items-center justify-between">
+          <Text className="text-gray-900">{row.driverName || 'Unassigned'}</Text>
+          <Pressable onPress={() => openDriverModal(row.id)} className="p-1">
+            <UserPlus className="w-3 h-3 text-gray-400" />
+          </Pressable>
+        </View>
+      )
+    },
+    { header: "Live Speed", accessor: (row: LiveBus) => <Text className="font-mono text-gray-600">{row.speed} km/h</Text> },
     { header: "Status", accessor: (row: LiveBus) => <SovereignBadge status={row.status === 'ON_ROUTE' ? 'success' : 'neutral'}>{row.status.replace('_', ' ')}</SovereignBadge> }
   ];
 
   const actions = (row: LiveBus) => (
-    <div className="flex gap-2">
-      <button 
-        onClick={() => toggleTrip(row)}
-        className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded border transition-colors ${
-           row.status === 'ON_ROUTE' 
-           ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' 
-           : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
-        }`}
+    <View className="flex-row gap-2">
+      <Pressable
+        onPress={() => toggleTrip(row)}
+        className={`flex-row items-center gap-1 px-2 py-1 rounded border ${row.status === 'ON_ROUTE'
+            ? 'bg-red-50 border-red-200'
+            : 'bg-green-50 border-green-200'
+          }`}
       >
-        {row.status === 'ON_ROUTE' ? <><StopCircle className="w-3 h-3"/> End Trip</> : <><PlayCircle className="w-3 h-3"/> Start Trip</>}
-      </button>
-      <button 
-         onClick={() => openFuelModal(row.id)}
-         className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-bold border border-gray-200 hover:bg-gray-200"
+        {row.status === 'ON_ROUTE' ? (
+          <>
+            <StopCircle className="w-3 h-3 text-red-600" />
+            <Text className="text-xs font-bold text-red-600">End Trip</Text>
+          </>
+        ) : (
+          <>
+            <PlayCircle className="w-3 h-3 text-green-600" />
+            <Text className="text-xs font-bold text-green-600">Start Trip</Text>
+          </>
+        )}
+      </Pressable>
+      <Pressable
+        onPress={() => openFuelModal(row.id)}
+        className="flex-row items-center justify-center bg-gray-100 px-2 py-1 rounded border border-gray-200"
       >
-        <Fuel className="w-3 h-3"/>
-      </button>
-    </div>
+        <Fuel className="w-3 h-3 text-gray-600" />
+      </Pressable>
+    </View>
   );
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <PageHeader title="Fleet Management" subtitle="Live Tracking & Logistics" />
+    <ScrollView className="flex-1 bg-white">
+      <View className="p-4 md:p-6 max-w-7xl mx-auto w-full">
+        <PageHeader title="Fleet Management" subtitle="Live Tracking & Logistics" />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <StatCard title="Total Fleet" value={buses.length} icon={<Bus className="w-5 h-5"/>} />
-        <StatCard title="Active Trips" value={activeBuses} icon={<MapPin className="w-5 h-5 text-green-600"/>} trend={{ value: (activeBuses/buses.length)*100, isPositive: true }} />
-        <StatCard title="Maintenance" value={buses.filter(b => b.status === 'MAINTENANCE').length} icon={<Fuel className="w-5 h-5 text-orange-600"/>} />
-      </div>
+        <Row className="mb-8">
+          <Col className="w-full md:w-1/3">
+            <StatCard title="Total Fleet" value={buses.length} icon={<Bus className="w-5 h-5" />} />
+          </Col>
+          <Col className="w-full md:w-1/3">
+            <StatCard title="Active Trips" value={activeBuses} icon={<MapPin className="w-5 h-5 text-green-600" />} trend={{ value: (activeBuses / buses.length) * 100, isPositive: true }} />
+          </Col>
+          <Col className="w-full md:w-1/3">
+            <StatCard title="Maintenance" value={buses.filter(b => b.status === 'MAINTENANCE').length} icon={<Fuel className="w-5 h-5 text-orange-600" />} />
+          </Col>
+        </Row>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-         <SovereignTable data={buses} columns={columns} actions={actions} />
-      </div>
+        <View className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <SovereignTable data={buses} columns={columns} actions={actions} />
+        </View>
 
-      {/* Driver Modal */}
-      <ActionModal 
-        isOpen={driverModalOpen} 
-        onClose={() => setDriverModalOpen(false)} 
-        title="Assign Driver"
-        onConfirm={handleAssignDriver}
-        confirmLabel="Assign"
-      >
-        <div className="space-y-4">
-           <SovereignInput label="Driver Name" value={driverForm} onChange={e => setDriverForm(e.target.value)} placeholder="e.g. Rajesh Kumar" />
-        </div>
-      </ActionModal>
+        {/* Driver Modal */}
+        <ActionModal
+          isOpen={driverModalOpen}
+          onClose={() => setDriverModalOpen(false)}
+          title="Assign Driver"
+          onConfirm={handleAssignDriver}
+          confirmLabel="Assign"
+        >
+          <View className="space-y-4">
+            <SovereignInput label="Driver Name" value={driverForm} onChangeText={setDriverForm} placeholder="e.g. Rajesh Kumar" />
+          </View>
+        </ActionModal>
 
-      {/* Fuel Modal */}
-      <ActionModal 
-        isOpen={fuelModalOpen} 
-        onClose={() => setFuelModalOpen(false)} 
-        title="Log Fuel Entry"
-        onConfirm={handleLogFuel}
-        confirmLabel="Record Expense"
-      >
-        <div className="space-y-4">
-           <div className="p-3 bg-gray-50 text-xs text-gray-500 rounded border">
-             This will automatically create a "MAINTENANCE" expense in the Finance Ledger.
-           </div>
-           <SovereignInput label="Liters Filled" type="number" value={fuelForm.liters} onChange={e => setFuelForm({...fuelForm, liters: e.target.value})} />
-           <SovereignInput label="Total Cost (₹)" type="number" value={fuelForm.amount} onChange={e => setFuelForm({...fuelForm, amount: e.target.value})} />
-        </div>
-      </ActionModal>
-    </div>
+        {/* Fuel Modal */}
+        <ActionModal
+          isOpen={fuelModalOpen}
+          onClose={() => setFuelModalOpen(false)}
+          title="Log Fuel Entry"
+          onConfirm={handleLogFuel}
+          confirmLabel="Record Expense"
+        >
+          <View className="space-y-4">
+            <View className="p-3 bg-gray-50 rounded border border-gray-100">
+              <Text className="text-xs text-gray-500">
+                This will automatically create a "MAINTENANCE" expense in the Finance Ledger.
+              </Text>
+            </View>
+            <SovereignInput label="Liters Filled" keyboardType="numeric" value={fuelForm.liters} onChangeText={t => setFuelForm({ ...fuelForm, liters: t })} />
+            <SovereignInput label="Total Cost (₹)" keyboardType="numeric" value={fuelForm.amount} onChangeText={t => setFuelForm({ ...fuelForm, amount: t })} />
+          </View>
+        </ActionModal>
+      </View>
+    </ScrollView>
   );
 };
