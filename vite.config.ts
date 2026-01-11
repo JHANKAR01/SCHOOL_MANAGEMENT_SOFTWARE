@@ -1,3 +1,4 @@
+// vite.config.ts
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -20,10 +21,11 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
-      tailwindcss(), // Tailwind v4 plugin
+      tailwindcss(),
       react({
+        // FIX: Tell React to use NativeWind's JSX runtime
+        jsxImportSource: "nativewind",
         babel: {
-          // FIX: Move NativeWind to presets to avoid property validation errors
           presets: ["nativewind/babel"],
           plugins: [],
         },
@@ -32,7 +34,6 @@ export default defineConfig(({ mode }) => {
     define: {
       __DEV__: JSON.stringify(isDev),
       global: 'window',
-      // FIX: Polyfill process.env to prevent crashes in some libraries
       'process.env': {},
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
