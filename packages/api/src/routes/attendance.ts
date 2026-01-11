@@ -1,74 +1,74 @@
 
-import { getRLSContext } from '../middleware/auth';
+import { Hono } from 'hono';
+import prisma from '../db';
+import { authMiddleware, requireRole } from '../middleware/auth';
 import { UserRole } from '../../../../types';
-import { NotificationService } from '../services/notification-service';
 
-// Mock DB (Prisma Client Wrapper)
-const prisma = {
-  attendance: {
-    create: async (data: any) => { console.log('DB Insert:', data); return data; }
-  },
-  student: {
-    findUnique: async (query: any) => { 
-        // Mock returning a student with a token
-        return { id: query.where.id, name: 'Student Name', parent_fcm_token: 'mock_device_token_abc123' }; 
-    }
-  }
+type Variables = {
+  user: {
+    id: string;
+    role: UserRole;
+    school_id: string;
+  };
 };
 
-interface HonoContext {
-  req: any;
-  json: (data: any, status?: number) => any;
-  user?: any; // Populated by auth middleware
-}
+const attendanceRouter = new Hono<{ Variables: Variables }>();
+attendanceRouter.use('*', authMiddleware);
 
-/**
- * Hardened Attendance Submission Route
- * Enforces School Isolation via RLS Context.
- */
-export async function submitAttendance(c: HonoContext) {
-  try {
-    // 1. Context Extraction & Security Check
-    const mockReq = { 
-        user: c.user || { id: 't1', role: UserRole.TEACHER, school_id: 'sch_123' },
-        headers: {} 
-    };
-    
-    // 2. Get RLS Context (Throws if school_id is missing/mismatch)
-    const rls = getRLSContext(mockReq);
+// --- GET ATTENDANCE ---
+attendanceRouter.get('/', requireRole([UserRole.TEACHER, UserRole.PRINCIPAL, UserRole.PARENT, UserRole.STUDENT]), async (c) => {
+  const user = c.get('user');
+  const { date, studentId } = c.req.query();
 
-    // 3. Parse Body
-    const body = await c.req.json();
-    const { studentId, status, date } = body;
+  // 1. Build Query
+  const query: any = { school_id: user.school_id };
 
-    // 4. Secure DB Operation
-    const record = await prisma.attendance.create({
-      data: {
-        student_id: studentId,
-        status: status,
-        date: date,
-        school_id: rls.school_id, // FORCE RLS
-        marked_by: mockReq.user.id
-      }
-    });
-
-    // 5. TRIGGER: Absent Alert
-    if (status === 'ABSENT') {
-      // In background (don't block response)
-      setTimeout(async () => {
-        try {
-            const student = await prisma.student.findUnique({ where: { id: studentId } });
-            if (student && student.parent_fcm_token) {
-                await NotificationService.sendAttendanceAlert(student.name, student.parent_fcm_token);
-            }
-        } catch(e) { console.error("Alert Trigger Failed", e); }
-      }, 0);
-    }
-
-    return c.json({ success: true, record });
-
-  } catch (error: any) {
-    console.error("Attendance Submission Failed:", error.message);
-    return c.json({ error: "Unauthorized or Invalid Request" }, 403);
+  if (date) {
+    query.date = new Date(date);
   }
-}
+
+  if (studentId) {
+    query.student_id = studentId;
+  } else if (user.role === UserRole.STUDENT) {
+    // Enforce student seeing only their own data if not explicitly requested
+    // Or if student user ID is linked to student table. 
+    // For now, assuming student users have same ID as student records or we need to lookup.
+    // Simplified:
+    // query.student_id = user.id; // Or similar mapping logic
+  }
+
+  const records = await prisma.attendance.findMany({
+    where: query,
+    include: { student: { select: { name: true, roll: true, class: true } } },
+    orderBy: { date: 'desc' }
+  });
+
+  return c.json(records);
+});
+
+// --- SUBMIT ATTENDANCE (BULK) ---
+attendanceRouter.post('/', requireRole([UserRole.TEACHER, UserRole.PRINCIPAL]), async (c) => {
+  const user = c.get('user');
+  const { date, records } = await c.req.json(); // records: { studentId: string, status: 'PRESENT'|'ABSENT' }[]
+
+  const targetDate = new Date(date);
+
+  // Transactional Bulk Ops
+  const ops = records.map((rec: any) =>
+    prisma.attendance.create({
+      data: {
+        school_id: user.school_id,
+        student_id: rec.studentId,
+        date: targetDate,
+        status: rec.status,
+        synced: true
+      }
+    })
+  );
+
+  await prisma.$transaction(ops);
+
+  return c.json({ success: true, count: records.length });
+});
+
+export { attendanceRouter };

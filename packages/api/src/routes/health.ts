@@ -1,24 +1,60 @@
 
 import { Hono } from 'hono';
-import { getTenantDB } from '../db';
+import prisma from '../db';
 import { authMiddleware, requireRole } from '../middleware/auth';
 import { UserRole } from '../../../../types';
-import { SOVEREIGN_GENESIS_DATA } from '../data/dummy-data';
 
-const healthRouter = new Hono();
+type Variables = {
+  user: {
+    id: string;
+    role: UserRole;
+    school_id: string;
+  };
+};
+
+const healthRouter = new Hono<{ Variables: Variables }>();
 healthRouter.use('*', authMiddleware);
 
 healthRouter.post('/log', requireRole([UserRole.NURSE]), async (c) => {
-  // ... existing log logic ...
-  return c.json({ success: true });
+  const user = c.get('user');
+  const { studentId, condition, treatment } = await c.req.json();
+
+  const log = await prisma.medicalLog.create({
+    data: {
+      id: `med_${Date.now()}`,
+      school_id: user.school_id,
+      student_id: studentId,
+      time: new Date(),
+      issue: condition,    // Map condition -> issue
+      action: treatment    // Map treatment -> action
+    }
+  });
+
+  return c.json({ success: true, log });
 });
 
 healthRouter.get('/logs', requireRole([UserRole.NURSE, UserRole.PRINCIPAL]), async (c) => {
-  return c.json(SOVEREIGN_GENESIS_DATA.medicalLogs);
+  const user = c.get('user');
+  const logs = await prisma.medicalLog.findMany({
+    where: { school_id: user.school_id },
+    orderBy: { time: 'desc' }
+  });
+
+  // Map back to frontend fields
+  return c.json(logs.map(l => ({
+    ...l,
+    condition: l.issue,
+    treatment: l.action
+  })));
 });
 
 healthRouter.get('/counselor/notes', requireRole([UserRole.COUNSELOR, UserRole.PRINCIPAL]), async (c) => {
-  return c.json(SOVEREIGN_GENESIS_DATA.counseling);
+  const user = c.get('user');
+  const notes = await prisma.counseling.findMany({
+    where: { school_id: user.school_id },
+    orderBy: { date: 'desc' }
+  });
+  return c.json(notes);
 });
 
 export { healthRouter };
