@@ -11,18 +11,13 @@ if (!connectionString) {
   throw new Error('DATABASE_URL is not defined in environment variables');
 }
 
-// 1. Create the Pool
+// Create the Pool with SSL for Supabase
 const pool = new Pool({
   connectionString,
   ssl: { rejectUnauthorized: false }
 });
 
-// 2. CRITICAL: Force the schema search path on every connection
-pool.on('connect', (client) => {
-  client.query('SET search_path TO schoolmanagementsystem, public');
-});
-
-// 3. Initialize Adapter and Client
+// Initialize Adapter and Client
 const adapter = new PrismaPg(pool);
 const globalPrisma = new PrismaClient({ adapter });
 

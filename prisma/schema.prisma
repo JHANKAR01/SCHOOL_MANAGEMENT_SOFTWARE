@@ -1,11 +1,11 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  previewFeatures = ["driverAdapters", "multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  schemas  = ["schoolmanagementsystem"]
 }
 
 model School {
@@ -35,6 +35,8 @@ model School {
   Timetable        Timetable[]
   users            User[]
   Visitor          Visitor[]
+
+  @@schema("schoolmanagementsystem")
 }
 
 model User {
@@ -60,6 +62,7 @@ model User {
   school                                                School             @relation(fields: [school_id], references: [id])
 
   @@index([school_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model Student {
@@ -85,6 +88,7 @@ model Student {
 
   @@unique([school_id, admission_no])
   @@index([school_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model ParentStudent {
@@ -97,6 +101,7 @@ model ParentStudent {
   student    Student @relation(fields: [student_id], references: [id], onDelete: Cascade)
 
   @@id([parent_id, student_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model IdentityDocument {
@@ -113,6 +118,7 @@ model IdentityDocument {
   owner_user          User?          @relation(fields: [owner_user_id], references: [id])
 
   @@index([school_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model Bus {
@@ -126,6 +132,7 @@ model Bus {
   school          School   @relation(fields: [school_id], references: [id])
 
   @@index([school_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model Book {
@@ -138,6 +145,7 @@ model Book {
   school    School  @relation(fields: [school_id], references: [id])
 
   @@index([school_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model Invoice {
@@ -157,6 +165,7 @@ model Invoice {
 
   @@index([school_id])
   @@index([student_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model Attendance {
@@ -170,6 +179,7 @@ model Attendance {
 
   @@index([school_id])
   @@index([student_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model MedicalLog {
@@ -183,6 +193,7 @@ model MedicalLog {
 
   @@index([school_id])
   @@index([student_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model Counseling {
@@ -196,6 +207,7 @@ model Counseling {
 
   @@index([school_id])
   @@index([student_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model Expense {
@@ -208,6 +220,7 @@ model Expense {
   School      School          @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([school_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model Homework {
@@ -223,6 +236,7 @@ model Homework {
   School      School          @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([school_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model HostelRoom {
@@ -234,6 +248,8 @@ model HostelRoom {
   created_at  DateTime? @default(now()) @db.Timestamptz(6)
   School      School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   Student     Student?  @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("schoolmanagementsystem")
 }
 
 model Inquiry {
@@ -245,6 +261,8 @@ model Inquiry {
   status       InquiryStatus? @default(NEW)
   created_at   DateTime?      @default(now()) @db.Timestamptz(6)
   School       School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("schoolmanagementsystem")
 }
 
 model LeaveApplication {
@@ -261,6 +279,7 @@ model LeaveApplication {
   User       User         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([school_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model Ticket {
@@ -276,6 +295,7 @@ model Ticket {
   School      School          @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([school_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model Visitor {
@@ -288,6 +308,8 @@ model Visitor {
   time       DateTime?      @default(now()) @db.Timestamptz(6)
   School     School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   Student    Student?       @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("schoolmanagementsystem")
 }
 
 model Exam {
@@ -302,6 +324,7 @@ model Exam {
   Result     Result[]
 
   @@index([school_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model GateLog {
@@ -317,6 +340,7 @@ model GateLog {
   School      School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([school_id])
+  @@schema("schoolmanagementsystem")
 }
 
 model LiveClass {
@@ -330,6 +354,8 @@ model LiveClass {
   start_time   DateTime? @default(now()) @db.Timestamptz(6)
   School       School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   User         User      @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("schoolmanagementsystem")
 }
 
 model Paper {
@@ -341,6 +367,8 @@ model Paper {
   status     PaperStatus? @default(DRAFT)
   created_at DateTime?    @default(now()) @db.Timestamptz(6)
   School     School       @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("schoolmanagementsystem")
 }
 
 model Result {
@@ -356,6 +384,8 @@ model Result {
   Exam             Exam      @relation(fields: [exam_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   School           School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   Student          Student   @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("schoolmanagementsystem")
 }
 
 model Substitution {
@@ -369,6 +399,8 @@ model Substitution {
   School                                        School     @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   User_Substitution_substitute_teacher_idToUser User?      @relation("Substitution_substitute_teacher_idToUser", fields: [substitute_teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   Timetable                                     Timetable? @relation(fields: [timetable_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("schoolmanagementsystem")
 }
 
 model Syllabus {
@@ -382,6 +414,8 @@ model Syllabus {
   completed_at DateTime?       @db.Timestamptz(6)
   School       School          @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   User         User?           @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("schoolmanagementsystem")
 }
 
 model SystemSettings {
@@ -391,6 +425,8 @@ model SystemSettings {
   announcement_ticker String?
   updated_at          DateTime? @default(now()) @db.Timestamptz(6)
   School              School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("schoolmanagementsystem")
 }
 
 model Timetable {
@@ -407,6 +443,7 @@ model Timetable {
   User         User?          @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([class_id])
+  @@schema("schoolmanagementsystem")
 }
 
 enum UserRole {
@@ -432,24 +469,32 @@ enum UserRole {
   ESTATE_MANAGER
   PARENT
   STUDENT
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum AttendanceStatus {
   PRESENT
   ABSENT
   LATE
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum InvoiceStatus {
   PENDING
   VERIFIED
   PAID
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum DocumentStatus {
   PENDING
   VERIFIED
   REJECTED
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum ExpenseCategory {
@@ -457,30 +502,40 @@ enum ExpenseCategory {
   VENDOR
   SALARY
   MAINTENANCE
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum HomeworkStatus {
   PENDING
   SUBMITTED
   GRADED
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum InquiryStatus {
   NEW
   FOLLOW_UP
   CONVERTED
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum LeaveStatus {
   PENDING
   APPROVED
   REJECTED
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum LeaveType {
   SICK
   CASUAL
   EARNED
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum TicketPriority {
@@ -488,6 +543,8 @@ enum TicketPriority {
   MEDIUM
   HIGH
   CRITICAL
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum TicketStatus {
@@ -495,39 +552,53 @@ enum TicketStatus {
   RESOLVED
   ASSIGNED
   PENDING
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum VisitorStatus {
   WAITING
   APPROVED
   COMPLETED
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum ExamType {
   INTERNAL
   MIDTERM
   FINAL
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum GatePersonType {
   STUDENT
   STAFF
   VISITOR
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum GateStatus {
   INSIDE
   EXITED
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum PaperStatus {
   DRAFT
   PRINTED
   DISTRIBUTED
+
+  @@schema("schoolmanagementsystem")
 }
 
 enum SyllabusStatus {
   NOT_STARTED
   IN_PROGRESS
   COMPLETED
+
+  @@schema("schoolmanagementsystem")
 }
