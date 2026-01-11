@@ -48,6 +48,22 @@ financeRouter.post('/invoices', async (c) => {
   return c.json(invoice);
 });
 
+financeRouter.patch('/invoices/:id/pay', requireRole([UserRole.ACCOUNTANT, UserRole.FINANCE_MANAGER, UserRole.SCHOOL_ADMIN]), async (c) => {
+  const user = c.get('user');
+  const { id } = c.req.param();
+  const { method } = await c.req.json(); // CASH | ONLINE | CHEQUE
+
+  // Verify ownership
+  const result = await prisma.invoice.updateMany({
+    where: { id, school_id: user.school_id },
+    data: { status: 'PAID' }
+  });
+
+  if (result.count === 0) return c.json({ error: 'Invoice not found' }, 404);
+
+  return c.json({ success: true, id, status: 'PAID' });
+});
+
 // --- EXPENSES ---
 financeRouter.get('/expenses', async (c) => {
   const user = c.get('user');

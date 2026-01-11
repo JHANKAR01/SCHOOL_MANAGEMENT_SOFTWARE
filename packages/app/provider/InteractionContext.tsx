@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../api/client';
 import { UserRole, Invoice, Bus, Book, HostelRoom, MedicalLog } from '../../../types';
@@ -13,6 +13,14 @@ export interface Homework {
   dueDate: string;
   status: 'PENDING' | 'SUBMITTED' | 'GRADED';
   classId: string;
+}
+
+export interface LiveClass {
+  id: string;
+  subject: string;
+  class_id: string;
+  is_active: boolean;
+  meeting_link: string;
 }
 
 export interface LeaveApplication {
@@ -339,10 +347,34 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   });
   const lockdownMode = settings?.lockdown_mode || false;
 
+  // Leaves
+  const { data: leaves = [] } = useQuery({
+    queryKey: ['leaves'],
+    queryFn: async () => {
+      const res = await client.get('/academics/leaves');
+      return res.data;
+    },
+    initialData: []
+  });
 
-  // --- 2. REMAINING/FUTURE MODULES ---
-  const leaves: LeaveApplication[] = []; // TODO: Implement in Phase 7 (Leaves)
-  const liveClasses: Record<string, boolean> = {}; // TODO: Live Class Integ
+  // Live Classes
+  const { data: liveClassesList = [] } = useQuery({
+    queryKey: ['liveClasses'],
+    queryFn: async () => {
+      const res = await client.get('/academics/live-classes');
+      return res.data as LiveClass[];
+    },
+    initialData: []
+  });
+
+  // Map Array to Record<Subject, Boolean>
+  const liveClasses = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    liveClassesList.forEach((c: any) => {
+      if (c.subject) map[c.subject] = c.is_active;
+    });
+    return map;
+  }, [liveClassesList]);
 
 
   // --- 3. MUTATIONS (REAL) ---
@@ -352,7 +384,7 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     mutationFn: (enabled: boolean) => client.post('/operations/settings/toggle-lockdown', { enabled }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings'] })
   });
-  const toggleLockdown = () => toggleLockdownMutation.mutate(!lockdownMode); // Toggle current state
+  const toggleLockdown = () => toggleLockdownMutation.mutate(!lockdownMode);
 
   // Exam Mutation
   const addExamMutation = useMutation({
@@ -423,12 +455,6 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['hostelRooms'] })
   });
   const allocateRoom = (roomNumber: string, studentId: string) => {
-    // Need ID, but context params might allow Logic lookup or we send roomNumber if backend handles it
-    // Backend expects roomId (ID), frontend passes roomNumber? 
-    // I'll stick to stub if mapping is hard, OR assume roomNumber IS ID for now if data seeded that way?
-    // No, ID is CUID. I need to find room by Number. 
-    // For now, I will NOT wire up allocateRoom fully if ID is missing in context args. 
-    // Context defines `allocateRoom(roomNumber, studentId)`.
     console.warn("allocateRoom: Requires Room ID, only Number provided.");
   };
 
@@ -438,24 +464,54 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['medicalLogs'] })
   });
   const addMedicalLog = (log: Omit<MedicalLog, 'id' | 'time' | 'date'>) => {
-    // Context signature mismatch slightly, implementing best effort or stub
-    // addMedicalLogMutation.mutate(log);
+    // Stub
   };
+
+  // --- NEW MUTATIONS (PHASE 7) ---
+
+  const applyLeaveMutation = useMutation({
+    mutationFn: (leave: Omit<LeaveApplication, 'id' | 'status' | 'teacherName'>) => client.post('/academics/leaves', leave),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leaves'] })
+  });
+  const applyLeave = (leave: Omit<LeaveApplication, 'id' | 'status' | 'teacherName'>) => applyLeaveMutation.mutate(leave);
+
+  const updateLeaveStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string, status: 'APPROVED' | 'REJECTED' }) => client.patch(`/academics/leaves/${id}`, { status }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leaves'] })
+  });
+  const updateLeaveStatus = (id: string, status: 'APPROVED' | 'REJECTED') => updateLeaveStatusMutation.mutate({ id, status });
+
+  const approveSyllabusMutation = useMutation({
+    mutationFn: (id: number) => client.patch(`/academics/syllabus/${id}/approve`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['syllabus'] })
+  });
+  const approveSyllabus = (id: number) => approveSyllabusMutation.mutate(id);
+
+  const markInvoicePaidMutation = useMutation({
+    mutationFn: ({ id, method }: { id: string, method: string }) => client.patch(`/finance/invoices/${id}/pay`, { method }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invoices'] })
+  });
+  const markInvoicePaid = (id: string, method: 'CASH' | 'CHEQUE' | 'ONLINE') => markInvoicePaidMutation.mutate({ id, method });
+
+  const toggleLiveClassMutation = useMutation({
+    mutationFn: (data: { subject: string, isActive: boolean, classId: string }) => client.post('/academics/live-classes/toggle', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['liveClasses'] })
+  });
+  const toggleLiveClass = (subject: string, isActive: boolean) => toggleLiveClassMutation.mutate({ subject, isActive, classId: '10A' }); // Default Class
+
+  // Invoice Mutation
+  const addInvoiceMutation = useMutation({
+    mutationFn: (newInv: Omit<Invoice, 'id' | 'status'>) => client.post('/finance/invoices', newInv),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invoices'] })
+  });
+  const addInvoice = (inv: Omit<Invoice, 'id' | 'status'>) => addInvoiceMutation.mutate(inv);
 
   // Stubs for others
   const submitHomework = (id: string) => { };
-  const applyLeave = (leave: Omit<LeaveApplication, 'id' | 'status' | 'teacherName'>) => { };
-  const updateLeaveStatus = (id: string, status: 'APPROVED' | 'REJECTED') => { };
-  const toggleLiveClass = (subject: string, isActive: boolean) => { };
-  const approveSyllabus = (id: number) => { };
-  const addExam = (exam: Omit<Exam, 'id'>) => { };
+  const resolveTicket = (id: string) => { };
+  const logGateEntry = (entry: Omit<GateLog, 'id' | 'time' | 'date'>) => { };
   const convertInquiry = (id: number) => { };
   const approveVisitor = (id: number) => { };
-  const resolveTicket = (id: string) => { }; // Could implement real resolve
-  const logGateEntry = (entry: Omit<GateLog, 'id' | 'time' | 'date'>) => { };
-  const toggleLockdown = () => { };
-  const addInvoice = (inv: Omit<Invoice, 'id' | 'status'>) => { };
-  const markInvoicePaid = (id: string, method: 'CASH' | 'CHEQUE' | 'ONLINE') => { };
   const updateBusStatus = (id: string, status: LiveBus['status']) => { };
   const assignBusDriver = (busId: string, driverName: string) => { };
   const addBook = (book: Book) => { };
