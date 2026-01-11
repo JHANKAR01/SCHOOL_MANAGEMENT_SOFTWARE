@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   return {
     base: '/',
     server: {
-      port: 5173, // Keep the frontend on 5173 to avoid conflict with backend
+      port: 5173,
       host: '0.0.0.0',
       proxy: {
         '/api': {
@@ -23,19 +23,26 @@ export default defineConfig(({ mode }) => {
     define: {
       __DEV__: JSON.stringify(isDev),
       global: 'window',
+      // FIX: Polyfill process.env to prevent crashes in some libraries
+      'process.env': {},
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
         'react-native': path.resolve(__dirname, 'shim.js'),
+
+        // FIX: Redirect all native modules to the shim
         'expo-sqlite': path.resolve(__dirname, 'shim.js'),
+        'expo-secure-store': path.resolve(__dirname, 'shim.js'),
+        'expo-local-authentication': path.resolve(__dirname, 'shim.js'),
+        'expo-haptics': path.resolve(__dirname, 'shim.js'),
+
         '@react-native/assets-registry/registry': 'react-native-web/dist/modules/AssetRegistry',
       }
     },
     optimizeDeps: {
       esbuildOptions: {
-        // FIX: Add this define block to the pre-bundler
         define: {
           __DEV__: JSON.stringify(isDev),
           global: 'window',
