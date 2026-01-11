@@ -5,27 +5,25 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 
 const { Pool } = pg;
-
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
   throw new Error('DATABASE_URL is not defined in environment variables');
 }
 
-// 1. Create a PostgreSQL connection pool with SSL
+// 1. Create the Pool
 const pool = new Pool({
   connectionString,
-  // Supabase/Cloud Postgres requires SSL. 
-  // 'rejectUnauthorized: false' allows self-signed certs (common in some cloud setups)
-  ssl: process.env.NODE_ENV === 'production' || connectionString.includes('supabase')
-    ? { rejectUnauthorized: false }
-    : undefined
+  ssl: { rejectUnauthorized: false }
 });
 
-// 2. Create the Prisma Adapter
-const adapter = new PrismaPg(pool);
+// 2. CRITICAL: Force the schema search path on every connection
+pool.on('connect', (client) => {
+  client.query('SET search_path TO schoolmanagementsystem, public');
+});
 
-// 3. Initialize Prisma Client with the adapter
+// 3. Initialize Adapter and Client
+const adapter = new PrismaPg(pool);
 const globalPrisma = new PrismaClient({ adapter });
 
 export default globalPrisma;
