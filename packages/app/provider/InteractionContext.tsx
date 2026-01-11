@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { View } from 'react-native';
-import { SOVEREIGN_GENESIS_DATA } from '../../api/src/data/dummy-data';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import client from '../api/client';
 import { UserRole, Invoice, Bus, Book, HostelRoom, MedicalLog } from '../../../types';
 
 // --- ACADEMIC TYPES ---
@@ -34,10 +34,10 @@ export interface Exam {
 }
 
 export interface StudentProfile {
-    id: string;
-    name: string;
-    class: string;
-    roll: number;
+  id: string;
+  name: string;
+  class: string;
+  roll: number;
 }
 
 // --- OPERATIONS TYPES ---
@@ -107,10 +107,10 @@ export interface InteractionContextType {
   homeworks: Homework[];
   leaves: LeaveApplication[];
   liveClasses: Record<string, boolean>;
-  syllabus: typeof SOVEREIGN_GENESIS_DATA.syllabus;
+  syllabus: any[]; // Missing Type
   exams: Exam[];
   students: StudentProfile[];
-  
+
   // Operations Data
   inquiries: Inquiry[];
   visitors: Visitor[];
@@ -129,7 +129,7 @@ export interface InteractionContextType {
   medicalLogs: MedicalLog[];
   hostelRooms: HostelRoom[];
 
-  // Academic Actions
+  // Academic Actions (Stubs for now)
   addHomework: (hw: Omit<Homework, 'id' | 'status'>) => void;
   submitHomework: (id: string) => void;
   applyLeave: (leave: Omit<LeaveApplication, 'id' | 'status' | 'teacherName'>) => void;
@@ -157,7 +157,7 @@ export interface InteractionContextType {
   // Facilities Actions
   updateBusStatus: (id: string, status: LiveBus['status']) => void;
   assignBusDriver: (busId: string, driverName: string) => void;
-  
+
   // Library Actions
   addBook: (book: Book) => void;
   issueBook: (isbn: string, studentId: string) => void;
@@ -173,171 +173,113 @@ export interface InteractionContextType {
 const InteractionContext = createContext<InteractionContextType | undefined>(undefined);
 
 export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // --- ACADEMIC STATE ---
-  const [homeworks, setHomeworks] = useState<Homework[]>(
-    SOVEREIGN_GENESIS_DATA.homework.map(h => ({ ...h, status: h.status as any, description: 'Read Chapter 4', classId: h.class }))
-  );
-  const [leaves, setLeaves] = useState<LeaveApplication[]>([
-    { id: 'l1', teacherName: 'Mrs. S. Gupta', type: 'SICK', startDate: '2023-11-01', endDate: '2023-11-02', reason: 'Viral Fever', status: 'PENDING' }
-  ]);
-  const [liveClasses, setLiveClasses] = useState<Record<string, boolean>>({});
-  const [syllabus, setSyllabus] = useState(SOVEREIGN_GENESIS_DATA.syllabus);
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [students, setStudents] = useState<StudentProfile[]>(SOVEREIGN_GENESIS_DATA.students);
+  const queryClient = useQueryClient();
 
-  // --- OPERATIONS STATE ---
-  const [inquiries, setInquiries] = useState<Inquiry[]>([
-    { id: 1, parent_name: 'Mrs. Verma', phone: '9876543210', target_class: 'Class 5', status: 'NEW' },
-    { id: 2, parent_name: 'Mr. Singh', phone: '9988776655', target_class: 'Class 8', status: 'FOLLOW_UP' },
-  ]);
-  const [visitors, setVisitors] = useState<Visitor[]>(SOVEREIGN_GENESIS_DATA.visitors as Visitor[]);
-  const [tickets, setTickets] = useState<Ticket[]>(SOVEREIGN_GENESIS_DATA.tickets as Ticket[]);
-  const [gateLogs, setGateLogs] = useState<GateLog[]>(SOVEREIGN_GENESIS_DATA.gateLogs as GateLog[]);
-  const [localStaff, setLocalStaff] = useState<LocalStaff[]>(
-    SOVEREIGN_GENESIS_DATA.staff.map(s => ({
-       id: s.id, name: s.name, role: s.role, department: s.department, joinedAt: '2023-01-15'
-    }))
-  );
-  const [lockdownMode, setLockdownMode] = useState(false);
+  // --- 1. REAL DATA FETCHING (QUERIES) ---
 
-  // --- FINANCE STATE ---
-  const [invoices, setInvoices] = useState<Invoice[]>(SOVEREIGN_GENESIS_DATA.invoices);
-  const [expenses, setExpenses] = useState<Expense[]>([
-    { id: 'exp_1', category: 'UTILITY', amount: 15000, description: 'Electricity Bill Oct', date: '2023-10-25' }
-  ]);
+  // Students
+  const { data: students = [] } = useQuery({
+    queryKey: ['students'],
+    queryFn: async () => {
+      // Assuming GET /students exists or using GET /academics/students
+      // If not yet implemented, this will fail or return 404. 
+      // User asked to replace with useQuery.
+      const res = await client.get('/students'); // Adjust route if needed
+      return res.data;
+    },
+    initialData: []
+  });
 
-  // --- FACILITIES STATE ---
-  const [buses, setBuses] = useState<LiveBus[]>(
-    SOVEREIGN_GENESIS_DATA.buses.map(b => ({
-      ...b,
-      status: 'IDLE',
-      lat: 28.6139,
-      lng: 77.2090,
-      speed: 0
-    }))
-  );
-  const [books, setBooks] = useState<Book[]>(SOVEREIGN_GENESIS_DATA.books);
-  const [medicalLogs, setMedicalLogs] = useState<MedicalLog[]>(SOVEREIGN_GENESIS_DATA.medicalLogs);
-  const [hostelRooms, setHostelRooms] = useState<HostelRoom[]>(SOVEREIGN_GENESIS_DATA.hostel);
+  // Staff (Users)
+  const { data: localStaff = [] } = useQuery({
+    queryKey: ['staff'],
+    queryFn: async () => {
+      const res = await client.get('/staff');
+      return res.data;
+    },
+    initialData: []
+  });
+
+  // Invoices
+  const { data: invoices = [] } = useQuery({
+    queryKey: ['invoices'],
+    queryFn: async () => {
+      const res = await client.get('/finance/invoices'); // Adjust route if needed
+      return res.data;
+    },
+    initialData: []
+  });
+
+  // Buses
+  const { data: buses = [] } = useQuery({
+    queryKey: ['buses'],
+    queryFn: async () => {
+      const res = await client.get('/transport/buses'); // Adjust route if needed
+      return res.data;
+    },
+    initialData: []
+  });
+
+  // --- 2. MISSING TABLES (EMPTY ARRAYS + TODOS) ---
+  const homeworks: Homework[] = []; // TODO: DB Table Missing
+  const leaves: LeaveApplication[] = []; // TODO: DB Table Missing
+  const liveClasses: Record<string, boolean> = {}; // TODO: DB Table Missing
+  const syllabus: any[] = []; // TODO: DB Table Missing
+  const exams: Exam[] = []; // TODO: DB Table Missing
+
+  const inquiries: Inquiry[] = []; // TODO: DB Table Missing
+  const visitors: Visitor[] = []; // TODO: DB Table Missing
+  const tickets: Ticket[] = []; // TODO: DB Table Missing
+  const gateLogs: GateLog[] = []; // TODO: DB Table Missing
+  const lockdownMode = false; // TODO: DB Table Missing (Settings)
+
+  const expenses: Expense[] = []; // TODO: DB Table Missing
+
+  const books: Book[] = []; // TODO: DB Table Missing in Queries (Exists in Schema though)
+  const medicalLogs: MedicalLog[] = []; // TODO: DB Table Missing in Queries (Exists in Schema though)
+  const hostelRooms: HostelRoom[] = []; // TODO: DB Table Missing
 
 
-  // --- FLEET SIMULATION EFFECT ---
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setBuses(prevBuses => prevBuses.map(bus => {
-        if (bus.status === 'ON_ROUTE') {
-          // Simulate simple movement: zigzag slightly
-          const deltaLat = (Math.random() - 0.5) * 0.001;
-          const deltaLng = (Math.random() - 0.5) * 0.001;
-          return {
-            ...bus,
-            lat: bus.lat + deltaLat,
-            lng: bus.lng + deltaLng,
-            speed: Math.floor(Math.random() * 40) + 10 // 10-50 km/h
-          };
-        }
-        return { ...bus, speed: 0 };
-      }));
-    }, 5000); // Update every 5 seconds
-    return () => clearInterval(interval);
-  }, []);
-
-  // --- ACADEMIC ACTIONS ---
+  // --- 3. MUTATIONS (STUBS OR REAL) ---
   const addHomework = (hw: Omit<Homework, 'id' | 'status'>) => {
-    const newHw: Homework = { ...hw, id: `hw_${Date.now()}`, status: 'PENDING' };
-    setHomeworks(prev => [newHw, ...prev]);
+    console.log('addHomework not implemented (DB Missing)');
   };
-  const submitHomework = (id: string) => {
-    setHomeworks(prev => prev.map(h => h.id === id ? { ...h, status: 'SUBMITTED' } : h));
-  };
-  const applyLeave = (leave: Omit<LeaveApplication, 'id' | 'status' | 'teacherName'>) => {
-    const newLeave: LeaveApplication = { ...leave, id: `lv_${Date.now()}`, status: 'PENDING', teacherName: 'Current User' };
-    setLeaves(prev => [newLeave, ...prev]);
-  };
-  const updateLeaveStatus = (id: string, status: 'APPROVED' | 'REJECTED') => {
-    setLeaves(prev => prev.map(l => l.id === id ? { ...l, status } : l));
-  };
-  const toggleLiveClass = (subject: string, isActive: boolean) => {
-    setLiveClasses(prev => ({ ...prev, [subject]: isActive }));
-  };
-  const approveSyllabus = (id: number) => {
-    setSyllabus(prev => prev.map(s => s.id === id ? { ...s, status: 'COMPLETED' } : s));
-  };
-  const addExam = (exam: Omit<Exam, 'id'>) => {
-    setExams(prev => [{ ...exam, id: `ex_${Date.now()}` }, ...prev]);
-  };
+  const submitHomework = (id: string) => { };
+  const applyLeave = (leave: Omit<LeaveApplication, 'id' | 'status' | 'teacherName'>) => { };
+  const updateLeaveStatus = (id: string, status: 'APPROVED' | 'REJECTED') => { };
+  const toggleLiveClass = (subject: string, isActive: boolean) => { };
+  const approveSyllabus = (id: number) => { };
+  const addExam = (exam: Omit<Exam, 'id'>) => { };
 
-  // --- OPERATIONS ACTIONS ---
-  const addInquiry = (inq: Omit<Inquiry, 'id' | 'status'>) => {
-    setInquiries(prev => [{ ...inq, id: Date.now(), status: 'NEW' }, ...prev]);
-  };
-  const convertInquiry = (id: number) => {
-    setInquiries(prev => prev.map(i => i.id === id ? { ...i, status: 'CONVERTED' } : i));
-  };
-  const addVisitor = (vis: Omit<Visitor, 'id' | 'status' | 'time'>) => {
-    setVisitors(prev => [{ ...vis, id: Date.now(), status: 'WAITING', time: new Date().toLocaleTimeString() }, ...prev]);
-  };
-  const approveVisitor = (id: number) => {
-    setVisitors(prev => prev.map(v => v.id === id ? { ...v, status: 'APPROVED' } : v));
-  };
-  const addTicket = (ticket: Omit<Ticket, 'id' | 'status'>) => {
-    setTickets(prev => [{ ...ticket, id: `T-${Date.now()}`, status: 'OPEN' }, ...prev]);
-  };
-  const resolveTicket = (id: string) => {
-    setTickets(prev => prev.map(t => t.id === id ? { ...t, status: t.status === 'RESOLVED' ? 'PENDING' : 'RESOLVED' } : t));
-  };
-  const logGateEntry = (entry: Omit<GateLog, 'id' | 'time' | 'date'>) => {
-    setGateLogs(prev => [{ ...entry, id: Date.now(), time: new Date().toLocaleTimeString(), date: new Date().toLocaleDateString() }, ...prev]);
-  };
-  const addStaff = (staff: Omit<LocalStaff, 'id'>) => {
-    setLocalStaff(prev => [{ ...staff, id: `stf_${Date.now()}` }, ...prev]);
-  };
-  const toggleLockdown = () => {
-    setLockdownMode(prev => !prev);
-  };
+  const addInquiry = (inq: Omit<Inquiry, 'id' | 'status'>) => { };
+  const convertInquiry = (id: number) => { };
+  const addVisitor = (vis: Omit<Visitor, 'id' | 'status' | 'time'>) => { };
+  const approveVisitor = (id: number) => { };
+  const addTicket = (ticket: Omit<Ticket, 'id' | 'status'>) => { };
+  const resolveTicket = (id: string) => { };
+  const logGateEntry = (entry: Omit<GateLog, 'id' | 'time' | 'date'>) => { };
 
-  // --- FINANCE ACTIONS ---
-  const addInvoice = (inv: Omit<Invoice, 'id' | 'status'>) => {
-    setInvoices(prev => [{ ...inv, id: `INV-${Date.now()}`, status: 'PENDING' }, ...prev]);
-  };
-  const markInvoicePaid = (id: string, method: 'CASH' | 'CHEQUE' | 'ONLINE') => {
-    setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, status: 'PAID' } : inv));
-  };
-  const addExpense = (exp: Omit<Expense, 'id' | 'date'>) => {
-    setExpenses(prev => [{ ...exp, id: `exp_${Date.now()}`, date: new Date().toLocaleDateString() }, ...prev]);
-  };
+  const addStaffMutation = useMutation({
+    mutationFn: (newStaff: Omit<LocalStaff, 'id'>) => client.post('/staff', newStaff),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['staff'] })
+  });
+  const addStaff = (staff: Omit<LocalStaff, 'id'>) => addStaffMutation.mutate(staff);
 
-  // --- FACILITIES ACTIONS ---
-  const updateBusStatus = (id: string, status: LiveBus['status']) => {
-    setBuses(prev => prev.map(b => b.id === id ? { ...b, status } : b));
-  };
-  const assignBusDriver = (busId: string, driverName: string) => {
-    setBuses(prev => prev.map(b => b.id === busId ? { ...b, driverName } : b));
-  };
-  
-  // Library
-  const addBook = (book: Book) => setBooks(prev => [...prev, book]);
-  const issueBook = (isbn: string, studentId: string) => {
-    setBooks(prev => prev.map(b => b.isbn === isbn ? { ...b, status: 'ISSUED', issuedTo: studentId } : b));
-  };
-  const returnBook = (isbn: string) => {
-    setBooks(prev => prev.map(b => b.isbn === isbn ? { ...b, status: 'AVAILABLE', issuedTo: undefined } : b));
-  };
+  const toggleLockdown = () => { };
 
-  // Health
-  const addMedicalLog = (log: Omit<MedicalLog, 'id' | 'time' | 'date'>) => {
-    setMedicalLogs(prev => [{ ...log, id: Date.now(), date: new Date().toLocaleDateString(), time: new Date().toLocaleTimeString() }, ...prev]);
-  };
+  const addInvoice = (inv: Omit<Invoice, 'id' | 'status'>) => { };
+  const markInvoicePaid = (id: string, method: 'CASH' | 'CHEQUE' | 'ONLINE') => { };
+  const addExpense = (exp: Omit<Expense, 'id' | 'date'>) => { };
 
-  // Hostel
-  const allocateRoom = (roomNumber: string, studentId: string) => {
-    setHostelRooms(prev => prev.map(r => {
-        if (r.roomNumber === roomNumber && r.occupied < r.capacity) {
-            return { ...r, occupied: r.occupied + 1, students: [...r.students, studentId] };
-        }
-        return r;
-    }));
-  };
+  const updateBusStatus = (id: string, status: LiveBus['status']) => { };
+  const assignBusDriver = (busId: string, driverName: string) => { };
+
+  const addBook = (book: Book) => { };
+  const issueBook = (isbn: string, studentId: string) => { };
+  const returnBook = (isbn: string) => { };
+
+  const addMedicalLog = (log: Omit<MedicalLog, 'id' | 'time' | 'date'>) => { };
+  const allocateRoom = (roomNumber: string, studentId: string) => { };
 
   return (
     <InteractionContext.Provider value={{

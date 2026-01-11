@@ -1,11 +1,174 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+}
+
+model School {
+  id            String    @id @default(cuid())
+  name          String
+  settings_json Json?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  books         Book[]
+  buses         Bus[]
+  invoices      Invoice[]
+  students      Student[]
+  users         User[]
+}
+
+model User {
+  id            String             @id @default(cuid())
+  name          String
+  email         String             @unique
+  phone         String?
+  password_hash String
+  role          UserRole
+  department    String?
+  school_id     String
+  created_at    DateTime           @default(now())
+  updated_at    DateTime           @updatedAt
+  documents     IdentityDocument[]
+  parent_links  ParentStudent[]
+  school        School             @relation(fields: [school_id], references: [id])
+
+  @@index([school_id])
+}
+
+model Student {
+  id           String             @id @default(cuid())
+  admission_no String
+  name         String
+  email        String?            @unique
+  class        String
+  roll         Int
+  school_id    String
+  created_at   DateTime           @default(now())
+  updated_at   DateTime           @updatedAt
+  attendance   Attendance[]
+  counseling   Counseling[]
+  documents    IdentityDocument[]
+  invoices     Invoice[]
+  medical_logs MedicalLog[]
+  parents      ParentStudent[]
+  school       School             @relation(fields: [school_id], references: [id])
+
+  @@unique([school_id, admission_no])
+  @@index([school_id])
+}
+
+model ParentStudent {
+  parent_id  String
+  student_id String
+  school_id  String
+  relation   String
+  is_primary Boolean @default(false)
+  parent     User    @relation(fields: [parent_id], references: [id], onDelete: Cascade)
+  student    Student @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+  @@id([parent_id, student_id])
+}
+
+model IdentityDocument {
+  id                  String         @id @default(cuid())
+  owner_user_id       String?
+  owner_student_id    String?
+  doc_type            String
+  file_ref            String
+  masked_id           String?
+  verification_status DocumentStatus @default(PENDING)
+  school_id           String
+  created_at          DateTime       @default(now())
+  owner_student       Student?       @relation(fields: [owner_student_id], references: [id])
+  owner_user          User?          @relation(fields: [owner_user_id], references: [id])
+
+  @@index([school_id])
+}
+
+model Bus {
+  id              String   @id @default(cuid())
+  plateNumber     String   @unique
+  driverName      String
+  capacity        Int
+  routeId         String
+  insuranceExpiry DateTime
+  school_id       String
+  school          School   @relation(fields: [school_id], references: [id])
+
+  @@index([school_id])
+}
+
+model Book {
+  isbn      String  @id
+  title     String
+  author    String
+  status    String
+  issuedTo  String?
+  school_id String
+  school    School  @relation(fields: [school_id], references: [id])
+
+  @@index([school_id])
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  student_id      String
+  base_amount     Float
+  discount_amount Float
+  description     String
+  due_date        DateTime
+  status          InvoiceStatus @default(PENDING)
+  utr             String?
+  school_id       String
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+  school          School        @relation(fields: [school_id], references: [id])
+  student         Student       @relation(fields: [student_id], references: [id])
+
+  @@index([school_id])
+  @@index([student_id])
+}
+
+model Attendance {
+  id         String           @id @default(cuid())
+  student_id String
+  date       DateTime
+  status     AttendanceStatus
+  synced     Boolean          @default(false)
+  school_id  String
+  student    Student          @relation(fields: [student_id], references: [id])
+
+  @@index([school_id])
+  @@index([student_id])
+}
+
+model MedicalLog {
+  id         String   @id @default(cuid())
+  student_id String
+  time       DateTime
+  issue      String
+  action     String
+  school_id  String
+  student    Student  @relation(fields: [student_id], references: [id])
+
+  @@index([school_id])
+  @@index([student_id])
+}
+
+model Counseling {
+  id         String   @id @default(cuid())
+  student_id String
+  category   String
+  note       String
+  date       DateTime
+  school_id  String
+  student    Student  @relation(fields: [student_id], references: [id])
+
+  @@index([school_id])
+  @@index([student_id])
 }
 
 enum UserRole {
@@ -49,182 +212,4 @@ enum DocumentStatus {
   PENDING
   VERIFIED
   REJECTED
-}
-
-model School {
-  id            String   @id @default(cuid())
-  name          String
-  settings_json Json?
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
-
-  users    User[]
-  students Student[]
-  invoices Invoice[]
-  buses    Bus[]
-  books    Book[]
-}
-
-model User {
-  id            String   @id @default(cuid())
-  name          String
-  email         String   @unique
-  phone         String?
-  password_hash String
-  role          UserRole
-  department    String?
-  school_id     String
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  school       School             @relation(fields: [school_id], references: [id])
-  parent_links ParentStudent[] 
-  documents    IdentityDocument[]
-
-  @@index([school_id])
-}
-
-model Student {
-  id           String  @id @default(cuid())
-  admission_no String
-  name         String
-  email        String? @unique
-  class        String
-  roll         Int
-  school_id    String
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  school       School             @relation(fields: [school_id], references: [id])
-  parents      ParentStudent[]
-  documents    IdentityDocument[]
-  invoices     Invoice[]
-  attendance   Attendance[]
-  medical_logs MedicalLog[]
-  counseling   Counseling[]
-
-  @@unique([school_id, admission_no])
-  @@index([school_id])
-}
-
-model ParentStudent {
-  parent_id  String
-  student_id String
-  school_id  String
-  relation   String
-  is_primary Boolean @default(false)
-
-  parent  User    @relation(fields: [parent_id], references: [id], onDelete: Cascade)
-  student Student @relation(fields: [student_id], references: [id], onDelete: Cascade)
-
-  @@id([parent_id, student_id])
-}
-
-model IdentityDocument {
-  id                  String         @id @default(cuid())
-  owner_user_id       String?
-  owner_student_id    String?
-  doc_type            String 
-  file_ref            String 
-  masked_id           String?
-  verification_status DocumentStatus @default(PENDING)
-  school_id           String
-  created_at          DateTime       @default(now())
-
-  owner_user    User?    @relation(fields: [owner_user_id], references: [id])
-  owner_student Student? @relation(fields: [owner_student_id], references: [id])
-
-  @@index([school_id])
-}
-
-model Bus {
-  id              String   @id @default(cuid())
-  plateNumber     String   @unique
-  driverName      String
-  capacity        Int
-  routeId         String
-  insuranceExpiry DateTime
-  school_id       String
-
-  school School @relation(fields: [school_id], references: [id])
-
-  @@index([school_id])
-}
-
-model Book {
-  isbn      String  @id
-  title     String
-  author    String
-  status    String
-  issuedTo  String?
-  school_id String
-
-  school School @relation(fields: [school_id], references: [id])
-
-  @@index([school_id])
-}
-
-model Invoice {
-  id              String        @id @default(cuid())
-  student_id      String
-  base_amount     Float
-  discount_amount Float
-  description     String
-  due_date        DateTime
-  status          InvoiceStatus @default(PENDING)
-  utr             String?
-  school_id       String
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  student Student @relation(fields: [student_id], references: [id])
-  school  School  @relation(fields: [school_id], references: [id])
-
-  @@index([school_id])
-  @@index([student_id])
-}
-
-model Attendance {
-  id         String           @id @default(cuid())
-  student_id String
-  date       DateTime
-  status     AttendanceStatus
-  synced     Boolean          @default(false)
-  school_id  String
-
-  student Student @relation(fields: [student_id], references: [id])
-
-  @@index([school_id])
-  @@index([student_id])
-}
-
-model MedicalLog {
-  id         String   @id @default(cuid())
-  student_id String
-  time       DateTime
-  issue      String
-  action     String
-  school_id  String
-
-  student Student @relation(fields: [student_id], references: [id])
-
-  @@index([school_id])
-  @@index([student_id])
-}
-
-model Counseling {
-  id         String   @id @default(cuid())
-  student_id String
-  category   String
-  note       String
-  date       DateTime
-  school_id  String
-
-  student Student @relation(fields: [student_id], references: [id])
-
-  @@index([school_id])
-  @@index([student_id])
 }

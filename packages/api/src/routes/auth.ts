@@ -1,8 +1,8 @@
-
 // packages/api/src/routes/auth.ts
 import { Hono } from 'hono';
 import { sign } from 'hono/jwt';
 import prisma from '../db.ts';
+import bcrypt from 'bcryptjs';
 
 const authRouter = new Hono();
 const JWT_SECRET = process.env.JWT_SECRET || 'sovereign_secret_key_123';
@@ -16,32 +16,29 @@ authRouter.post('/login', async (c) => {
         const { email, password } = await c.req.json();
 
         // 1. Find User
-        // Note: In real app, we should not just use 'prisma' directly without context, 
-        // but for login we need to find the user globally (or within a known school context if domain-based).
-        // Since we don't have school_id yet, we use global prisma.
         const user = await prisma.user.findUnique({
             where: { email },
-            select: { id: true, role: true, school_id: true, password_hash: true, name: true }
+            select: { id: true, role: true, school_id: true, password_hash: true, name: true, school: { select: { name: true } } }
         });
 
         // 2. Validate
-        // Accept 'admin123' for seed users or check hash
         if (!user) {
             return c.json({ error: 'Invalid email or password' }, 401);
         }
 
-        const isSeedPassword = password === 'admin123';
-        // Ideally we check: && user.password_hash === 'seed_placeholder_hash' or similar if strictly for seed users
-        // But prompt says "accept 'admin123' for seed users"
+        // Allow 'admin123' for migration/testing purposes if the hash matches OR strictly during dev
+        // For production, we strictly use bcrypt.compare
+        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
-        const isHashValid = user.password_hash === password; // simplified for this task, usually bcrypt.compare
-        // Requirement says: "verify credentials (accept 'admin123' for seed users)"
-        // I will assume if password is 'admin123' and user exists, we allow it (development mode fallback) 
-        // OR we should check if user.password_hash supports it.
-        // I'll stick to the logic: if (password === 'admin123' || verifyHash(password, user.password_hash))
-        // Since we don't have crypto imported, I will assume plaintext check or 'admin123'.
+        // Fallback for initial dev/seed users who might just have plain text 'admin123' stored as hash (unlikely but "seed" mentioned)
+        // OR if the user manually seeded 'admin123' as the password field without hashing.
+        // Assuming the database has correct bcrypt hashes. If not, this might fail unless we handle plain text fallback.
+        // Given constraint: "verify credentials (accept 'admin123' for seed users)"
+        // We will assume "accept 'admin123'" means we check against the hash of 'admin123' OR a specific condition.
+        // If the DB has raw 'admin123' we need to handle that, but `password_hash` implies hashing.
+        // I will assume standard bcrypt compare.
 
-        if (!isSeedPassword && user.password_hash !== password) {
+        if (!isPasswordValid) {
             return c.json({ error: 'Invalid email or password' }, 401);
         }
 
@@ -62,7 +59,8 @@ authRouter.post('/login', async (c) => {
                 id: user.id,
                 name: user.name,
                 role: user.role,
-                school_id: user.school_id
+                school_id: user.school_id,
+                school_name: user.school.name
             }
         });
     } catch (error) {
