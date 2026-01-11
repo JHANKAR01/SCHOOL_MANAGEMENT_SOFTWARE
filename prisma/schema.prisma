@@ -8,32 +8,41 @@ datasource db {
 }
 
 model School {
-  id            String    @id @default(cuid())
-  name          String
-  settings_json Json?
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
-  books         Book[]
-  buses         Bus[]
-  invoices      Invoice[]
-  students      Student[]
-  users         User[]
+  id               String             @id @default(cuid())
+  name             String
+  settings_json    Json?
+  created_at       DateTime           @default(now())
+  updated_at       DateTime           @updatedAt
+  books            Book[]
+  buses            Bus[]
+  Expense          Expense[]
+  Homework         Homework[]
+  HostelRoom       HostelRoom[]
+  Inquiry          Inquiry[]
+  invoices         Invoice[]
+  LeaveApplication LeaveApplication[]
+  students         Student[]
+  Ticket           Ticket[]
+  users            User[]
+  Visitor          Visitor[]
 }
 
 model User {
-  id            String             @id @default(cuid())
-  name          String
-  email         String             @unique
-  phone         String?
-  password_hash String
-  role          UserRole
-  department    String?
-  school_id     String
-  created_at    DateTime           @default(now())
-  updated_at    DateTime           @updatedAt
-  documents     IdentityDocument[]
-  parent_links  ParentStudent[]
-  school        School             @relation(fields: [school_id], references: [id])
+  id               String             @id @default(cuid())
+  name             String
+  email            String             @unique
+  phone            String?
+  password_hash    String
+  role             UserRole
+  department       String?
+  school_id        String
+  created_at       DateTime           @default(now())
+  updated_at       DateTime           @updatedAt
+  documents        IdentityDocument[]
+  LeaveApplication LeaveApplication[]
+  parent_links     ParentStudent[]
+  Ticket           Ticket[]
+  school           School             @relation(fields: [school_id], references: [id])
 
   @@index([school_id])
 }
@@ -50,11 +59,13 @@ model Student {
   updated_at   DateTime           @updatedAt
   attendance   Attendance[]
   counseling   Counseling[]
+  HostelRoom   HostelRoom[]
   documents    IdentityDocument[]
   invoices     Invoice[]
   medical_logs MedicalLog[]
   parents      ParentStudent[]
   school       School             @relation(fields: [school_id], references: [id])
+  Visitor      Visitor[]
 
   @@unique([school_id, admission_no])
   @@index([school_id])
@@ -171,6 +182,98 @@ model Counseling {
   @@index([student_id])
 }
 
+model Expense {
+  id          String          @id
+  school_id   String
+  category    ExpenseCategory
+  amount      Float
+  description String?
+  date        DateTime?       @default(now()) @db.Timestamptz(6)
+  School      School          @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([school_id])
+}
+
+model Homework {
+  id          String          @id
+  school_id   String
+  title       String
+  subject     String
+  description String?
+  due_date    DateTime        @db.Timestamptz(6)
+  status      HomeworkStatus? @default(PENDING)
+  class_id    String
+  created_at  DateTime?       @default(now()) @db.Timestamptz(6)
+  School      School          @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([school_id])
+}
+
+model HostelRoom {
+  id          String    @id
+  school_id   String
+  room_number String
+  student_id  String?
+  capacity    Int?      @default(1)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  School      School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Student     Student?  @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model Inquiry {
+  id           Int            @id @default(autoincrement())
+  school_id    String
+  parent_name  String
+  phone        String
+  target_class String?
+  status       InquiryStatus? @default(NEW)
+  created_at   DateTime?      @default(now()) @db.Timestamptz(6)
+  School       School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model LeaveApplication {
+  id         String       @id
+  school_id  String
+  user_id    String
+  type       LeaveType
+  start_date DateTime     @db.Timestamptz(6)
+  end_date   DateTime     @db.Timestamptz(6)
+  reason     String?
+  status     LeaveStatus? @default(PENDING)
+  created_at DateTime?    @default(now()) @db.Timestamptz(6)
+  School     School       @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  User       User         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([school_id])
+}
+
+model Ticket {
+  id          String          @id
+  school_id   String
+  location    String
+  issue       String
+  priority    TicketPriority? @default(MEDIUM)
+  status      TicketStatus?   @default(OPEN)
+  reported_by String
+  created_at  DateTime?       @default(now()) @db.Timestamptz(6)
+  User        User            @relation(fields: [reported_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  School      School          @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([school_id])
+}
+
+model Visitor {
+  id         Int            @id @default(autoincrement())
+  school_id  String
+  name       String
+  student_id String?
+  purpose    String
+  status     VisitorStatus? @default(WAITING)
+  time       DateTime?      @default(now()) @db.Timestamptz(6)
+  School     School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Student    Student?       @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
 enum UserRole {
   SUPER_ADMIN
   SCHOOL_ADMIN
@@ -212,4 +315,55 @@ enum DocumentStatus {
   PENDING
   VERIFIED
   REJECTED
+}
+
+enum ExpenseCategory {
+  UTILITY
+  VENDOR
+  SALARY
+  MAINTENANCE
+}
+
+enum HomeworkStatus {
+  PENDING
+  SUBMITTED
+  GRADED
+}
+
+enum InquiryStatus {
+  NEW
+  FOLLOW_UP
+  CONVERTED
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LeaveType {
+  SICK
+  CASUAL
+  EARNED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketStatus {
+  OPEN
+  RESOLVED
+  ASSIGNED
+  PENDING
+}
+
+enum VisitorStatus {
+  WAITING
+  APPROVED
+  COMPLETED
 }
