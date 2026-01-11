@@ -19,13 +19,14 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
         'react-native': 'react-native-web',
+        // 👇 ADD THIS LINE HERE 👇
+        'expo-sqlite': 'react-native-web',
       }
     },
     optimizeDeps: {
       esbuildOptions: {
         loader: {
-
-          '.js': 'tsx',
+          '.js': 'jsx', // Changed 'tsx' to 'jsx' as it's safer for node_modules .js files
         },
       },
     },
