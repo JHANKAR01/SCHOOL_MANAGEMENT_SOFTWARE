@@ -3,8 +3,9 @@
     "target": "ES2022",
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
     "lib": [
       "ES2022",
       "DOM",
@@ -25,5 +26,12 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".agent/**/*.ts",
+    "nativewind-env.d.ts",
+    "vite.config.ts"
+  ]
 }

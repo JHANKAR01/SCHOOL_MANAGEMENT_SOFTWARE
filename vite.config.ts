@@ -20,6 +20,13 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, '.'),
         'react-native': 'react-native-web',
       }
-    }
+    },
+    optimizeDeps: {
+      esbuildOptions: {
+        loader: {
+          '.js': 'tsx',
+        },
+      },
+    },
   };
 });
