@@ -10,24 +10,20 @@ export default defineConfig(({ mode }) => {
   return {
     base: '/',
     server: {
-      port: 5173, // FIX: Changed from 3000 to avoid conflict with Backend
+      port: 5173, // Keep the frontend on 5173 to avoid conflict with backend
       host: '0.0.0.0',
-      // FIX: Add Proxy to redirect /api calls to the Hono Backend
       proxy: {
         '/api': {
           target: 'http://localhost:3000',
           changeOrigin: true,
-          secure: false,
         },
       },
     },
     plugins: [react()],
     define: {
-      // FIX: Satisfy Expo/React Native global variable requirements
       __DEV__: JSON.stringify(isDev),
       global: 'window',
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
     },
     resolve: {
       alias: {
@@ -39,6 +35,11 @@ export default defineConfig(({ mode }) => {
     },
     optimizeDeps: {
       esbuildOptions: {
+        // FIX: Add this define block to the pre-bundler
+        define: {
+          __DEV__: JSON.stringify(isDev),
+          global: 'window',
+        },
         loader: {
           '.js': 'jsx',
         },
