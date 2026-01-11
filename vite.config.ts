@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
         // FIX: Tell React to use NativeWind's JSX runtime
         jsxImportSource: "nativewind",
         babel: {
-          presets: ["nativewind/babel"],
+          presets: ["nativewind/babel", { mode: "compileOnly" }],
           plugins: [],
         },
       }),
