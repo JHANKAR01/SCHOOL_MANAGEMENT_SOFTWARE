@@ -4,13 +4,23 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 
-// In ESM environments, destructure Pool from the default export
 const { Pool } = pg;
 
 const connectionString = process.env.DATABASE_URL;
 
-// 1. Create a PostgreSQL connection pool
-const pool = new Pool({ connectionString });
+if (!connectionString) {
+  throw new Error('DATABASE_URL is not defined in environment variables');
+}
+
+// 1. Create a PostgreSQL connection pool with SSL
+const pool = new Pool({
+  connectionString,
+  // Supabase/Cloud Postgres requires SSL. 
+  // 'rejectUnauthorized: false' allows self-signed certs (common in some cloud setups)
+  ssl: process.env.NODE_ENV === 'production' || connectionString.includes('supabase')
+    ? { rejectUnauthorized: false }
+    : undefined
+});
 
 // 2. Create the Prisma Adapter
 const adapter = new PrismaPg(pool);
@@ -19,8 +29,6 @@ const adapter = new PrismaPg(pool);
 const globalPrisma = new PrismaClient({ adapter });
 
 export default globalPrisma;
-
-export type SovereignDB = ReturnType<typeof getTenantDB>;
 
 /**
  * Tenant-Aware DB Factory
@@ -39,7 +47,6 @@ export const getTenantDB = (schoolId: string, role: string) => {
           if (operation === 'create' || operation === 'createMany') {
             if (!safeArgs.data) safeArgs.data = {};
             if (Array.isArray(safeArgs.data)) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               safeArgs.data.forEach((item: any) => item.school_id = schoolId);
             } else {
               safeArgs.data.school_id = schoolId;
