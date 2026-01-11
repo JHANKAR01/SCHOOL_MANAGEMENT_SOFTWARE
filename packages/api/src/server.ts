@@ -33,9 +33,9 @@ app.route('/api/auth', authRouter);
 // We use a custom middleware wrapper to skip auth check for paths starting with /api/auth (just in case)
 app.use('/api/*', async (c, next) => {
   if (c.req.path.startsWith('/api/auth')) {
-    await next();
+    return next();
   } else {
-    await authMiddleware(c, next);
+    return authMiddleware(c, next);
   }
 });
 

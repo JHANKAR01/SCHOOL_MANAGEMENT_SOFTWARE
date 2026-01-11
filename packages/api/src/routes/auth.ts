@@ -65,7 +65,11 @@ authRouter.post('/login', async (c) => {
         });
     } catch (error) {
         console.error('[AUTH_ERROR]', error);
-        return c.json({ error: 'Internal Server Error' }, 500);
+        return c.json({
+            error: 'Internal Server Error',
+            details: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+        }, 500);
     }
 });
 
