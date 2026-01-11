@@ -1,56 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { SchoolConfig, User, UserRole, AuthResponse } from '@/types';
 import { SovereignButton, SovereignInput } from '@/packages/app/components/SovereignComponents';
+import client from '@/packages/app/api/client';
 import { ShieldCheck, Lock, User as UserIcon, Loader2, Fingerprint } from 'lucide-react';
 import { Platform, View, Text, ScrollView, SafeAreaView, TouchableOpacity, ImageBackground } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
-
-// Mock DB of Schools
-const MOCK_SCHOOL_DB: Record<string, SchoolConfig> = {
-  'demo': {
-    school_id: 'sch_123',
-    name: 'Sovereign High School',
-    logo_url: 'https://picsum.photos/200',
-    primary_color: '#059669', // Emerald Green
-    features: { attendance: true, fees: true, transport: true, library: true, hostel: true },
-    location: { lat: 28.6139, lng: 77.2090 },
-    upi_vpa: 'school@upi'
-  },
-  'dav': {
-    school_id: 'sch_456',
-    name: 'DAV Public School',
-    logo_url: '',
-    primary_color: '#DC2626', // Red
-    features: { attendance: true, fees: false, transport: false, library: true, hostel: false },
-    location: { lat: 19.0760, lng: 72.8777 },
-    upi_vpa: 'dav@upi'
-  }
-};
-
-const ROLE_SUFFIX_MAP: Record<string, UserRole> = {
-  'super': UserRole.SUPER_ADMIN,
-  'admin': UserRole.SCHOOL_ADMIN,
-  'principal': UserRole.PRINCIPAL,
-  'vice_principal': UserRole.VICE_PRINCIPAL,
-  'finance': UserRole.FINANCE_MANAGER,
-  'admissions': UserRole.ADMISSIONS_OFFICER,
-  'exam': UserRole.EXAM_CELL,
-  'fleet': UserRole.FLEET_MANAGER,
-  'librarian': UserRole.LIBRARIAN,
-  'warden': UserRole.WARDEN,
-  'nurse': UserRole.NURSE,
-  'inventory': UserRole.INVENTORY_MANAGER,
-  'security': UserRole.SECURITY_HEAD,
-  'estate': UserRole.ESTATE_MANAGER,
-  'it': UserRole.IT_ADMIN,
-  'teacher': UserRole.TEACHER,
-  'parent': UserRole.PARENT,
-  'student': UserRole.STUDENT,
-  'hod': UserRole.HOD,
-  'counselor': UserRole.COUNSELOR,
-  'receptionist': UserRole.RECEPTIONIST
-};
 
 interface Props {
   onLoginSuccess: (data: AuthResponse) => void;
@@ -98,56 +53,41 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
     }
   };
 
-  const performLogin = async (userStr: string, passStr: string) => {
+  const performLogin = async (emailStr: string, passStr: string) => {
     setLoading(true);
     setError('');
 
-    setTimeout(async () => {
-      const parts = userStr.split('.');
-      const schoolPrefix = parts[0];
-      const roleSuffix = parts.slice(1).join('_');
+    try {
+      // 1. Call the real Hono API (will hit /api/auth/login due to baseURL change)
+      const response = await client.post('/auth/login', {
+        email: emailStr,
+        password: passStr,
+      });
 
-      const schoolConfig = MOCK_SCHOOL_DB[schoolPrefix];
+      const { token, user, school } = response.data;
 
-      if (!schoolConfig) {
-        setError(`School "${schoolPrefix}" not found. Try "demo.admin"`);
-        setLoading(false);
-        return;
-      }
-
-      // FIX: Explicitly type this variable as UserRole to prevent "not assignable" errors
-      let userRole: UserRole = UserRole.STUDENT;
-      let userName = 'User';
-
-      if (roleSuffix === 'super') {
-        userRole = UserRole.SUPER_ADMIN;
-        userName = "Super Admin";
-      } else if (ROLE_SUFFIX_MAP[roleSuffix]) {
-        userRole = ROLE_SUFFIX_MAP[roleSuffix];
-        userName = roleSuffix.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      // 2. Save the real JWT Token
+      if (Platform.OS === 'web') {
+        localStorage.setItem('sovereign_token', token);
       } else {
-        setError(`Invalid Role Suffix: ${roleSuffix}`);
-        setLoading(false);
-        return;
+        await SecureStore.setItemAsync('sovereign_token', token);
       }
 
-      const user: User = {
-        id: `usr_${Date.now()}`,
-        name: userName,
-        role: userRole,
-        school_id: schoolConfig.school_id
-      };
-
-      const authData = { user, school: schoolConfig };
-
-      // Save Session Securely on Native
+      // 3. Save the session for biometrics
+      const authData = { user, school, token };
       if (Platform.OS !== 'web') {
         await SecureStore.setItemAsync('sovereign_user_session', JSON.stringify(authData));
       }
 
+      // 4. Update the app state
       onLoginSuccess(authData);
+    } catch (err: any) {
+      console.error('Login Error:', err);
+      const message = err.response?.data?.error || 'Invalid credentials or server offline.';
+      setError(message);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   return (
