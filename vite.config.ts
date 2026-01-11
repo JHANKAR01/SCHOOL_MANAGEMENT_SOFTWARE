@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
         'react-native': path.resolve(__dirname, 'shim.js'),
 
         // FIX 2: Keep the other aliases
-        'expo-sqlite': 'react-native-web',
+        'expo-sqlite': path.resolve(__dirname, 'shim.js'),
         '@react-native/assets-registry/registry': 'react-native-web/dist/modules/AssetRegistry',
       }
     },
