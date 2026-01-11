@@ -18,9 +18,12 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
-        'react-native': 'react-native-web',
+
+        // FIX 1: Point 'react-native' to the shim.js file we just created
+        'react-native': path.resolve(__dirname, 'shim.js'),
+
+        // FIX 2: Keep the other aliases
         'expo-sqlite': 'react-native-web',
-        // FIX: Alias the Flow-typed registry to the Web version
         '@react-native/assets-registry/registry': 'react-native-web/dist/modules/AssetRegistry',
       }
     },
