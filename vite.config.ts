@@ -20,10 +20,12 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
-      tailwindcss(),
+      tailwindcss(), // Tailwind v4 plugin
       react({
         babel: {
-          plugins: ["nativewind/babel"],
+          // FIX: Move NativeWind to presets to avoid property validation errors
+          presets: ["nativewind/babel"],
+          plugins: [],
         },
       }),
     ],
