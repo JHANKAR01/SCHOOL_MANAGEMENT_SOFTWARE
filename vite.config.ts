@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       esbuildOptions: {
         loader: {
+
           '.js': 'tsx',
         },
       },

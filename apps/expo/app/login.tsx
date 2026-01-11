@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SchoolConfig, User, UserRole, AuthResponse } from '@/types';
 import { SovereignButton, SovereignInput } from '@/packages/app/components/SovereignComponents';
@@ -116,7 +115,8 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
         return;
       }
 
-      let userRole = UserRole.STUDENT;
+      // FIX: Explicitly type this variable as UserRole to prevent "not assignable" errors
+      let userRole: UserRole = UserRole.STUDENT;
       let userName = 'User';
 
       if (roleSuffix === 'super') {
