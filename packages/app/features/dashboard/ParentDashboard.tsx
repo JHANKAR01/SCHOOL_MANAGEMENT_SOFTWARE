@@ -5,6 +5,7 @@ import ParentPayments from '../../../../apps/expo/app/parent/payments.js';
 import TransportTracking from '../../../../apps/expo/app/parent/transport.js';
 import { Gradebook } from '../academics/Gradebook.js';
 import { StatCard, PageHeader, SovereignButton, SovereignBadge, SovereignInput } from '../../components/SovereignComponents.js';
+import { Row, Col } from '../../components/Layout';
 import { Wallet, Bus, FileText, CheckCircle, Bell, Video, Upload } from 'lucide-react';
 import { useInteraction } from '../../provider/InteractionContext.js';
 import { ActionModal } from '../../components/ActionModal.js';
@@ -139,17 +140,25 @@ export const ParentDashboard: React.FC<Props> = ({ school, activeModule, role })
       </div>
 
       {/* KPI GRID - Mobile Optimized (2x2) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-        <StatCard
-          title="Fees Due"
-          value={`₹${totalDue.toLocaleString()}`}
-          icon={<Wallet className="w-4 h-4" />}
-          subtitle={invoices.length > 0 ? "Action Required" : "All Clear"}
-        />
-        <StatCard title="Attendance" value="92%" trend={{ value: 5, isPositive: true }} icon={<CheckCircle className="w-4 h-4" />} />
-        <StatCard title="Bus Status" value="On Time" subtitle="ETA 4:10 PM" icon={<Bus className="w-4 h-4" />} />
-        <StatCard title="Result" value="A+" subtitle="Term 1" icon={<FileText className="w-4 h-4" />} />
-      </div>
+      <Row className="mb-8">
+        <Col className="w-1/2 md:w-1/4">
+          <StatCard
+            title="Fees Due"
+            value={`₹${totalDue.toLocaleString()}`}
+            icon={<Wallet className="w-4 h-4" />}
+            subtitle={invoices.length > 0 ? "Action Required" : "All Clear"}
+          />
+        </Col>
+        <Col className="w-1/2 md:w-1/4">
+          <StatCard title="Attendance" value="92%" trend={{ value: 5, isPositive: true }} icon={<CheckCircle className="w-4 h-4" />} />
+        </Col>
+        <Col className="w-1/2 md:w-1/4">
+          <StatCard title="Bus Status" value="On Time" subtitle="ETA 4:10 PM" icon={<Bus className="w-4 h-4" />} />
+        </Col>
+        <Col className="w-1/2 md:w-1/4">
+          <StatCard title="Result" value="A+" subtitle="Term 1" icon={<FileText className="w-4 h-4" />} />
+        </Col>
+      </Row>
 
       {/* HOMEWORK SECTION (Visible by Default) */}
       {activeModule !== 'FEES' && activeModule !== 'TRACKING' && activeModule !== 'REPORT' && (

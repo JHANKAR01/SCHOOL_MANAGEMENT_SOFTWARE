@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SchoolConfig } from '../../../../types';
 import { generateUPILink } from '../../../api/src/upi-engine';
 import { StatCard, PageHeader, SovereignButton, SovereignTable, SovereignBadge, SovereignInput } from '../../components/SovereignComponents';
+import { Row, Col } from '../../components/Layout';
 import { Wallet, AlertCircle, TrendingUp, CheckCircle, Plus, DollarSign, Download, CreditCard } from 'lucide-react';
 import { useInteraction, Expense } from '../../provider/InteractionContext';
 import { SOVEREIGN_GENESIS_DATA } from '../../../api/src/data/dummy-data';
@@ -9,7 +10,7 @@ import { ActionModal } from '../../components/ActionModal';
 
 export const FinanceDashboard: React.FC<{ school: SchoolConfig, activeModule: string }> = ({ school, activeModule }) => {
   const { invoices, expenses, addInvoice, markInvoicePaid, addExpense } = useInteraction();
-  
+
   // Modal States
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -86,24 +87,32 @@ export const FinanceDashboard: React.FC<{ school: SchoolConfig, activeModule: st
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
       <PageHeader title="Finance Department" subtitle="Ledger & Collection Management" />
-      
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-         <StatCard title="Total Collected" value={`₹${(totalCollected / 100000).toFixed(2)}L`} trend={{ value: 12, isPositive: true }} icon={<Wallet className="w-5 h-5" />} />
-         <StatCard title="Pending Dues" value={`₹${(totalPending / 100000).toFixed(2)}L`} trend={{ value: 5, isPositive: false }} icon={<AlertCircle className="w-5 h-5" />} />
-         <StatCard title="Expenses" value={`₹${(totalExpenses / 100000).toFixed(2)}L`} icon={<TrendingUp className="w-5 h-5" />} subtitle="Total Outflow" />
-         <StatCard title="Cash on Hand" value={`₹${(cashOnHand / 100000).toFixed(2)}L`} icon={<CheckCircle className="w-5 h-5 text-green-600" />} />
-      </div>
+
+      <Row className="mb-8">
+        <Col className="w-full md:w-1/4">
+          <StatCard title="Total Collected" value={`₹${(totalCollected / 100000).toFixed(2)}L`} trend={{ value: 12, isPositive: true }} icon={<Wallet className="w-5 h-5" />} />
+        </Col>
+        <Col className="w-full md:w-1/4">
+          <StatCard title="Pending Dues" value={`₹${(totalPending / 100000).toFixed(2)}L`} trend={{ value: 5, isPositive: false }} icon={<AlertCircle className="w-5 h-5" />} />
+        </Col>
+        <Col className="w-full md:w-1/4">
+          <StatCard title="Expenses" value={`₹${(totalExpenses / 100000).toFixed(2)}L`} icon={<TrendingUp className="w-5 h-5" />} subtitle="Total Outflow" />
+        </Col>
+        <Col className="w-full md:w-1/4">
+          <StatCard title="Cash on Hand" value={`₹${(cashOnHand / 100000).toFixed(2)}L`} icon={<CheckCircle className="w-5 h-5 text-green-600" />} />
+        </Col>
+      </Row>
 
       <div className="space-y-6">
         <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
-           <div className="flex gap-4">
-              <button className="text-sm font-bold text-indigo-700 border-b-2 border-indigo-700 pb-1">Invoices</button>
-              <button className="text-sm font-bold text-gray-500 hover:text-gray-700 pb-1">Expenses</button>
-           </div>
-           <div className="flex gap-2">
-              <SovereignButton variant="danger" onClick={() => setShowExpenseModal(true)} icon={<TrendingUp className="w-4 h-4"/>}>Log Expense</SovereignButton>
-              <SovereignButton onClick={() => setShowInvoiceModal(true)} icon={<Plus className="w-4 h-4"/>}>Create Invoice</SovereignButton>
-           </div>
+          <div className="flex gap-4">
+            <button className="text-sm font-bold text-indigo-700 border-b-2 border-indigo-700 pb-1">Invoices</button>
+            <button className="text-sm font-bold text-gray-500 hover:text-gray-700 pb-1">Expenses</button>
+          </div>
+          <div className="flex gap-2">
+            <SovereignButton variant="danger" onClick={() => setShowExpenseModal(true)} icon={<TrendingUp className="w-4 h-4" />}>Log Expense</SovereignButton>
+            <SovereignButton onClick={() => setShowInvoiceModal(true)} icon={<Plus className="w-4 h-4" />}>Create Invoice</SovereignButton>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -122,20 +131,20 @@ export const FinanceDashboard: React.FC<{ school: SchoolConfig, activeModule: st
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Student</label>
-            <select 
-              className="w-full border p-2 rounded bg-white" 
-              value={invoiceForm.studentId} 
-              onChange={e => setInvoiceForm({...invoiceForm, studentId: e.target.value})}
+            <select
+              className="w-full border p-2 rounded bg-white"
+              value={invoiceForm.studentId}
+              onChange={e => setInvoiceForm({ ...invoiceForm, studentId: e.target.value })}
             >
-               <option value="">Select Student</option>
-               {SOVEREIGN_GENESIS_DATA.students.map(s => (
-                 <option key={s.id} value={s.id}>{s.name} ({s.class})</option>
-               ))}
+              <option value="">Select Student</option>
+              {SOVEREIGN_GENESIS_DATA.students.map(s => (
+                <option key={s.id} value={s.id}>{s.name} ({s.class})</option>
+              ))}
             </select>
           </div>
-          <SovereignInput label="Amount (₹)" type="number" value={invoiceForm.amount} onChange={e => setInvoiceForm({...invoiceForm, amount: e.target.value})} />
-          <SovereignInput label="Description" value={invoiceForm.description} onChange={e => setInvoiceForm({...invoiceForm, description: e.target.value})} />
-          <SovereignInput label="Due Date" type="date" value={invoiceForm.dueDate} onChange={e => setInvoiceForm({...invoiceForm, dueDate: e.target.value})} />
+          <SovereignInput label="Amount (₹)" type="number" value={invoiceForm.amount} onChange={e => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} />
+          <SovereignInput label="Description" value={invoiceForm.description} onChange={e => setInvoiceForm({ ...invoiceForm, description: e.target.value })} />
+          <SovereignInput label="Due Date" type="date" value={invoiceForm.dueDate} onChange={e => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })} />
         </div>
       </ActionModal>
 
@@ -149,18 +158,18 @@ export const FinanceDashboard: React.FC<{ school: SchoolConfig, activeModule: st
       >
         <div className="space-y-4">
           <div className="bg-yellow-50 p-3 rounded border border-yellow-200 text-xs text-yellow-800">
-             Ensure cash/cheque is collected before confirming. This action updates the ledger immediately.
+            Ensure cash/cheque is collected before confirming. This action updates the ledger immediately.
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Payment Method</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 border p-3 rounded w-full cursor-pointer hover:bg-gray-50">
                 <input type="radio" name="method" checked={paymentMethod === 'CASH'} onChange={() => setPaymentMethod('CASH')} />
-                <DollarSign className="w-4 h-4 text-green-600"/> Cash
+                <DollarSign className="w-4 h-4 text-green-600" /> Cash
               </label>
               <label className="flex items-center gap-2 border p-3 rounded w-full cursor-pointer hover:bg-gray-50">
                 <input type="radio" name="method" checked={paymentMethod === 'CHEQUE'} onChange={() => setPaymentMethod('CHEQUE')} />
-                <CreditCard className="w-4 h-4 text-blue-600"/> Cheque / DD
+                <CreditCard className="w-4 h-4 text-blue-600" /> Cheque / DD
               </label>
             </div>
           </div>
@@ -176,21 +185,21 @@ export const FinanceDashboard: React.FC<{ school: SchoolConfig, activeModule: st
         confirmLabel="Add to Ledger"
       >
         <div className="space-y-4">
-           <div>
-             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Category</label>
-             <select 
-               className="w-full border p-2 rounded bg-white"
-               value={expenseForm.category}
-               onChange={e => setExpenseForm({...expenseForm, category: e.target.value as any})}
-             >
-                <option value="UTILITY">Utility (Electricity/Water)</option>
-                <option value="VENDOR">Vendor / Inventory</option>
-                <option value="MAINTENANCE">Maintenance / Repairs</option>
-                <option value="SALARY">Salary / Bonus</option>
-             </select>
-           </div>
-           <SovereignInput label="Amount (₹)" type="number" value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} />
-           <SovereignInput label="Description" placeholder="e.g. Generator Fuel" value={expenseForm.description} onChange={e => setExpenseForm({...expenseForm, description: e.target.value})} />
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Category</label>
+            <select
+              className="w-full border p-2 rounded bg-white"
+              value={expenseForm.category}
+              onChange={e => setExpenseForm({ ...expenseForm, category: e.target.value as any })}
+            >
+              <option value="UTILITY">Utility (Electricity/Water)</option>
+              <option value="VENDOR">Vendor / Inventory</option>
+              <option value="MAINTENANCE">Maintenance / Repairs</option>
+              <option value="SALARY">Salary / Bonus</option>
+            </select>
+          </div>
+          <SovereignInput label="Amount (₹)" type="number" value={expenseForm.amount} onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })} />
+          <SovereignInput label="Description" placeholder="e.g. Generator Fuel" value={expenseForm.description} onChange={e => setExpenseForm({ ...expenseForm, description: e.target.value })} />
         </div>
       </ActionModal>
 
