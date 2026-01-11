@@ -6,13 +6,14 @@ import { PrismaClient } from '@prisma/client';
  * Connects to the live Supabase database via connection pooling.
  */
 
+// Cast to any to bypass strict typing on datasources for now
 const globalPrisma = new PrismaClient({
   datasources: {
     db: {
       url: process.env.DATABASE_URL,
     },
   },
-});
+} as any);
 
 export default globalPrisma;
 
@@ -28,6 +29,7 @@ export const getTenantDB = (schoolId: string, role: string) => {
       $allModels: {
         async $allOperations({ args, query, model, operation }) {
           // Cast args to any to safely access potentially missing properties on union types
+          // This fixes the TS errors about 'where'/'data' not existing on some types
           const safeArgs = args as any;
 
           // 1. Super Admin Bypass
