@@ -19,14 +19,15 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
         'react-native': 'react-native-web',
-        // 👇 ADD THIS LINE HERE 👇
         'expo-sqlite': 'react-native-web',
+        // FIX: Alias the Flow-typed registry to the Web version
+        '@react-native/assets-registry/registry': 'react-native-web/dist/modules/AssetRegistry',
       }
     },
     optimizeDeps: {
       esbuildOptions: {
         loader: {
-          '.js': 'jsx', // Changed 'tsx' to 'jsx' as it's safer for node_modules .js files
+          '.js': 'jsx',
         },
       },
     },
