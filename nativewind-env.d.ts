@@ -1,3 +1,4 @@
+/// <reference types="nativewind/types" />
 // nativewind-env.d.ts
 import 'react-native';
 

@@ -1,3 +1,5 @@
+import './global.css';
+import { AppRegistry } from 'react-native';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';

@@ -1,7 +1,7 @@
-// vite.config.ts
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
@@ -19,7 +19,14 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
-    plugins: [react()],
+    plugins: [
+      tailwindcss(),
+      react({
+        babel: {
+          plugins: ["nativewind/babel"],
+        },
+      }),
+    ],
     define: {
       __DEV__: JSON.stringify(isDev),
       global: 'window',
@@ -31,13 +38,10 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
         'react-native': path.resolve(__dirname, 'shim.js'),
-
-        // FIX: Redirect all native modules to the shim
         'expo-sqlite': path.resolve(__dirname, 'shim.js'),
         'expo-secure-store': path.resolve(__dirname, 'shim.js'),
         'expo-local-authentication': path.resolve(__dirname, 'shim.js'),
         'expo-haptics': path.resolve(__dirname, 'shim.js'),
-
         '@react-native/assets-registry/registry': 'react-native-web/dist/modules/AssetRegistry',
       }
     },
