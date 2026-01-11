@@ -298,18 +298,68 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     initialData: []
   });
 
+  // Exams
+  const { data: exams = [] } = useQuery({
+    queryKey: ['exams'],
+    queryFn: async () => {
+      const res = await client.get('/academics/exams');
+      return res.data;
+    },
+    initialData: []
+  });
 
-  // --- 2. MISSING/STUBBED TABLES ---
-  const leaves: LeaveApplication[] = []; // Leaves backend logic pending (academics didn't have endpoints)
-  const liveClasses: Record<string, boolean> = {}; // TODO: DB Table Missing
-  const syllabus: any[] = []; // TODO: DB Table Missing
-  const exams: Exam[] = []; // TODO: DB Table Missing
+  // Syllabus
+  const { data: syllabus = [] } = useQuery({
+    queryKey: ['syllabus'],
+    queryFn: async () => {
+      const res = await client.get('/academics/syllabus');
+      return res.data;
+    },
+    initialData: []
+  });
 
-  const gateLogs: GateLog[] = []; // TODO: DB Table Missing
-  const lockdownMode = false; // TODO: DB Table Missing (Settings)
+  // Gate Logs
+  const { data: gateLogs = [] } = useQuery({
+    queryKey: ['gateLogs'],
+    queryFn: async () => {
+      const res = await client.get('/operations/gate-logs');
+      return res.data;
+    },
+    initialData: []
+  });
+
+  // System Settings (Lockdown Mode)
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const res = await client.get('/operations/settings');
+      return res.data;
+    },
+    initialData: { lockdown_mode: false }
+  });
+  const lockdownMode = settings?.lockdown_mode || false;
+
+
+  // --- 2. REMAINING/FUTURE MODULES ---
+  const leaves: LeaveApplication[] = []; // TODO: Implement in Phase 7 (Leaves)
+  const liveClasses: Record<string, boolean> = {}; // TODO: Live Class Integ
 
 
   // --- 3. MUTATIONS (REAL) ---
+
+  // Settings Mutation
+  const toggleLockdownMutation = useMutation({
+    mutationFn: (enabled: boolean) => client.post('/operations/settings/toggle-lockdown', { enabled }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings'] })
+  });
+  const toggleLockdown = () => toggleLockdownMutation.mutate(!lockdownMode); // Toggle current state
+
+  // Exam Mutation
+  const addExamMutation = useMutation({
+    mutationFn: (newExam: any) => client.post('/academics/exams', newExam),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['exams'] })
+  });
+  const addExam = (exam: Omit<Exam, 'id'>) => addExamMutation.mutate(exam);
 
   // Attendance Mutation
   const markAttendanceMutation = useMutation({

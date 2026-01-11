@@ -113,9 +113,40 @@ operationsRouter.post('/inquiries', requireRole([UserRole.ADMISSIONS_OFFICER, Us
 });
 
 
-// --- GATE LOGS (Missing Table - STUB) ---
+// --- GATE LOGS ---
 operationsRouter.get('/gate-logs', requireRole([UserRole.SECURITY_HEAD, UserRole.PRINCIPAL]), async (c) => {
-  return c.json([]);
+  const user = c.get('user');
+  const logs = await prisma.gateLog.findMany({
+    where: { school_id: user.school_id },
+    orderBy: { entry_time: 'desc' }
+  });
+  return c.json(logs);
+});
+
+// --- SYSTEM SETTINGS ---
+operationsRouter.get('/settings', requireRole([UserRole.PRINCIPAL, UserRole.SCHOOL_ADMIN]), async (c) => {
+  const user = c.get('user');
+  const settings = await prisma.systemSettings.findFirst({
+    where: { school_id: user.school_id }
+  });
+  return c.json(settings || { lockdown_mode: false });
+});
+
+operationsRouter.post('/settings/toggle-lockdown', requireRole([UserRole.PRINCIPAL, UserRole.SCHOOL_ADMIN]), async (c) => {
+  const user = c.get('user');
+  const { enabled } = await c.req.json();
+
+  const settings = await prisma.systemSettings.upsert({
+    where: { school_id: user.school_id },
+    update: { lockdown_mode: enabled },
+    create: {
+      school_id: user.school_id,
+      lockdown_mode: enabled,
+      low_data_mode: false // Default
+    }
+  });
+
+  return c.json({ success: true, lockdown_mode: settings.lockdown_mode });
 });
 
 operationsRouter.post('/broadcast-alert', requireRole([UserRole.SECURITY_HEAD]), async (c) => {

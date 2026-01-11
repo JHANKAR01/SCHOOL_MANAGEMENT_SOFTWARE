@@ -15,34 +15,48 @@ model School {
   updated_at       DateTime           @updatedAt
   books            Book[]
   buses            Bus[]
+  Exam             Exam[]
   Expense          Expense[]
+  GateLog          GateLog[]
   Homework         Homework[]
   HostelRoom       HostelRoom[]
   Inquiry          Inquiry[]
   invoices         Invoice[]
   LeaveApplication LeaveApplication[]
+  LiveClass        LiveClass[]
+  Paper            Paper[]
+  Result           Result[]
   students         Student[]
+  Substitution     Substitution[]
+  Syllabus         Syllabus[]
+  SystemSettings   SystemSettings?
   Ticket           Ticket[]
+  Timetable        Timetable[]
   users            User[]
   Visitor          Visitor[]
 }
 
 model User {
-  id               String             @id @default(cuid())
-  name             String
-  email            String             @unique
-  phone            String?
-  password_hash    String
-  role             UserRole
-  department       String?
-  school_id        String
-  created_at       DateTime           @default(now())
-  updated_at       DateTime           @updatedAt
-  documents        IdentityDocument[]
-  LeaveApplication LeaveApplication[]
-  parent_links     ParentStudent[]
-  Ticket           Ticket[]
-  school           School             @relation(fields: [school_id], references: [id])
+  id                                                    String             @id @default(cuid())
+  name                                                  String
+  email                                                 String             @unique
+  phone                                                 String?
+  password_hash                                         String
+  role                                                  UserRole
+  department                                            String?
+  school_id                                             String
+  created_at                                            DateTime           @default(now())
+  updated_at                                            DateTime           @updatedAt
+  documents                                             IdentityDocument[]
+  LeaveApplication                                      LeaveApplication[]
+  LiveClass                                             LiveClass[]
+  parent_links                                          ParentStudent[]
+  Substitution_Substitution_original_teacher_idToUser   Substitution[]     @relation("Substitution_original_teacher_idToUser")
+  Substitution_Substitution_substitute_teacher_idToUser Substitution[]     @relation("Substitution_substitute_teacher_idToUser")
+  Syllabus                                              Syllabus[]
+  Ticket                                                Ticket[]
+  Timetable                                             Timetable[]
+  school                                                School             @relation(fields: [school_id], references: [id])
 
   @@index([school_id])
 }
@@ -64,6 +78,7 @@ model Student {
   invoices     Invoice[]
   medical_logs MedicalLog[]
   parents      ParentStudent[]
+  Result       Result[]
   school       School             @relation(fields: [school_id], references: [id])
   Visitor      Visitor[]
 
@@ -274,6 +289,125 @@ model Visitor {
   Student    Student?       @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
+model Exam {
+  id         String    @id
+  school_id  String
+  name       String
+  type       ExamType? @default(INTERNAL)
+  start_date DateTime  @db.Timestamptz(6)
+  end_date   DateTime  @db.Timestamptz(6)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  School     School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Result     Result[]
+
+  @@index([school_id])
+}
+
+model GateLog {
+  id          Int            @id @default(autoincrement())
+  school_id   String
+  person_type GatePersonType
+  person_id   String?
+  name        String
+  purpose     String
+  status      GateStatus?    @default(INSIDE)
+  entry_time  DateTime?      @default(now()) @db.Timestamptz(6)
+  exit_time   DateTime?      @db.Timestamptz(6)
+  School      School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([school_id])
+}
+
+model LiveClass {
+  id           String    @id
+  school_id    String
+  subject      String
+  class_id     String
+  teacher_id   String
+  meeting_link String
+  is_active    Boolean?  @default(false)
+  start_time   DateTime? @default(now()) @db.Timestamptz(6)
+  School       School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  User         User      @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model Paper {
+  id         String       @id
+  school_id  String
+  title      String
+  subject    String
+  class_id   String
+  status     PaperStatus? @default(DRAFT)
+  created_at DateTime?    @default(now()) @db.Timestamptz(6)
+  School     School       @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model Result {
+  id               String    @id
+  school_id        String
+  exam_id          String
+  student_id       String
+  subject_marks    Json
+  total_percentage Float?
+  grade            String?
+  remarks          String?
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  Exam             Exam      @relation(fields: [exam_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  School           School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Student          Student   @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model Substitution {
+  id                                            String     @id
+  school_id                                     String
+  date                                          DateTime   @default(dbgenerated("CURRENT_DATE")) @db.Date
+  original_teacher_id                           String?
+  substitute_teacher_id                         String?
+  timetable_id                                  String?
+  User_Substitution_original_teacher_idToUser   User?      @relation("Substitution_original_teacher_idToUser", fields: [original_teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  School                                        School     @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  User_Substitution_substitute_teacher_idToUser User?      @relation("Substitution_substitute_teacher_idToUser", fields: [substitute_teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Timetable                                     Timetable? @relation(fields: [timetable_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model Syllabus {
+  id           String          @id
+  school_id    String
+  subject      String
+  class_id     String
+  topic        String
+  status       SyllabusStatus? @default(NOT_STARTED)
+  teacher_id   String?
+  completed_at DateTime?       @db.Timestamptz(6)
+  School       School          @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  User         User?           @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model SystemSettings {
+  school_id           String    @id
+  lockdown_mode       Boolean?  @default(false)
+  low_data_mode       Boolean?  @default(false)
+  announcement_ticker String?
+  updated_at          DateTime? @default(now()) @db.Timestamptz(6)
+  School              School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model Timetable {
+  id           String         @id
+  school_id    String
+  class_id     String
+  day_of_week  Int
+  start_time   String
+  end_time     String
+  subject      String
+  teacher_id   String?
+  Substitution Substitution[]
+  School       School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  User         User?          @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([class_id])
+}
+
 enum UserRole {
   SUPER_ADMIN
   SCHOOL_ADMIN
@@ -365,5 +499,34 @@ enum TicketStatus {
 enum VisitorStatus {
   WAITING
   APPROVED
+  COMPLETED
+}
+
+enum ExamType {
+  INTERNAL
+  MIDTERM
+  FINAL
+}
+
+enum GatePersonType {
+  STUDENT
+  STAFF
+  VISITOR
+}
+
+enum GateStatus {
+  INSIDE
+  EXITED
+}
+
+enum PaperStatus {
+  DRAFT
+  PRINTED
+  DISTRIBUTED
+}
+
+enum SyllabusStatus {
+  NOT_STARTED
+  IN_PROGRESS
   COMPLETED
 }
