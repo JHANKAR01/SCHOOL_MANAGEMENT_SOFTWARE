@@ -53,3 +53,21 @@ export const selectionAsync = async () => { };
 // 6. Re-export everything from react-native-web
 export * from 'react-native-web';
 export default ReactNative;
+
+// 7. Dummy Reanimated / Worklets exports
+// jhankar01/school-management-system---1/School-Management-System---1-LOCAL/shim.js
+
+// 7. Dummy Reanimated / Worklets exports to satisfy NativeWind v4 Babel preset
+export const useSharedValue = (val) => ({ value: val });
+export const useAnimatedStyle = (cb) => ({});
+export const withTiming = (val) => val;
+export const withSpring = (val) => val;
+export const createAnimatedComponent = (comp) => comp;
+export const Animated = {
+    View: ReactNative.View,
+    Text: ReactNative.Text,
+    Image: ReactNative.Image,
+    ScrollView: ReactNative.ScrollView,
+};
+export const runOnJS = (fn) => fn;
+export const runOnUI = (fn) => fn;

@@ -45,7 +45,10 @@ export default defineConfig(({ mode }) => {
         'expo-secure-store': path.resolve(__dirname, 'shim.js'),
         'expo-local-authentication': path.resolve(__dirname, 'shim.js'),
         'expo-haptics': path.resolve(__dirname, 'shim.js'),
+        'react-native-reanimated': path.resolve(__dirname, 'shim.js'),
+        'react-native-worklets': path.resolve(__dirname, 'shim.js'),
         '@react-native/assets-registry/registry': 'react-native-web/dist/modules/AssetRegistry',
+        'react-native-css-interop/jsx-runtime': 'react-native-css-interop/dist/runtime/jsx-runtime',
       }
     },
     optimizeDeps: {
