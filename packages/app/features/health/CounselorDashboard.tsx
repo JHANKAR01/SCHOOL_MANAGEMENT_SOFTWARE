@@ -2,6 +2,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { SovereignTable, PageHeader, StatCard, SovereignBadge } from '../../components/SovereignComponents';
+import { Row, Col } from '../../components/Layout';
 import { HeartPulse, Brain, UserPlus } from 'lucide-react';
 import { SOVEREIGN_GENESIS_DATA } from '../../../api/src/data/dummy-data';
 
@@ -17,7 +18,11 @@ export const CounselorDashboard = () => {
   const { data: notes } = useQuery<CounselorNote[]>({
     queryKey: ['counselor-notes'],
     queryFn: async () => {
-      return SOVEREIGN_GENESIS_DATA.counseling;
+      const students = SOVEREIGN_GENESIS_DATA.students;
+      return SOVEREIGN_GENESIS_DATA.counseling.map(c => ({
+        ...c,
+        student: students.find(s => s.id === c.student_id)?.name || c.student_id
+      }));
     }
   });
 
@@ -32,12 +37,18 @@ export const CounselorDashboard = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <PageHeader title="Student Wellness" subtitle="Counseling & Behavioral Health" />
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-         <StatCard title="Active Cases" value="12" icon={<Brain className="w-5 h-5"/>} trend={{ value: 2, isPositive: false }} />
-         <StatCard title="Sessions Today" value="5" icon={<UserPlus className="w-5 h-5"/>} />
-         <StatCard title="Flagged (Severe)" value="1" icon={<HeartPulse className="w-5 h-5 text-red-600"/>} />
-      </div>
+
+      <Row className="mb-8">
+        <Col className="w-full md:w-1/3">
+          <StatCard title="Active Cases" value="12" icon={<Brain className="w-5 h-5" />} trend={{ value: 2, isPositive: false }} />
+        </Col>
+        <Col className="w-full md:w-1/3">
+          <StatCard title="Sessions Today" value="5" icon={<UserPlus className="w-5 h-5" />} />
+        </Col>
+        <Col className="w-full md:w-1/3">
+          <StatCard title="Flagged (Severe)" value="1" icon={<HeartPulse className="w-5 h-5 text-red-600" />} />
+        </Col>
+      </Row>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between">
