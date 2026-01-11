@@ -21,8 +21,11 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
-
-      react(),
+      react({
+        babel: {
+          presets: ["nativewind/babel"],
+        },
+      }),
     ],
     define: {
       __DEV__: JSON.stringify(isDev),
