@@ -1,2 +1,2 @@
 @import "tailwindcss";
-@custom-variant native (&:is(.native));
+/* @custom-variant native (&:is(.native)); */

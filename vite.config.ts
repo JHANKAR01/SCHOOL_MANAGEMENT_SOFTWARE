@@ -22,14 +22,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       tailwindcss(),
-      react({
-        // FIX: Tell React to use NativeWind's JSX runtime
-        jsxImportSource: "nativewind",
-        babel: {
-          presets: ["nativewind/babel", { mode: "compileOnly" }],
-          plugins: [],
-        },
-      }),
+      react(),
     ],
     define: {
       __DEV__: JSON.stringify(isDev),
