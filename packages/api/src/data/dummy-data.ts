@@ -1,344 +1,1602 @@
-import { UserRole, Book, Bus, HostelRoom, Invoice, BankTransaction, StudentResult } from '../../../../types.ts';
+/**
+ * DUMMY DATA GENERATOR - Large Scale School Management System
+ * 
+ * Generates ~1920 students, 48 classes, ~100 staff programmatically.
+ * All PII is masked. Passwords are plaintext (hashed by seed.ts).
+ * 
+ * Test Credentials:
+ * - Super Admin: super@sovereign.edu / SuperAdmin@123
+ * - School Admin: admin@sovereign.edu / Admin@123
+ * - Finance: finance@sovereign.edu / Finance@123
+ * - All generated users: password123
+ */
 
-// --- GENESIS CONSTANTS ---
-const SCHOOL_ID_1 = 'sch_123'; // Sovereign High
-const SCHOOL_ID_2 = 'sch_456'; // DAV Public
-const TIMESTAMP_NOW = new Date().toISOString();
+import {
+  UserRole,
+  Section,
+  StudentStatus,
+  StaffStatus,
+  EnrollmentStatus,
+  LoanStatus,
+  InvoiceStatus,
+  AttendanceStatus,
+  ExamType,
+  HomeworkStatus,
+  SyllabusStatus,
+  TicketPriority,
+  TicketStatus,
+} from '@prisma/client';
 
-// ---------------------------------------------------------------------------
-// NOTE: This file is a DEV/SEED fixture. DO NOT store real PII here.
-// file_ref paths correspond to ZIP structure: documents/students/STD_{ADMISSION_NO}/...
-// ---------------------------------------------------------------------------
+// ============================================================================
+// CONSTANTS
+// ============================================================================
 
-// --- 1. PARENTS (one record per person; parent_ref used as folder key in ZIP) ---
-export const DUMMY_PARENTS = [
-  { id: 'prn_1', parent_ref: 'PRN_001', name: 'Rajesh Kumar', primary_phone: '+919876543210', email: 'rajesh.k@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_001/aadhaar.pdf', id_last4: '3210' }, { doc_type: 'DRIVING_LICENSE', file_ref: 'documents/parents/PRN_001/dl.jpg', id_last4: '4321' }] },
-  { id: 'prn_2', parent_ref: 'PRN_002', name: 'Sita Kumar', primary_phone: '+919876543211', email: 'sita.k@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_002/aadhaar.pdf', id_last4: '3211' }] },
-  { id: 'prn_3', parent_ref: 'PRN_003', name: 'Vikram Singh', primary_phone: '+919876543212', email: 'vikram.s@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_003/aadhaar.pdf', id_last4: '3212' }] },
-  { id: 'prn_4', parent_ref: 'PRN_004', name: 'Meera Joshi', primary_phone: '+919876543213', email: 'meera.j@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_004/aadhaar.pdf', id_last4: '3213' }] },
-  { id: 'prn_5', parent_ref: 'PRN_005', name: 'Anil Patel', primary_phone: '+919876543214', email: 'anil.p@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_005/aadhaar.pdf', id_last4: '3214' }] },
-  { id: 'prn_6', parent_ref: 'PRN_006', name: 'Sunita Rao', primary_phone: '+919876543215', email: 'sunita.r@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_006/aadhaar.pdf', id_last4: '3215' }] },
-  { id: 'prn_7', parent_ref: 'PRN_007', name: 'Ramesh Verma', primary_phone: '+919876543216', email: 'ramesh.v@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_007/aadhaar.pdf', id_last4: '3216' }] },
-  { id: 'prn_8', parent_ref: 'PRN_008', name: 'Priya Nair', primary_phone: '+919876543217', email: 'priya.n@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_008/aadhaar.pdf', id_last4: '3217' }] },
-  { id: 'prn_9', parent_ref: 'PRN_009', name: 'Rohit Shah', primary_phone: '+919876543218', email: 'rohit.s@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_009/aadhaar.pdf', id_last4: '3218' }] },
-  { id: 'prn_10', parent_ref: 'PRN_010', name: 'Anita Desai', primary_phone: '+919876543219', email: 'anita.d@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_010/aadhaar.pdf', id_last4: '3219' }] },
-  { id: 'prn_11', parent_ref: 'PRN_011', name: 'Kamal Gupta', primary_phone: '+919876543220', email: 'kamal.g@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_011/aadhaar.pdf', id_last4: '3220' }] },
-  { id: 'prn_12', parent_ref: 'PRN_012', name: 'Nidhi Mehra', primary_phone: '+919876543221', email: 'nidhi.m@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_012/aadhaar.pdf', id_last4: '3221' }] },
-  { id: 'prn_13', parent_ref: 'PRN_013', name: 'Anoop Menon', primary_phone: '+919876543222', email: 'anoop.m@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_013/aadhaar.pdf', id_last4: '3222' }] },
-  { id: 'prn_14', parent_ref: 'PRN_014', name: 'Geeta Sharma', primary_phone: '+919876543223', email: 'geeta.s@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_014/aadhaar.pdf', id_last4: '3223' }] },
-  { id: 'prn_15', parent_ref: 'PRN_015', name: 'Vikas Reddy', primary_phone: '+919876543224', email: 'vikas.r@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_015/aadhaar.pdf', id_last4: '3224' }] },
-  { id: 'prn_16', parent_ref: 'PRN_016', name: 'Shilpa Iyer', primary_phone: '+919876543225', email: 'shilpa.i@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_016/aadhaar.pdf', id_last4: '3225' }] },
-  { id: 'prn_17', parent_ref: 'PRN_017', name: 'Manish Kulkarni', primary_phone: '+919876543226', email: 'manish.k@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_017/aadhaar.pdf', id_last4: '3226' }] },
-  { id: 'prn_18', parent_ref: 'PRN_018', name: 'Sonal Kapoor', primary_phone: '+919876543227', email: 'sonal.k@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_018/aadhaar.pdf', id_last4: '3227' }] },
-  { id: 'prn_19', parent_ref: 'PRN_019', name: 'Deepak Yadav', primary_phone: '+919876543228', email: 'deepak.y@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_019/aadhaar.pdf', id_last4: '3228' }] },
-  { id: 'prn_20', parent_ref: 'PRN_020', name: 'Rekha Singh', primary_phone: '+919876543229', email: 'rekha.s@demo.com', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_020/aadhaar.pdf', id_last4: '3229' }] }
+export const SCHOOL_ID = 'sch_123';
+const SEED_RNG = 42;
+
+// Academic year IDs
+export const ACADEMIC_YEAR_2024_ID = 'ay_2024_2025';
+export const ACADEMIC_YEAR_2025_ID = 'ay_2025_2026';
+
+// ============================================================================
+// SEEDED RANDOM NUMBER GENERATOR (Reproducible)
+// ============================================================================
+
+let rngState = SEED_RNG;
+
+function seededRandom(): number {
+  rngState = (rngState * 1103515245 + 12345) & 0x7fffffff;
+  return rngState / 0x7fffffff;
+}
+
+function resetRng(): void {
+  rngState = SEED_RNG;
+}
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(seededRandom() * (max - min + 1)) + min;
+}
+
+function randomFromArray<T>(arr: readonly T[]): T {
+  return arr[randomInt(0, arr.length - 1)];
+}
+
+// ============================================================================
+// NAME DATA POOLS (Common Indian Names)
+// ============================================================================
+
+const FIRST_NAMES_MALE = [
+  'Aarav', 'Vihaan', 'Aditya', 'Sai', 'Arjun', 'Reyansh', 'Ayaan', 'Krishna',
+  'Ishaan', 'Shaurya', 'Atharva', 'Vivaan', 'Pranav', 'Dhruv', 'Kabir', 'Rudra',
+  'Ansh', 'Darsh', 'Advait', 'Rishi', 'Arnav', 'Dev', 'Rohan', 'Karan', 'Yash',
+  'Rahul', 'Amit', 'Vikram', 'Suresh', 'Rajesh', 'Manish', 'Anil', 'Sanjay',
+  'Gaurav', 'Nikhil', 'Akash', 'Vishal', 'Deepak', 'Pankaj', 'Mohit'
 ];
 
-// --- 2. PARENT-STUDENT MAPPING (explicit many-to-many) ---
-export const DUMMY_PARENT_STUDENT = [
-  // PRN_001 -> multiple children (siblings)
-  { parent_ref: 'PRN_001', admission_no: '2026-0001', relation: 'FATHER', is_primary: true },
-  { parent_ref: 'PRN_001', admission_no: '2026-0002', relation: 'FATHER', is_primary: true },
-
-  // Single child relationships
-  { parent_ref: 'PRN_002', admission_no: '2026-0003', relation: 'MOTHER', is_primary: true },
-  { parent_ref: 'PRN_003', admission_no: '2026-0004', relation: 'FATHER', is_primary: true },
-  { parent_ref: 'PRN_004', admission_no: '2026-0005', relation: 'MOTHER', is_primary: true },
-  { parent_ref: 'PRN_005', admission_no: '2026-0006', relation: 'FATHER', is_primary: true },
-  { parent_ref: 'PRN_006', admission_no: '2026-0007', relation: 'MOTHER', is_primary: true },
-  { parent_ref: 'PRN_007', admission_no: '2026-0008', relation: 'FATHER', is_primary: true },
-  { parent_ref: 'PRN_008', admission_no: '2026-0009', relation: 'MOTHER', is_primary: true },
-  { parent_ref: 'PRN_009', admission_no: '2026-0010', relation: 'FATHER', is_primary: true },
-  { parent_ref: 'PRN_010', admission_no: '2026-0011', relation: 'MOTHER', is_primary: true },
-  { parent_ref: 'PRN_011', admission_no: '2026-0012', relation: 'FATHER', is_primary: true },
-  { parent_ref: 'PRN_012', admission_no: '2026-0013', relation: 'MOTHER', is_primary: true },
-  { parent_ref: 'PRN_013', admission_no: '2026-0014', relation: 'FATHER', is_primary: true },
-  { parent_ref: 'PRN_014', admission_no: '2026-0015', relation: 'MOTHER', is_primary: true },
-  { parent_ref: 'PRN_015', admission_no: '2026-0016', relation: 'FATHER', is_primary: true },
-  { parent_ref: 'PRN_016', admission_no: '2026-0017', relation: 'MOTHER', is_primary: true },
-  { parent_ref: 'PRN_017', admission_no: '2026-0018', relation: 'FATHER', is_primary: true },
-  { parent_ref: 'PRN_018', admission_no: '2026-0019', relation: 'MOTHER', is_primary: true },
-  { parent_ref: 'PRN_019', admission_no: '2026-0020', relation: 'FATHER', is_primary: true },
-  { parent_ref: 'PRN_020', admission_no: '2026-0021', relation: 'MOTHER', is_primary: true },
-
-  // Add a few more sibling links
-  { parent_ref: 'PRN_011', admission_no: '2026-0022', relation: 'FATHER', is_primary: false },
-  { parent_ref: 'PRN_012', admission_no: '2026-0023', relation: 'MOTHER', is_primary: false },
-  { parent_ref: 'PRN_013', admission_no: '2026-0024', relation: 'FATHER', is_primary: false },
-  { parent_ref: 'PRN_014', admission_no: '2026-0025', relation: 'MOTHER', is_primary: false }
+const FIRST_NAMES_FEMALE = [
+  'Saanvi', 'Aanya', 'Aadhya', 'Ananya', 'Pari', 'Diya', 'Isha', 'Kiara',
+  'Myra', 'Sara', 'Anika', 'Navya', 'Avni', 'Prisha', 'Riya', 'Anvi',
+  'Shanaya', 'Kavya', 'Tara', 'Nisha', 'Pooja', 'Priya', 'Neha', 'Swati',
+  'Meera', 'Anjali', 'Shruti', 'Sneha', 'Kritika', 'Divya', 'Komal', 'Simran',
+  'Tanvi', 'Bhavna', 'Rekha', 'Sunita', 'Geeta', 'Suman', 'Kiran', 'Lata'
 ];
 
-// --- 3. STUDENTS (30 example students) ---
-export const DUMMY_STUDENTS = [
-  { id: 'std_1', admission_no: '2026-0001', name: 'Aarav Kumar', email: 'aarav.k@sovereign.edu', class: '10-A', roll: 1, parent_refs: ['PRN_001'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0001/aadhaar.pdf', id_last4: '1111' }, { doc_type: 'PHOTO', file_ref: 'documents/students/2026-0001/photo.jpg' }] },
-  { id: 'std_2', admission_no: '2026-0002', name: 'Diya Sharma', email: 'diya.s@sovereign.edu', class: '10-A', roll: 2, parent_refs: ['PRN_001'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0002/aadhaar.pdf', id_last4: '2222' }] },
-  { id: 'std_3', admission_no: '2026-0003', name: 'Ishaan Patel', email: 'ishaan.p@sovereign.edu', class: '10-A', roll: 3, parent_refs: ['PRN_002'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0003/aadhaar.pdf', id_last4: '3333' }] },
-  { id: 'std_4', admission_no: '2026-0004', name: 'Ananya Gupta', email: 'ananya.g@sovereign.edu', class: '10-B', roll: 1, parent_refs: ['PRN_003'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0004/aadhaar.pdf', id_last4: '4444' }] },
-  { id: 'std_5', admission_no: '2026-0005', name: 'Vihaan Singh', email: 'vihaan.s@sovereign.edu', class: '10-B', roll: 2, parent_refs: ['PRN_004'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0005/aadhaar.pdf', id_last4: '5555' }] },
-  { id: 'std_6', admission_no: '2026-0006', name: 'Aditi Rao', email: 'aditi.r@sovereign.edu', class: '9-A', roll: 1, parent_refs: ['PRN_005'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0006/aadhaar.pdf', id_last4: '6666' }] },
-  { id: 'std_7', admission_no: '2026-0007', name: 'Kabir Das', email: 'kabir.d@sovereign.edu', class: '9-A', roll: 2, parent_refs: ['PRN_006'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0007/aadhaar.pdf', id_last4: '7777' }] },
-  { id: 'std_8', admission_no: '2026-0008', name: 'Meera Iyer', email: 'meera.i@sovereign.edu', class: '9-B', roll: 1, parent_refs: ['PRN_007'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0008/aadhaar.pdf', id_last4: '8888' }] },
-  { id: 'std_9', admission_no: '2026-0009', name: 'Rohan Joshi', email: 'rohan.j@sovereign.edu', class: '8-A', roll: 1, parent_refs: ['PRN_008'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0009/aadhaar.pdf', id_last4: '9999' }] },
-  { id: 'std_10', admission_no: '2026-0010', name: 'Sanya Malhotra', email: 'sanya.m@sovereign.edu', class: '8-A', roll: 2, parent_refs: ['PRN_009'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0010/aadhaar.pdf', id_last4: '1010' }] },
-
-  { id: 'std_11', admission_no: '2026-0011', name: 'Arjun Reddy', email: 'arjun.r@sovereign.edu', class: '12-Sci', roll: 1, parent_refs: ['PRN_010'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0011/aadhaar.pdf', id_last4: '1111' }] },
-  { id: 'std_12', admission_no: '2026-0012', name: 'Priya Menon', email: 'priya.m@sovereign.edu', class: '12-Sci', roll: 2, parent_refs: ['PRN_011'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0012/aadhaar.pdf', id_last4: '1212' }] },
-  { id: 'std_13', admission_no: '2026-0013', name: 'Karan Johar', email: 'karan.j@sovereign.edu', class: '12-Com', roll: 1, parent_refs: ['PRN_012'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0013/aadhaar.pdf', id_last4: '1313' }] },
-  { id: 'std_14', admission_no: '2026-0014', name: 'Simran Kaur', email: 'simran.k@sovereign.edu', class: '12-Com', roll: 2, parent_refs: ['PRN_013'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0014/aadhaar.pdf', id_last4: '1414' }] },
-  { id: 'std_15', admission_no: '2026-0015', name: 'Rahul Dravid', email: 'rahul.d@sovereign.edu', class: '11-Sci', roll: 1, parent_refs: ['PRN_014'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0015/aadhaar.pdf', id_last4: '1515' }] },
-  { id: 'std_16', admission_no: '2026-0016', name: 'Anjali Tendulkar', email: 'anjali.t@sovereign.edu', class: '11-Sci', roll: 2, parent_refs: ['PRN_015'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0016/aadhaar.pdf', id_last4: '1616' }] },
-  { id: 'std_17', admission_no: '2026-0017', name: 'Vikram Batra', email: 'vikram.b@sovereign.edu', class: '11-Arts', roll: 1, parent_refs: ['PRN_016'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0017/aadhaar.pdf', id_last4: '1717' }] },
-  { id: 'std_18', admission_no: '2026-0018', name: 'Neha Dhupia', email: 'neha.d@sovereign.edu', class: '11-Arts', roll: 2, parent_refs: ['PRN_017'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0018/aadhaar.pdf', id_last4: '1818' }] },
-  { id: 'std_19', admission_no: '2026-0019', name: 'Siddharth Malhotra', email: 'siddharth.m@sovereign.edu', class: '6-A', roll: 1, parent_refs: ['PRN_018'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0019/aadhaar.pdf', id_last4: '1919' }] },
-  { id: 'std_20', admission_no: '2026-0020', name: 'Kiara Advani', email: 'kiara.a@sovereign.edu', class: '6-A', roll: 2, parent_refs: ['PRN_019'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0020/aadhaar.pdf', id_last4: '2020' }] },
-
-  { id: 'std_21', admission_no: '2026-0021', name: 'Arnav Deshmukh', email: 'arnav.d@sovereign.edu', class: '7-B', roll: 3, parent_refs: ['PRN_020'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0021/aadhaar.pdf', id_last4: '2121' }] },
-  { id: 'std_22', admission_no: '2026-0022', name: 'Nayan Gupta', email: 'nayan.g@sovereign.edu', class: '7-B', roll: 4, parent_refs: ['PRN_011'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0022/aadhaar.pdf', id_last4: '2222' }] },
-  { id: 'std_23', admission_no: '2026-0023', name: 'Mehul Sharma', email: 'mehul.s@sovereign.edu', class: '8-C', roll: 5, parent_refs: ['PRN_012'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0023/aadhaar.pdf', id_last4: '2323' }] },
-  { id: 'std_24', admission_no: '2026-0024', name: 'Ritu Verma', email: 'ritu.v@sovereign.edu', class: '8-C', roll: 6, parent_refs: ['PRN_013'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0024/aadhaar.pdf', id_last4: '2424' }] },
-  { id: 'std_25', admission_no: '2026-0025', name: 'Kunal Chopra', email: 'kunal.c@sovereign.edu', class: '9-C', roll: 7, parent_refs: ['PRN_014'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0025/aadhaar.pdf', id_last4: '2525' }] },
-  { id: 'std_26', admission_no: '2026-0026', name: 'Anushka Sen', email: 'anushka.s@sovereign.edu', class: '9-C', roll: 8, parent_refs: ['PRN_015'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0026/aadhaar.pdf', id_last4: '2626' }] },
-  { id: 'std_27', admission_no: '2026-0027', name: 'Tahir Khan', email: 'tahir.k@sovereign.edu', class: '10-C', roll: 9, parent_refs: ['PRN_016'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0027/aadhaar.pdf', id_last4: '2727' }] },
-  { id: 'std_28', admission_no: '2026-0028', name: 'Rhea Kapoor', email: 'rhea.k@sovereign.edu', class: '10-C', roll: 10, parent_refs: ['PRN_017'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0028/aadhaar.pdf', id_last4: '2828' }] },
-  { id: 'std_29', admission_no: '2026-0029', name: 'Dev Patil', email: 'dev.p@sovereign.edu', class: '11-Com', roll: 11, parent_refs: ['PRN_018'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0029/aadhaar.pdf', id_last4: '2929' }] },
-  { id: 'std_30', admission_no: '2026-0030', name: 'Isha Bhat', email: 'isha.b@sovereign.edu', class: '11-Com', roll: 12, parent_refs: ['PRN_019'], school_id: SCHOOL_ID_1,
-    documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0030/aadhaar.pdf', id_last4: '3030' }] }
+const LAST_NAMES = [
+  'Sharma', 'Verma', 'Gupta', 'Singh', 'Kumar', 'Patel', 'Reddy', 'Rao',
+  'Joshi', 'Shah', 'Mehta', 'Agarwal', 'Mishra', 'Dubey', 'Trivedi', 'Pandey',
+  'Chopra', 'Kapoor', 'Malhotra', 'Bhatia', 'Iyer', 'Nair', 'Menon', 'Pillai',
+  'Das', 'Roy', 'Bose', 'Sen', 'Mukherjee', 'Banerjee', 'Chatterjee', 'Ghosh',
+  'Desai', 'Patil', 'Kulkarni', 'Jain', 'Saxena', 'Srivastava', 'Tiwari', 'Yadav'
 ];
 
-// --- 4. STAFF (20 staff with staff_no and docs) ---
-export const DUMMY_STAFF = [
-  { id: 'stf_1', staff_no: 'STF_001', name: 'Principal User', email: 'principal@sovereign.edu', role: UserRole.PRINCIPAL, department: 'Administration', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/staff/STF_001/aadhaar.pdf', id_last4: '4001' }] },
-  { id: 'stf_2', staff_no: 'STF_002', name: 'VP User', email: 'vp@sovereign.edu', role: UserRole.VICE_PRINCIPAL, department: 'Academics', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/staff/STF_002/aadhaar.pdf', id_last4: '4002' }] },
-  { id: 'stf_3', staff_no: 'STF_003', name: 'HOD Physics', email: 'hod.phy@sovereign.edu', role: UserRole.HOD, department: 'Physics', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'AADHAAR', file_ref: 'documents/staff/STF_003/aadhaar.pdf', id_last4: '4003' }] },
-  { id: 'stf_4', staff_no: 'STF_004', name: 'Physics Teacher', email: 'teacher.phy1@sovereign.edu', role: UserRole.TEACHER, department: 'Physics', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_5', staff_no: 'STF_005', name: 'Maths Teacher', email: 'teacher.math@sovereign.edu', role: UserRole.TEACHER, department: 'Mathematics', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_6', staff_no: 'STF_006', name: 'Hindi Teacher', email: 'teacher.hindi@sovereign.edu', role: UserRole.TEACHER, department: 'Hindi', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_7', staff_no: 'STF_007', name: 'Music Teacher', email: 'teacher.music@sovereign.edu', role: UserRole.TEACHER, department: 'Music', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_8', staff_no: 'STF_008', name: 'PE Teacher', email: 'teacher.pe@sovereign.edu', role: UserRole.TEACHER, department: 'Physical Education', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_9', staff_no: 'STF_009', name: 'Finance Mgr', email: 'finance@sovereign.edu', role: UserRole.FINANCE_MANAGER, department: 'Accounts', school_id: SCHOOL_ID_1, documents: [{ doc_type: 'PAN', file_ref: 'documents/staff/STF_009/pan.pdf', id_last4: 'F999' }] },
-  { id: 'stf_10', staff_no: 'STF_010', name: 'School Nurse', email: 'nurse@sovereign.edu', role: UserRole.NURSE, department: 'Infirmary', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_11', staff_no: 'STF_011', name: 'Counselor', email: 'counselor@sovereign.edu', role: UserRole.COUNSELOR, department: 'Wellness', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_12', staff_no: 'STF_012', name: 'Security Head', email: 'security@sovereign.edu', role: UserRole.SECURITY_HEAD, department: 'Security', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_13', staff_no: 'STF_013', name: 'Librarian', email: 'librarian@sovereign.edu', role: UserRole.LIBRARIAN, department: 'Library', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_14', staff_no: 'STF_014', name: 'Warden', email: 'warden@sovereign.edu', role: UserRole.WARDEN, department: 'Hostel', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_15', staff_no: 'STF_015', name: 'IT Admin', email: 'it.admin@sovereign.edu', role: UserRole.IT_ADMIN, department: 'IT', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_16', staff_no: 'STF_016', name: 'Receptionist', email: 'reception@sovereign.edu', role: UserRole.RECEPTIONIST, department: 'Front Desk', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_17', staff_no: 'STF_017', name: 'Estate Manager', email: 'estate@sovereign.edu', role: UserRole.ESTATE_MANAGER, department: 'Facilities', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_18', staff_no: 'STF_018', name: 'Inventory Manager', email: 'inventory@sovereign.edu', role: UserRole.INVENTORY_MANAGER, department: 'Stores', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_19', staff_no: 'STF_019', name: 'Fleet Manager', email: 'fleet@sovereign.edu', role: UserRole.FLEET_MANAGER, department: 'Transport', school_id: SCHOOL_ID_1, documents: [] },
-  { id: 'stf_20', staff_no: 'STF_020', name: 'Exam Controller', email: 'exam.cell@sovereign.edu', role: UserRole.EXAM_CELL, department: 'Exams', school_id: SCHOOL_ID_1, documents: [] }
-];
+const CITIES = ['Bhopal', 'Indore', 'Gwalior', 'Jabalpur', 'Ujjain', 'Sagar', 'Dewas', 'Rewa'];
+const STATES = ['Madhya Pradesh', 'Maharashtra', 'Gujarat', 'Rajasthan', 'Delhi', 'Uttar Pradesh'];
+const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
+const CATEGORIES = ['General', 'OBC', 'SC', 'ST', 'EWS'];
+const RELIGIONS = ['Hindu', 'Muslim', 'Christian', 'Sikh', 'Buddhist', 'Jain'];
+const OCCUPATIONS = ['Business', 'Government Service', 'Private Job', 'Doctor', 'Engineer', 'Teacher', 'Farmer', 'Lawyer'];
+const INCOME_BRACKETS = ['Below 2L', '2-5L', '5-10L', '10-20L', 'Above 20L'];
+const QUALIFICATIONS = ['10th', '12th', 'Graduate', 'Post Graduate', 'PhD'];
+const BANK_NAMES = ['State Bank of India', 'HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Punjab National Bank'];
 
-// --- 5. DOCUMENTS (central index for seed test & ZIP manifest simulation) ---
-export const DUMMY_DOCUMENTS = [
-  // Students (a subset - many more exist in student objects above)
-  { owner_type: 'STUDENT', owner_key: '2026-0001', doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0001/aadhaar.pdf', id_last4: '1111' },
-  { owner_type: 'STUDENT', owner_key: '2026-0001', doc_type: 'PHOTO', file_ref: 'documents/students/2026-0001/photo.jpg' },
-  { owner_type: 'STUDENT', owner_key: '2026-0002', doc_type: 'AADHAAR', file_ref: 'documents/students/2026-0002/aadhaar.pdf', id_last4: '2222' },
-  // Parents
-  { owner_type: 'PARENT', owner_key: 'PRN_001', doc_type: 'AADHAAR', file_ref: 'documents/parents/PRN_001/aadhaar.pdf', id_last4: '3210' },
-  { owner_type: 'PARENT', owner_key: 'PRN_001', doc_type: 'DRIVING_LICENSE', file_ref: 'documents/parents/PRN_001/dl.jpg', id_last4: '4321' },
-  // Staff
-  { owner_type: 'STAFF', owner_key: 'STF_001', doc_type: 'AADHAAR', file_ref: 'documents/staff/STF_001/aadhaar.pdf', id_last4: '4001' }
-];
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
-// --- 6. BOOKS (kept modest) ---
-export const DUMMY_BOOKS: Book[] = [
-  { isbn: '978-01', title: 'Concepts of Physics Vol 1', author: 'H.C. Verma', status: 'AVAILABLE' },
-  { isbn: '978-02', title: 'Concepts of Physics Vol 2', author: 'H.C. Verma', status: 'ISSUED', issuedTo: 'std_15' },
-  { isbn: '978-03', title: 'Mathematics Class X', author: 'R.D. Sharma', status: 'AVAILABLE' },
-  { isbn: '978-04', title: 'Science Class X', author: 'Lakhmir Singh', status: 'ISSUED', issuedTo: 'std_1' },
-  { isbn: '978-05', title: 'History of India', author: 'Bipin Chandra', status: 'AVAILABLE' },
-  { isbn: '978-06', title: 'Wings of Fire', author: 'A.P.J. Abdul Kalam', status: 'AVAILABLE' },
-  { isbn: '978-07', title: 'The Discovery of India', author: 'Jawaharlal Nehru', status: 'ISSUED', issuedTo: 'std_17' },
-  { isbn: '978-08', title: 'Train to Pakistan', author: 'Khushwant Singh', status: 'AVAILABLE' },
-  { isbn: '978-09', title: 'God of Small Things', author: 'Arundhati Roy', status: 'AVAILABLE' },
-  { isbn: '978-10', title: 'White Tiger', author: 'Aravind Adiga', status: 'ISSUED', issuedTo: 'std_18' },
-];
+export function generateId(prefix: string, index: number): string {
+  return `${prefix}_${index.toString().padStart(4, '0')}`;
+}
 
-// --- 7. BUSES (Matching Schema Requirements) ---
-export const DUMMY_BUSES = [
-  { 
-    id: 'bus_1', 
-    plateNumber: 'MP-09-0001', 
-    driverName: 'Ramesh Singh', 
-    capacity: 40, 
-    routeId: 'R-01', 
-    insuranceExpiry: '2026-01-01T00:00:00Z', 
-    school_id: SCHOOL_ID_1 
+export function generateStudentName(index: number): { name: string; gender: string } {
+  const isMale = index % 2 === 0;
+  const firstName = isMale
+    ? FIRST_NAMES_MALE[index % FIRST_NAMES_MALE.length]
+    : FIRST_NAMES_FEMALE[index % FIRST_NAMES_FEMALE.length];
+  const lastName = LAST_NAMES[(index * 7) % LAST_NAMES.length];
+  return {
+    name: `${firstName} ${lastName}`,
+    gender: isMale ? 'Male' : 'Female'
+  };
+}
+
+export function generateStaffName(index: number, isMale: boolean = true): string {
+  const firstName = isMale
+    ? FIRST_NAMES_MALE[index % FIRST_NAMES_MALE.length]
+    : FIRST_NAMES_FEMALE[index % FIRST_NAMES_FEMALE.length];
+  const lastName = LAST_NAMES[(index * 3) % LAST_NAMES.length];
+  return `${firstName} ${lastName}`;
+}
+
+export function generateEmail(name: string, domain: string): string {
+  const sanitized = name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z.]/g, '');
+  return `${sanitized}@${domain}`;
+}
+
+export function generateAdmissionNo(year: number, index: number): string {
+  return `${year}-${index.toString().padStart(4, '0')}`;
+}
+
+export function generateEmployeeId(index: number): string {
+  return `EMP${index.toString().padStart(4, '0')}`;
+}
+
+export function generatePhone(index: number): string {
+  const base = 9876500000 + (index * 17) % 100000;
+  return `+91${base}`;
+}
+
+export function generateMaskedAadhaar(index: number): string {
+  const last4 = ((index * 1234) % 10000).toString().padStart(4, '0');
+  return `XXXX-XXXX-${last4}`;
+}
+
+export function generateMaskedPAN(index: number): string {
+  const digits = ((index * 5678) % 10000).toString().padStart(4, '0');
+  return `XXXXX${digits}X`;
+}
+
+export function generateMaskedBankAccount(index: number): string {
+  const last4 = ((index * 9012) % 10000).toString().padStart(4, '0');
+  return `XXXXXXXXX${last4}`;
+}
+
+export function generatePincode(index: number): string {
+  return `462${(index % 100).toString().padStart(3, '0')}`;
+}
+
+export function generateAddress(index: number): { line1: string; line2: string; city: string; state: string; pincode: string } {
+  return {
+    line1: `${100 + index}, Block ${String.fromCharCode(65 + (index % 26))}`,
+    line2: `Sector ${(index % 50) + 1}`,
+    city: CITIES[index % CITIES.length],
+    state: STATES[index % STATES.length],
+    pincode: generatePincode(index)
+  };
+}
+
+export function generateDOB(baseYear: number, index: number): Date {
+  const year = baseYear - (index % 3);
+  const month = index % 12;
+  const day = (index % 28) + 1;
+  return new Date(year, month, day);
+}
+
+export function spreadTimestamp(baseDate: Date, index: number, totalCount: number): Date {
+  const daysSpread = 180; // Spread across 6 months
+  const offset = Math.floor((index / totalCount) * daysSpread);
+  const result = new Date(baseDate);
+  result.setDate(result.getDate() + offset);
+  return result;
+}
+
+// ============================================================================
+// GRADE & SECTION HELPERS
+// ============================================================================
+
+const GRADES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+const SECTIONS: Section[] = [Section.A, Section.B, Section.C, Section.D];
+
+export function getGradeIndex(grade: string): number {
+  return GRADES.indexOf(grade);
+}
+
+export function getSectionIndex(section: Section): number {
+  return SECTIONS.indexOf(section);
+}
+
+export function calculateBaseYear(grade: string): number {
+  const gradeNum = parseInt(grade);
+  // Students in grade 1 are ~6 years old, grade 12 are ~17 years old
+  // For 2025 academic year
+  return 2019 - gradeNum;
+}
+
+// ============================================================================
+// PART 2: ACADEMIC STRUCTURE
+// ============================================================================
+
+// --- Academic Years ---
+export interface DummyAcademicYear {
+  id: string;
+  school_id: string;
+  name: string;
+  start_date: Date;
+  end_date: Date;
+  is_current: boolean;
+}
+
+export const DUMMY_ACADEMIC_YEARS: DummyAcademicYear[] = [
+  {
+    id: ACADEMIC_YEAR_2024_ID,
+    school_id: SCHOOL_ID,
+    name: '2024-2025',
+    start_date: new Date('2024-04-01'),
+    end_date: new Date('2025-03-31'),
+    is_current: false
   },
-  { 
-    id: 'bus_2', 
-    plateNumber: 'MP-09-0002', 
-    driverName: 'Suresh Kumar', 
-    capacity: 35, 
-    routeId: 'R-02', 
-    insuranceExpiry: '2026-02-01T00:00:00Z', 
-    school_id: SCHOOL_ID_1 
-  },
-  { 
-    id: 'bus_3', 
-    plateNumber: 'MP-09-0003', 
-    driverName: 'Mahesh Yadav', 
-    capacity: 50, 
-    routeId: 'R-03', 
-    insuranceExpiry: '2026-03-01T00:00:00Z', 
-    school_id: SCHOOL_ID_1 
+  {
+    id: ACADEMIC_YEAR_2025_ID,
+    school_id: SCHOOL_ID,
+    name: '2025-2026',
+    start_date: new Date('2025-04-01'),
+    end_date: new Date('2026-03-31'),
+    is_current: true
   }
 ];
 
-// --- 8. HOSTEL ---
-export const DUMMY_HOSTEL: HostelRoom[] = [
-  { roomNumber: '101', capacity: 4, occupied: 3, gender: 'BOYS', students: ['std_1', 'std_3', 'std_5'] },
-  { roomNumber: '102', capacity: 4, occupied: 4, gender: 'BOYS', students: ['std_7', 'std_9', 'std_11', 'std_13'] },
-  { roomNumber: '201', capacity: 4, occupied: 2, gender: 'GIRLS', students: ['std_2', 'std_4'] },
+// --- Subjects ---
+export interface DummySubject {
+  id: string;
+  school_id: string;
+  code: string;
+  name: string;
+  is_optional: boolean;
+}
+
+export const DUMMY_SUBJECTS: DummySubject[] = [
+  { id: 'sub_math', school_id: SCHOOL_ID, code: 'MATH', name: 'Mathematics', is_optional: false },
+  { id: 'sub_eng', school_id: SCHOOL_ID, code: 'ENG', name: 'English', is_optional: false },
+  { id: 'sub_hin', school_id: SCHOOL_ID, code: 'HIN', name: 'Hindi', is_optional: false },
+  { id: 'sub_sci', school_id: SCHOOL_ID, code: 'SCI', name: 'General Science', is_optional: false },
+  { id: 'sub_sst', school_id: SCHOOL_ID, code: 'SST', name: 'Social Studies', is_optional: false },
+  { id: 'sub_phy', school_id: SCHOOL_ID, code: 'PHY', name: 'Physics', is_optional: false },
+  { id: 'sub_chem', school_id: SCHOOL_ID, code: 'CHEM', name: 'Chemistry', is_optional: false },
+  { id: 'sub_bio', school_id: SCHOOL_ID, code: 'BIO', name: 'Biology', is_optional: false },
+  { id: 'sub_hist', school_id: SCHOOL_ID, code: 'HIST', name: 'History', is_optional: false },
+  { id: 'sub_geo', school_id: SCHOOL_ID, code: 'GEO', name: 'Geography', is_optional: false },
+  { id: 'sub_eco', school_id: SCHOOL_ID, code: 'ECO', name: 'Economics', is_optional: true },
+  { id: 'sub_acc', school_id: SCHOOL_ID, code: 'ACC', name: 'Accountancy', is_optional: true },
+  { id: 'sub_cs', school_id: SCHOOL_ID, code: 'CS', name: 'Computer Science', is_optional: true },
+  { id: 'sub_pe', school_id: SCHOOL_ID, code: 'PE', name: 'Physical Education', is_optional: true },
+  { id: 'sub_art', school_id: SCHOOL_ID, code: 'ART', name: 'Art & Craft', is_optional: true },
 ];
 
-// --- 9. INVOICES (Matching Schema Naming) ---
-export const DUMMY_INVOICES = [
-  { 
-    id: 'INV-001', 
-    student_id: 'std_1', 
-    base_amount: 5000, 
-    discount_amount: 0, 
-    description: 'Term 1 Fees', 
-    due_date: '2026-04-10T00:00:00Z', 
-    status: 'PAID', 
-    utr: 'UPI123456789012', 
-    school_id: SCHOOL_ID_1 
+// --- Classes (48 total: Grades 1-12 x Sections A-D) ---
+export interface DummyClass {
+  id: string;
+  school_id: string;
+  academic_year_id: string;
+  grade: string;
+  section: Section;
+  capacity: number;
+  class_teacher_id: string | null;
+}
+
+function generateClasses(): DummyClass[] {
+  const classes: DummyClass[] = [];
+  let classIndex = 0;
+
+  for (const grade of GRADES) {
+    for (const section of SECTIONS) {
+      classes.push({
+        id: `cls_${grade}_${section}`,
+        school_id: SCHOOL_ID,
+        academic_year_id: ACADEMIC_YEAR_2025_ID,
+        grade,
+        section,
+        capacity: 40,
+        class_teacher_id: `usr_staff_${(classIndex % 48) + 1}`.padStart(13, '0').replace('usr_staff_', 'usr_staff_') // Will link later
+      });
+      classIndex++;
+    }
+  }
+  return classes;
+}
+
+export const DUMMY_CLASSES: DummyClass[] = generateClasses();
+
+// --- Class-Subject Links ---
+export interface DummyClassSubject {
+  id: string;
+  school_id: string;
+  class_id: string;
+  subject_id: string;
+}
+
+function generateClassSubjects(): DummyClassSubject[] {
+  const links: DummyClassSubject[] = [];
+  let linkIndex = 0;
+
+  // Primary (1-5): MATH, ENG, HIN, SCI, SST, PE, ART
+  const primarySubjects = ['sub_math', 'sub_eng', 'sub_hin', 'sub_sci', 'sub_sst', 'sub_pe', 'sub_art'];
+  // Middle (6-8): Add GEO, HIST, CS
+  const middleSubjects = ['sub_math', 'sub_eng', 'sub_hin', 'sub_sci', 'sub_sst', 'sub_geo', 'sub_hist', 'sub_cs', 'sub_pe'];
+  // Secondary (9-10): PHY, CHEM, BIO, MATH, ENG, HIN, SST, CS, PE
+  const secondarySubjects = ['sub_math', 'sub_eng', 'sub_hin', 'sub_phy', 'sub_chem', 'sub_bio', 'sub_sst', 'sub_cs', 'sub_pe'];
+  // Senior (11-12): PHY, CHEM, BIO/ACC, MATH, ENG, ECO, CS, PE
+  const seniorSubjects = ['sub_math', 'sub_eng', 'sub_phy', 'sub_chem', 'sub_bio', 'sub_eco', 'sub_acc', 'sub_cs', 'sub_pe'];
+
+  for (const cls of DUMMY_CLASSES) {
+    const gradeNum = parseInt(cls.grade);
+    let subjects: string[];
+
+    if (gradeNum <= 5) subjects = primarySubjects;
+    else if (gradeNum <= 8) subjects = middleSubjects;
+    else if (gradeNum <= 10) subjects = secondarySubjects;
+    else subjects = seniorSubjects;
+
+    for (const subjectId of subjects) {
+      links.push({
+        id: generateId('csub', linkIndex++),
+        school_id: SCHOOL_ID,
+        class_id: cls.id,
+        subject_id: subjectId
+      });
+    }
+  }
+  return links;
+}
+
+export const DUMMY_CLASS_SUBJECTS: DummyClassSubject[] = generateClassSubjects();
+
+// ============================================================================
+// PART 2: STAFF DATA (~100 staff)
+// ============================================================================
+
+// --- Staff User Accounts ---
+export interface DummyStaffUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  password: string; // Plaintext, hashed by seed.ts
+  role: UserRole;
+  department: string | null;
+  school_id: string;
+}
+
+// --- Staff Profiles ---
+export interface DummyStaffProfile {
+  id: string;
+  user_id: string;
+  school_id: string;
+  employee_id: string;
+  designation: string;
+  department: string | null;
+  employment_type: string;
+  joining_date: Date;
+  qualification: string;
+  experience_years: number;
+  date_of_birth: Date;
+  gender: string;
+  blood_group: string;
+  address_line1: string;
+  city: string;
+  state: string;
+  pincode: string;
+  aadhaar_number: string;
+  pan_number: string;
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  status: StaffStatus;
+}
+
+// --- Staff Financials ---
+export interface DummyStaffFinancial {
+  id: string;
+  staff_profile_id: string;
+  school_id: string;
+  salary_grade: string;
+  basic_salary: number;
+  hra: number;
+  allowances: number;
+  deductions: number;
+  bank_name: string;
+  bank_account_no: string;
+  ifsc_code: string;
+}
+
+// Staff role distribution
+const STAFF_ROLES: { role: UserRole; count: number; department: string; designation: string; salaryGrade: string; baseSalary: number }[] = [
+  { role: UserRole.SUPER_ADMIN, count: 1, department: 'IT', designation: 'System Administrator', salaryGrade: 'S', baseSalary: 100000 },
+  { role: UserRole.SCHOOL_ADMIN, count: 2, department: 'Administration', designation: 'School Administrator', salaryGrade: 'A', baseSalary: 80000 },
+  { role: UserRole.PRINCIPAL, count: 1, department: 'Administration', designation: 'Principal', salaryGrade: 'A+', baseSalary: 120000 },
+  { role: UserRole.VICE_PRINCIPAL, count: 1, department: 'Administration', designation: 'Vice Principal', salaryGrade: 'A', baseSalary: 90000 },
+  { role: UserRole.HOD, count: 6, department: 'Academics', designation: 'Head of Department', salaryGrade: 'B+', baseSalary: 65000 },
+  { role: UserRole.TEACHER, count: 60, department: 'Academics', designation: 'Teacher', salaryGrade: 'B', baseSalary: 45000 },
+  { role: UserRole.ACCOUNTANT, count: 2, department: 'Finance', designation: 'Accountant', salaryGrade: 'C', baseSalary: 40000 },
+  { role: UserRole.FINANCE_MANAGER, count: 1, department: 'Finance', designation: 'Finance Manager', salaryGrade: 'B', baseSalary: 55000 },
+  { role: UserRole.LIBRARIAN, count: 2, department: 'Library', designation: 'Librarian', salaryGrade: 'C', baseSalary: 35000 },
+  { role: UserRole.NURSE, count: 2, department: 'Medical', designation: 'School Nurse', salaryGrade: 'C', baseSalary: 32000 },
+  { role: UserRole.COUNSELOR, count: 2, department: 'Wellness', designation: 'Counselor', salaryGrade: 'B', baseSalary: 45000 },
+  { role: UserRole.RECEPTIONIST, count: 2, department: 'Front Desk', designation: 'Receptionist', salaryGrade: 'D', baseSalary: 25000 },
+  { role: UserRole.SECURITY_HEAD, count: 1, department: 'Security', designation: 'Security Head', salaryGrade: 'C', baseSalary: 35000 },
+  { role: UserRole.IT_ADMIN, count: 2, department: 'IT', designation: 'IT Administrator', salaryGrade: 'B', baseSalary: 50000 },
+  { role: UserRole.WARDEN, count: 2, department: 'Hostel', designation: 'Hostel Warden', salaryGrade: 'C', baseSalary: 38000 },
+  { role: UserRole.FLEET_MANAGER, count: 1, department: 'Transport', designation: 'Fleet Manager', salaryGrade: 'C', baseSalary: 40000 },
+  { role: UserRole.INVENTORY_MANAGER, count: 1, department: 'Stores', designation: 'Inventory Manager', salaryGrade: 'C', baseSalary: 38000 },
+  { role: UserRole.ESTATE_MANAGER, count: 1, department: 'Facilities', designation: 'Estate Manager', salaryGrade: 'B', baseSalary: 50000 },
+  { role: UserRole.EXAM_CELL, count: 2, department: 'Exams', designation: 'Exam Controller', salaryGrade: 'B', baseSalary: 45000 },
+  { role: UserRole.ADMISSIONS_OFFICER, count: 2, department: 'Admissions', designation: 'Admissions Officer', salaryGrade: 'C', baseSalary: 38000 },
+];
+
+function generateStaffData(): {
+  users: DummyStaffUser[];
+  profiles: DummyStaffProfile[];
+  financials: DummyStaffFinancial[];
+} {
+  const users: DummyStaffUser[] = [];
+  const profiles: DummyStaffProfile[] = [];
+  const financials: DummyStaffFinancial[] = [];
+
+  let staffIndex = 0;
+  const baseDate = new Date('2025-04-01');
+
+  // Known admin accounts first
+  const knownAccounts = [
+    { email: 'super@sovereign.edu', password: 'SuperAdmin@123', role: UserRole.SUPER_ADMIN, name: 'Super Administrator' },
+    { email: 'admin@sovereign.edu', password: 'Admin@123', role: UserRole.SCHOOL_ADMIN, name: 'School Administrator' },
+    { email: 'finance@sovereign.edu', password: 'Finance@123', role: UserRole.FINANCE_MANAGER, name: 'Finance Manager' },
+    { email: 'accountant@sovereign.edu', password: 'Acc@123', role: UserRole.ACCOUNTANT, name: 'Head Accountant' },
+  ];
+
+  for (const account of knownAccounts) {
+    staffIndex++;
+    const userId = `usr_staff_${staffIndex.toString().padStart(4, '0')}`;
+    const profileId = `sp_${staffIndex.toString().padStart(4, '0')}`;
+    const isMale = staffIndex % 2 === 0;
+    const addr = generateAddress(staffIndex);
+    const roleInfo = STAFF_ROLES.find(r => r.role === account.role) || STAFF_ROLES[0];
+
+    users.push({
+      id: userId,
+      name: account.name,
+      email: account.email,
+      phone: generatePhone(staffIndex + 1000),
+      password: account.password,
+      role: account.role,
+      department: roleInfo.department,
+      school_id: SCHOOL_ID
+    });
+
+    profiles.push({
+      id: profileId,
+      user_id: userId,
+      school_id: SCHOOL_ID,
+      employee_id: generateEmployeeId(staffIndex),
+      designation: roleInfo.designation,
+      department: roleInfo.department,
+      employment_type: 'Permanent',
+      joining_date: new Date('2020-04-01'),
+      qualification: 'Post Graduate',
+      experience_years: 10 + (staffIndex % 10),
+      date_of_birth: new Date(1975 + (staffIndex % 15), staffIndex % 12, (staffIndex % 28) + 1),
+      gender: isMale ? 'Male' : 'Female',
+      blood_group: BLOOD_GROUPS[staffIndex % BLOOD_GROUPS.length],
+      address_line1: addr.line1,
+      city: addr.city,
+      state: addr.state,
+      pincode: addr.pincode,
+      aadhaar_number: generateMaskedAadhaar(staffIndex + 5000),
+      pan_number: generateMaskedPAN(staffIndex + 5000),
+      emergency_contact_name: `Emergency Contact ${staffIndex}`,
+      emergency_contact_phone: generatePhone(staffIndex + 2000),
+      status: StaffStatus.ACTIVE
+    });
+
+    financials.push({
+      id: `sf_${staffIndex.toString().padStart(4, '0')}`,
+      staff_profile_id: profileId,
+      school_id: SCHOOL_ID,
+      salary_grade: roleInfo.salaryGrade,
+      basic_salary: roleInfo.baseSalary,
+      hra: roleInfo.baseSalary * 0.2,
+      allowances: roleInfo.baseSalary * 0.1,
+      deductions: roleInfo.baseSalary * 0.12,
+      bank_name: BANK_NAMES[staffIndex % BANK_NAMES.length],
+      bank_account_no: generateMaskedBankAccount(staffIndex + 5000),
+      ifsc_code: 'SBIN0001234'
+    });
+  }
+
+  // Generate remaining staff based on role distribution
+  for (const roleConfig of STAFF_ROLES) {
+    // Skip already created known accounts
+    const alreadyCreated = knownAccounts.filter(a => a.role === roleConfig.role).length;
+    const toCreate = Math.max(0, roleConfig.count - alreadyCreated);
+
+    for (let i = 0; i < toCreate; i++) {
+      staffIndex++;
+      const userId = `usr_staff_${staffIndex.toString().padStart(4, '0')}`;
+      const profileId = `sp_${staffIndex.toString().padStart(4, '0')}`;
+      const isMale = staffIndex % 3 !== 0; // 2/3 male for teaching staff typical ratio
+      const name = generateStaffName(staffIndex, isMale);
+      const addr = generateAddress(staffIndex);
+
+      users.push({
+        id: userId,
+        name,
+        email: generateEmail(name, 'sovereign.edu'),
+        phone: generatePhone(staffIndex + 1000),
+        password: 'password123',
+        role: roleConfig.role,
+        department: roleConfig.department,
+        school_id: SCHOOL_ID
+      });
+
+      profiles.push({
+        id: profileId,
+        user_id: userId,
+        school_id: SCHOOL_ID,
+        employee_id: generateEmployeeId(staffIndex),
+        designation: roleConfig.designation,
+        department: roleConfig.department,
+        employment_type: i < toCreate - 2 ? 'Permanent' : 'Contract',
+        joining_date: spreadTimestamp(new Date('2018-04-01'), staffIndex, 100),
+        qualification: QUALIFICATIONS[2 + (staffIndex % 3)], // Graduate or higher
+        experience_years: 2 + (staffIndex % 15),
+        date_of_birth: new Date(1970 + (staffIndex % 25), staffIndex % 12, (staffIndex % 28) + 1),
+        gender: isMale ? 'Male' : 'Female',
+        blood_group: BLOOD_GROUPS[staffIndex % BLOOD_GROUPS.length],
+        address_line1: addr.line1,
+        city: addr.city,
+        state: addr.state,
+        pincode: addr.pincode,
+        aadhaar_number: generateMaskedAadhaar(staffIndex + 5000),
+        pan_number: generateMaskedPAN(staffIndex + 5000),
+        emergency_contact_name: `EC for ${name}`,
+        emergency_contact_phone: generatePhone(staffIndex + 2000),
+        status: staffIndex % 50 === 0 ? StaffStatus.ON_LEAVE : StaffStatus.ACTIVE
+      });
+
+      financials.push({
+        id: `sf_${staffIndex.toString().padStart(4, '0')}`,
+        staff_profile_id: profileId,
+        school_id: SCHOOL_ID,
+        salary_grade: roleConfig.salaryGrade,
+        basic_salary: roleConfig.baseSalary + (staffIndex % 5) * 1000,
+        hra: roleConfig.baseSalary * 0.2,
+        allowances: roleConfig.baseSalary * 0.1,
+        deductions: roleConfig.baseSalary * 0.12,
+        bank_name: BANK_NAMES[staffIndex % BANK_NAMES.length],
+        bank_account_no: generateMaskedBankAccount(staffIndex + 5000),
+        ifsc_code: `SBIN000${(1000 + staffIndex % 100).toString()}`
+      });
+    }
+  }
+
+  return { users, profiles, financials };
+}
+
+const staffData = generateStaffData();
+export const DUMMY_STAFF_USERS: DummyStaffUser[] = staffData.users;
+export const DUMMY_STAFF_PROFILES: DummyStaffProfile[] = staffData.profiles;
+export const DUMMY_STAFF_FINANCIALS: DummyStaffFinancial[] = staffData.financials;
+
+// Update class teacher IDs now that staff is generated
+DUMMY_CLASSES.forEach((cls, index) => {
+  // First 48 teachers are class teachers
+  const teacherIndex = (index % Math.min(48, DUMMY_STAFF_USERS.filter(u => u.role === UserRole.TEACHER).length));
+  const teachers = DUMMY_STAFF_USERS.filter(u => u.role === UserRole.TEACHER);
+  if (teachers[teacherIndex]) {
+    cls.class_teacher_id = teachers[teacherIndex].id;
+  }
+});
+
+// --- Staff Subject & Class Assignments ---
+export interface DummyStaffSubject {
+  id: string;
+  school_id: string;
+  staff_profile_id: string;
+  subject_id: string;
+  is_primary: boolean;
+}
+
+export interface DummyStaffClass {
+  id: string;
+  school_id: string;
+  staff_profile_id: string;
+  class_id: string;
+  role: string;
+}
+
+function generateStaffAssignments(): { staffSubjects: DummyStaffSubject[]; staffClasses: DummyStaffClass[] } {
+  const staffSubjects: DummyStaffSubject[] = [];
+  const staffClasses: DummyStaffClass[] = [];
+
+  const teachers = DUMMY_STAFF_PROFILES.filter(p => {
+    const user = DUMMY_STAFF_USERS.find(u => u.id === p.user_id);
+    return user && (user.role === UserRole.TEACHER || user.role === UserRole.HOD);
+  });
+
+  let ssIndex = 0;
+  let scIndex = 0;
+
+  teachers.forEach((teacher, tIndex) => {
+    // Assign 1-2 subjects per teacher
+    const subjectCount = 1 + (tIndex % 2);
+    for (let s = 0; s < subjectCount; s++) {
+      const subjectIndex = (tIndex + s) % DUMMY_SUBJECTS.length;
+      staffSubjects.push({
+        id: generateId('ss', ssIndex++),
+        school_id: SCHOOL_ID,
+        staff_profile_id: teacher.id,
+        subject_id: DUMMY_SUBJECTS[subjectIndex].id,
+        is_primary: s === 0
+      });
+    }
+
+    // Assign 2-4 classes per teacher
+    const classCount = 2 + (tIndex % 3);
+    for (let c = 0; c < classCount; c++) {
+      const classIndex = (tIndex * 3 + c) % DUMMY_CLASSES.length;
+      staffClasses.push({
+        id: generateId('sc', scIndex++),
+        school_id: SCHOOL_ID,
+        staff_profile_id: teacher.id,
+        class_id: DUMMY_CLASSES[classIndex].id,
+        role: c === 0 && tIndex < 48 ? 'CLASS_TEACHER' : 'TEACHER'
+      });
+    }
+  });
+
+  return { staffSubjects, staffClasses };
+}
+
+const staffAssignments = generateStaffAssignments();
+export const DUMMY_STAFF_SUBJECTS: DummyStaffSubject[] = staffAssignments.staffSubjects;
+export const DUMMY_STAFF_CLASSES: DummyStaffClass[] = staffAssignments.staffClasses;
+
+// ============================================================================
+// PART 3: STUDENTS & PARENTS
+// ============================================================================
+
+// --- Student User Accounts ---
+export interface DummyStudentUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  password: string; // Plaintext, hashed by seed.ts
+  role: UserRole;
+  school_id: string;
+}
+
+// --- Student Profiles ---
+export interface DummyStudent {
+  id: string;
+  admission_no: string;
+  name: string;
+  email: string;
+  school_id: string;
+  user_id: string;
+  // Demographics
+  gender: string;
+  date_of_birth: Date;
+  father_name: string;
+  mother_name: string;
+  guardian_name: string | null;
+  blood_group: string;
+  nationality: string;
+  religion: string;
+  category: string;
+  caste: string | null;
+  mother_tongue: string;
+  // Contact
+  phone: string;
+  alternate_phone: string | null;
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  // Address
+  address_line1: string;
+  address_line2: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  // Identity
+  aadhaar_number: string;
+  birth_certificate_no: string | null;
+  // Previous Education
+  previous_school: string | null;
+  transfer_certificate_no: string | null;
+  // Status
+  status: StudentStatus;
+  admission_date: Date;
+  leaving_date: Date | null;
+  leaving_reason: string | null;
+}
+
+function generateStudentsData(): { users: DummyStudentUser[]; students: DummyStudent[] } {
+  const users: DummyStudentUser[] = [];
+  const students: DummyStudent[] = [];
+
+  let studentIndex = 0;
+  const academicYearStart = new Date('2025-04-01');
+
+  for (const grade of GRADES) {
+    const gradeNum = parseInt(grade);
+    // Calculate approximate birth year for this grade
+    // Grade 1 = ~6 years old in 2025, Grade 12 = ~17 years old
+    const baseAge = 5 + gradeNum;
+    const birthYear = 2025 - baseAge;
+
+    for (const section of SECTIONS) {
+      const sectionLetter = Section[section]; // 'A', 'B', 'C', 'D'
+
+      for (let roll = 1; roll <= 40; roll++) {
+        studentIndex++;
+
+        // Generate IDs
+        const padIndex = studentIndex.toString().padStart(4, '0');
+        const userId = `usr_std_${padIndex}`;
+        const studentId = `std_${padIndex}`;
+        const admissionNo = generateAdmissionNo(2025, studentIndex);
+
+        // Generate name and gender
+        const { name, gender } = generateStudentName(studentIndex);
+        const lastName = name.split(' ')[1] || 'Kumar';
+
+        // Generate email
+        const email = `student.${grade}.${sectionLetter.toLowerCase()}.${roll}@sovereign.edu`;
+
+        // Generate demographics
+        const birthMonth = (studentIndex % 12);
+        const birthDay = (studentIndex % 28) + 1;
+        const dob = new Date(birthYear - (studentIndex % 2), birthMonth, birthDay);
+
+        const addr = generateAddress(studentIndex);
+
+        // Determine status - most are ACTIVE, some edge cases
+        let status: StudentStatus = StudentStatus.ACTIVE;
+        if (studentIndex % 100 === 0) status = StudentStatus.ALUMNI;
+        else if (studentIndex % 75 === 0) status = StudentStatus.TRANSFERRED;
+        else if (studentIndex % 150 === 0) status = StudentStatus.INACTIVE;
+
+        // Create User
+        users.push({
+          id: userId,
+          name,
+          email,
+          phone: generatePhone(studentIndex + 3000),
+          password: 'password123',
+          role: UserRole.STUDENT,
+          school_id: SCHOOL_ID
+        });
+
+        // Create Student Profile
+        students.push({
+          id: studentId,
+          admission_no: admissionNo,
+          name,
+          email,
+          school_id: SCHOOL_ID,
+          user_id: userId,
+          // Demographics
+          gender,
+          date_of_birth: dob,
+          father_name: `Mr. ${lastName}`,
+          mother_name: `Mrs. ${lastName}`,
+          guardian_name: studentIndex % 20 === 0 ? `Guardian of ${name}` : null,
+          blood_group: BLOOD_GROUPS[studentIndex % BLOOD_GROUPS.length],
+          nationality: 'Indian',
+          religion: RELIGIONS[studentIndex % RELIGIONS.length],
+          category: CATEGORIES[studentIndex % CATEGORIES.length],
+          caste: null,
+          mother_tongue: studentIndex % 5 === 0 ? 'Marathi' : 'Hindi',
+          // Contact
+          phone: generatePhone(studentIndex + 3000),
+          alternate_phone: studentIndex % 3 === 0 ? generatePhone(studentIndex + 4000) : null,
+          emergency_contact_name: `EC for ${name}`,
+          emergency_contact_phone: generatePhone(studentIndex + 5000),
+          // Address
+          address_line1: addr.line1,
+          address_line2: addr.line2,
+          city: addr.city,
+          state: addr.state,
+          pincode: addr.pincode,
+          // Identity
+          aadhaar_number: generateMaskedAadhaar(studentIndex),
+          birth_certificate_no: studentIndex % 10 === 0 ? `BC${studentIndex.toString().padStart(8, '0')}` : null,
+          // Previous Education
+          previous_school: studentIndex % 15 === 0 ? 'Previous School Name' : null,
+          transfer_certificate_no: studentIndex % 15 === 0 ? `TC${studentIndex.toString().padStart(6, '0')}` : null,
+          // Status
+          status,
+          admission_date: spreadTimestamp(new Date('2024-04-01'), studentIndex, 1920),
+          leaving_date: status === StudentStatus.ALUMNI || status === StudentStatus.TRANSFERRED
+            ? new Date('2025-03-31') : null,
+          leaving_reason: status === StudentStatus.TRANSFERRED ? 'Family relocation' : null
+        });
+      }
+    }
+  }
+
+  return { users, students };
+}
+
+const studentsData = generateStudentsData();
+export const DUMMY_STUDENT_USERS: DummyStudentUser[] = studentsData.users;
+export const DUMMY_STUDENTS: DummyStudent[] = studentsData.students;
+
+// ============================================================================
+// PART 3.2: STUDENT ENROLLMENTS
+// ============================================================================
+
+export interface DummyEnrollment {
+  id: string;
+  school_id: string;
+  student_id: string;
+  class_id: string;
+  academic_year_id: string;
+  roll_number: number;
+  status: EnrollmentStatus;
+  promoted_from_id: string | null;
+}
+
+function generateEnrollments(): DummyEnrollment[] {
+  const enrollments: DummyEnrollment[] = [];
+
+  let studentIndex = 0;
+
+  for (const grade of GRADES) {
+    for (const section of SECTIONS) {
+      const classId = `cls_${grade}_${section}`;
+
+      for (let roll = 1; roll <= 40; roll++) {
+        studentIndex++;
+        const padIndex = studentIndex.toString().padStart(4, '0');
+        const studentId = `std_${padIndex}`;
+
+        // Determine enrollment status based on student status
+        const student = DUMMY_STUDENTS.find(s => s.id === studentId);
+        let enrollmentStatus: EnrollmentStatus = EnrollmentStatus.ACTIVE;
+
+        if (student) {
+          if (student.status === StudentStatus.ALUMNI) {
+            enrollmentStatus = EnrollmentStatus.COMPLETED;
+          } else if (student.status === StudentStatus.TRANSFERRED) {
+            enrollmentStatus = EnrollmentStatus.TRANSFERRED;
+          }
+        }
+
+        // For some students in higher grades, create a promotion chain reference
+        let promotedFromId: string | null = null;
+        const gradeNum = parseInt(grade);
+        if (gradeNum > 1 && studentIndex % 10 === 0) {
+          // This student was promoted from previous grade
+          promotedFromId = `enr_prev_${padIndex}`;
+        }
+
+        enrollments.push({
+          id: `enr_${ACADEMIC_YEAR_2025_ID}_${padIndex}`,
+          school_id: SCHOOL_ID,
+          student_id: studentId,
+          class_id: classId,
+          academic_year_id: ACADEMIC_YEAR_2025_ID,
+          roll_number: roll,
+          status: enrollmentStatus,
+          promoted_from_id: promotedFromId
+        });
+      }
+    }
+  }
+
+  return enrollments;
+}
+
+export const DUMMY_ENROLLMENTS: DummyEnrollment[] = generateEnrollments();
+
+// ============================================================================
+// PART 4.1: PARENTS
+// ============================================================================
+
+// --- Parent User Accounts ---
+export interface DummyParentUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  role: UserRole;
+  school_id: string;
+}
+
+// --- Parent Profiles ---
+export interface DummyParentProfile {
+  id: string;
+  user_id: string;
+  school_id: string;
+  date_of_birth: Date | null;
+  gender: string;
+  occupation: string;
+  organization: string | null;
+  annual_income: string;
+  qualification: string;
+  alternate_phone: string | null;
+  office_phone: string | null;
+  address_line1: string;
+  address_line2: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  aadhaar_number: string;
+  is_emergency_contact: boolean;
+}
+
+// --- Parent-Student Links ---
+export interface DummyParentStudentLink {
+  parent_id: string;
+  student_id: string;
+  school_id: string;
+  relation: string;
+  is_primary: boolean;
+  can_pickup: boolean;
+  has_custody: boolean;
+}
+
+function generateParentsData(): {
+  users: DummyParentUser[];
+  profiles: DummyParentProfile[];
+  links: DummyParentStudentLink[];
+} {
+  const users: DummyParentUser[] = [];
+  const profiles: DummyParentProfile[] = [];
+  const links: DummyParentStudentLink[] = [];
+
+  // Generate ~960 parents (1 per 2 students)
+  const numParents = Math.ceil(DUMMY_STUDENTS.length / 2);
+
+  for (let i = 0; i < numParents; i++) {
+    const parentIndex = i + 1;
+    const padIndex = parentIndex.toString().padStart(4, '0');
+    const userId = `usr_parent_${padIndex}`;
+    const profileId = `pp_${padIndex}`;
+
+    // Alternate between fathers and mothers
+    const isFather = i % 2 === 0;
+    const gender = isFather ? 'Male' : 'Female';
+    const prefix = isFather ? 'Mr.' : 'Mrs.';
+
+    // Get student info to derive parent last name
+    const studentIndex = i * 2;
+    const relatedStudent = DUMMY_STUDENTS[studentIndex];
+    const lastName = relatedStudent ? relatedStudent.name.split(' ')[1] || 'Kumar' : 'Kumar';
+
+    const firstName = isFather
+      ? FIRST_NAMES_MALE[i % FIRST_NAMES_MALE.length]
+      : FIRST_NAMES_FEMALE[i % FIRST_NAMES_FEMALE.length];
+    const name = `${prefix} ${firstName} ${lastName}`;
+
+    const email = generateEmail(`${firstName} ${lastName}`, 'parent.sovereign.edu');
+    const addr = generateAddress(parentIndex + 2000);
+
+    users.push({
+      id: userId,
+      name,
+      email,
+      phone: generatePhone(parentIndex + 6000),
+      password: 'password123',
+      role: UserRole.PARENT,
+      school_id: SCHOOL_ID
+    });
+
+    profiles.push({
+      id: profileId,
+      user_id: userId,
+      school_id: SCHOOL_ID,
+      date_of_birth: new Date(1970 + (parentIndex % 20), parentIndex % 12, (parentIndex % 28) + 1),
+      gender,
+      occupation: OCCUPATIONS[parentIndex % OCCUPATIONS.length],
+      organization: parentIndex % 3 === 0 ? `Company ${parentIndex}` : null,
+      annual_income: INCOME_BRACKETS[parentIndex % INCOME_BRACKETS.length],
+      qualification: QUALIFICATIONS[parentIndex % QUALIFICATIONS.length],
+      alternate_phone: parentIndex % 4 === 0 ? generatePhone(parentIndex + 7000) : null,
+      office_phone: parentIndex % 5 === 0 ? generatePhone(parentIndex + 8000) : null,
+      address_line1: addr.line1,
+      address_line2: addr.line2,
+      city: addr.city,
+      state: addr.state,
+      pincode: addr.pincode,
+      aadhaar_number: generateMaskedAadhaar(parentIndex + 3000),
+      is_emergency_contact: parentIndex % 10 !== 0 // 90% are emergency contacts
+    });
+  }
+
+  // Generate parent-student links
+  // Each parent is linked to 2 students (siblings)
+  // Some variability in can_pickup and has_custody
+  for (let i = 0; i < DUMMY_STUDENTS.length; i++) {
+    const student = DUMMY_STUDENTS[i];
+    const parentIndex = Math.floor(i / 2);
+    const padIndex = (parentIndex + 1).toString().padStart(4, '0');
+    const parentId = `usr_parent_${padIndex}`;
+
+    // Determine relation based on parent index
+    const isFather = parentIndex % 2 === 0;
+    const relation = isFather ? 'Father' : 'Mother';
+
+    // First child of pair is primary
+    const isPrimary = i % 2 === 0;
+
+    // Most can pickup, some cannot
+    const canPickup = i % 15 !== 0; // ~93% can pickup
+
+    // Most have custody, very few don't
+    const hasCustody = i % 40 !== 0; // ~97.5% have custody
+
+    links.push({
+      parent_id: parentId,
+      student_id: student.id,
+      school_id: SCHOOL_ID,
+      relation,
+      is_primary: isPrimary,
+      can_pickup: canPickup,
+      has_custody: hasCustody
+    });
+
+    // Add a second parent link for some students (both parents registered)
+    if (i % 5 === 0 && parentIndex + 1 < Math.ceil(DUMMY_STUDENTS.length / 2)) {
+      const secondParentIndex = parentIndex + 1;
+      const secondPadIndex = (secondParentIndex + 1).toString().padStart(4, '0');
+      const secondParentId = `usr_parent_${secondPadIndex}`;
+      const secondRelation = isFather ? 'Mother' : 'Father';
+
+      links.push({
+        parent_id: secondParentId,
+        student_id: student.id,
+        school_id: SCHOOL_ID,
+        relation: secondRelation,
+        is_primary: false,
+        can_pickup: true,
+        has_custody: true
+      });
+    }
+  }
+
+  return { users, profiles, links };
+}
+
+const parentsData = generateParentsData();
+export const DUMMY_PARENT_USERS: DummyParentUser[] = parentsData.users;
+export const DUMMY_PARENT_PROFILES: DummyParentProfile[] = parentsData.profiles;
+export const DUMMY_PARENT_STUDENT_LINKS: DummyParentStudentLink[] = parentsData.links;
+
+// ============================================================================
+// PART 4.2: EXAMS & RESULTS
+// ============================================================================
+
+// --- Exams ---
+export interface DummyExam {
+  id: string;
+  school_id: string;
+  name: string;
+  type: ExamType;
+  start_date: Date;
+  end_date: Date;
+}
+
+export const DUMMY_EXAMS: DummyExam[] = [
+  {
+    id: 'exam_midterm_2025',
+    school_id: SCHOOL_ID,
+    name: 'Mid-Term Examination 2025',
+    type: ExamType.MIDTERM,
+    start_date: new Date('2025-09-15'),
+    end_date: new Date('2025-09-25')
   },
-  { 
-    id: 'INV-002', 
-    student_id: 'std_2', 
-    base_amount: 5000, 
-    discount_amount: 0, 
-    description: 'Term 1 Fees', 
-    due_date: '2026-04-10T00:00:00Z', 
-    status: 'PENDING', 
-    school_id: SCHOOL_ID_1 
-  },
-  { 
-    id: 'INV-003', 
-    student_id: 'std_3', 
-    base_amount: 2500, 
-    discount_amount: 0, 
-    description: 'Bus Fees', 
-    due_date: '2026-04-10T00:00:00Z', 
-    status: 'VERIFIED', 
-    utr: 'NEFT0987654321', 
-    school_id: SCHOOL_ID_1 
-  },
-  { 
-    id: 'INV-004', 
-    student_id: 'std_4', 
-    base_amount: 5000, 
-    discount_amount: 0, 
-    description: 'Term 1 Fees', 
-    due_date: '2026-04-10T00:00:00Z', 
-    status: 'PENDING', 
-    school_id: SCHOOL_ID_1 
-  },
-  { 
-    id: 'INV-005', 
-    student_id: 'std_5', 
-    base_amount: 5000, 
-    discount_amount: 0, 
-    description: 'Term 1 Fees', 
-    due_date: '2026-04-10T00:00:00Z', 
-    status: 'PAID', 
-    utr: 'UPI987654321098', 
-    school_id: SCHOOL_ID_1 
+  {
+    id: 'exam_final_2025',
+    school_id: SCHOOL_ID,
+    name: 'Final Examination 2025',
+    type: ExamType.FINAL,
+    start_date: new Date('2026-02-15'),
+    end_date: new Date('2026-02-28')
   }
 ];
 
-// --- 10. HOMEWORK ---
-export const DUMMY_HOMEWORK = [
-  { id: 'hw_1', class: '10-A', subject: 'Physics', title: 'Newton Laws', dueDate: '2026-10-28T00:00:00Z', status: 'PENDING' },
-  { id: 'hw_2', class: '10-A', subject: 'Math', title: 'Quadratic Equations', dueDate: '2026-10-29T00:00:00Z', status: 'SUBMITTED' },
-  { id: 'hw_3', class: '9-B', subject: 'History', title: 'Mughal Empire', dueDate: '2026-10-30T00:00:00Z', status: 'PENDING' }
+// --- Results ---
+export interface DummyResult {
+  id: string;
+  school_id: string;
+  exam_id: string;
+  student_id: string;
+  total_percentage: number;
+  grade: string;
+  remarks: string | null;
+}
+
+// --- ResultMarks ---
+export interface DummyResultMark {
+  id: string;
+  school_id: string;
+  result_id: string;
+  subject_id: string;
+  marks_obtained: number;
+  max_marks: number;
+  grade: string;
+  remarks: string | null;
+}
+
+function calculateGrade(percentage: number): string {
+  if (percentage >= 90) return 'A+';
+  if (percentage >= 80) return 'A';
+  if (percentage >= 70) return 'B+';
+  if (percentage >= 60) return 'B';
+  if (percentage >= 50) return 'C';
+  if (percentage >= 40) return 'D';
+  return 'F';
+}
+
+function generateResultsData(): { results: DummyResult[]; marks: DummyResultMark[] } {
+  const results: DummyResult[] = [];
+  const marks: DummyResultMark[] = [];
+
+  let resultIndex = 0;
+  let markIndex = 0;
+
+  // Generate results for Mid-Term exam only (to keep size manageable)
+  const examId = 'exam_midterm_2025';
+
+  for (const enrollment of DUMMY_ENROLLMENTS) {
+    // Skip some students (transferred/completed)
+    if (enrollment.status !== EnrollmentStatus.ACTIVE) continue;
+
+    resultIndex++;
+    const resultId = `res_${resultIndex.toString().padStart(5, '0')}`;
+
+    // Find subjects for this class
+    const classSubjects = DUMMY_CLASS_SUBJECTS.filter(cs => cs.class_id === enrollment.class_id);
+
+    if (classSubjects.length === 0) continue;
+
+    // Generate marks for each subject
+    let totalMarks = 0;
+    let totalMaxMarks = 0;
+    const studentMarks: DummyResultMark[] = [];
+
+    for (const cs of classSubjects) {
+      markIndex++;
+
+      // Generate score with some edge cases
+      let marksObtained: number;
+      if (resultIndex % 100 === 0) {
+        // Edge case: absent (0 marks)
+        marksObtained = 0;
+      } else if (resultIndex % 50 === 0) {
+        // Edge case: perfect score
+        marksObtained = 100;
+      } else if (resultIndex % 30 === 0) {
+        // Edge case: failing
+        marksObtained = 20 + (resultIndex % 15);
+      } else {
+        // Normal distribution around 60-85
+        marksObtained = 45 + (resultIndex % 50) + (markIndex % 10);
+        if (marksObtained > 100) marksObtained = 95;
+      }
+
+      const maxMarks = 100;
+      const subjectGrade = calculateGrade(marksObtained);
+
+      totalMarks += marksObtained;
+      totalMaxMarks += maxMarks;
+
+      // Remarks for special cases
+      let remarks: string | null = null;
+      if (marksObtained === 0) remarks = 'Absent';
+      else if (marksObtained === 100) remarks = 'Excellent!';
+      else if (marksObtained < 40) remarks = 'Needs improvement';
+
+      studentMarks.push({
+        id: `rm_${markIndex.toString().padStart(6, '0')}`,
+        school_id: SCHOOL_ID,
+        result_id: resultId,
+        subject_id: cs.subject_id,
+        marks_obtained: marksObtained,
+        max_marks: maxMarks,
+        grade: subjectGrade,
+        remarks
+      });
+    }
+
+    // Calculate overall result
+    const totalPercentage = totalMaxMarks > 0 ? (totalMarks / totalMaxMarks) * 100 : 0;
+    const overallGrade = calculateGrade(totalPercentage);
+
+    let overallRemarks: string | null = null;
+    if (totalPercentage >= 90) overallRemarks = 'Outstanding performance';
+    else if (totalPercentage >= 75) overallRemarks = 'Good performance';
+    else if (totalPercentage < 40) overallRemarks = 'Requires remedial classes';
+
+    results.push({
+      id: resultId,
+      school_id: SCHOOL_ID,
+      exam_id: examId,
+      student_id: enrollment.student_id,
+      total_percentage: Math.round(totalPercentage * 100) / 100,
+      grade: overallGrade,
+      remarks: overallRemarks
+    });
+
+    marks.push(...studentMarks);
+  }
+
+  return { results, marks };
+}
+
+const resultsData = generateResultsData();
+export const DUMMY_RESULTS: DummyResult[] = resultsData.results;
+export const DUMMY_RESULT_MARKS: DummyResultMark[] = resultsData.marks;
+
+// ============================================================================
+// PART 4.3: OPERATIONAL DATA
+// ============================================================================
+
+// --- Attendance ---
+export interface DummyAttendance {
+  id: string;
+  student_id: string;
+  date: Date;
+  status: AttendanceStatus;
+  period: number;
+  school_id: string;
+  marked_by: string | null;
+  synced: boolean;
+}
+
+function generateAttendance(): DummyAttendance[] {
+  const attendance: DummyAttendance[] = [];
+  let attIndex = 0;
+
+  // Generate attendance for Class 10-A students for 5 days
+  const class10AStudents = DUMMY_ENROLLMENTS.filter(e => e.class_id === 'cls_10_A');
+  const dates = [
+    new Date('2025-09-01'),
+    new Date('2025-09-02'),
+    new Date('2025-09-03'),
+    new Date('2025-09-04'),
+    new Date('2025-09-05')
+  ];
+
+  const principalId = DUMMY_STAFF_USERS.find(s => s.role === UserRole.PRINCIPAL)?.id || null;
+
+  for (const enrollment of class10AStudents.slice(0, 40)) {
+    for (const date of dates) {
+      attIndex++;
+
+      // Daily attendance (period 0)
+      let status: AttendanceStatus = AttendanceStatus.PRESENT;
+      if (attIndex % 10 === 0) status = AttendanceStatus.ABSENT;
+      else if (attIndex % 15 === 0) status = AttendanceStatus.LATE;
+
+      attendance.push({
+        id: `att_${attIndex.toString().padStart(5, '0')}`,
+        student_id: enrollment.student_id,
+        date,
+        status,
+        period: 0,
+        school_id: SCHOOL_ID,
+        marked_by: principalId,
+        synced: true
+      });
+
+      // Period-level attendance for some days
+      if (attIndex % 5 === 0) {
+        for (let period = 1; period <= 6; period++) {
+          attIndex++;
+          attendance.push({
+            id: `att_${attIndex.toString().padStart(5, '0')}`,
+            student_id: enrollment.student_id,
+            date,
+            status: period === 3 ? AttendanceStatus.ABSENT : AttendanceStatus.PRESENT,
+            period,
+            school_id: SCHOOL_ID,
+            marked_by: principalId,
+            synced: true
+          });
+        }
+      }
+    }
+  }
+
+  return attendance;
+}
+
+export const DUMMY_ATTENDANCE: DummyAttendance[] = generateAttendance();
+
+// --- Books ---
+export interface DummyBook {
+  isbn: string;
+  title: string;
+  author: string;
+  status: string;
+  school_id: string;
+  quantity: number;
+  available: number;
+}
+
+const BOOK_TITLES = [
+  { title: 'Concepts of Physics Vol 1', author: 'H.C. Verma' },
+  { title: 'Concepts of Physics Vol 2', author: 'H.C. Verma' },
+  { title: 'Mathematics Class X', author: 'R.D. Sharma' },
+  { title: 'Mathematics Class XII', author: 'R.D. Sharma' },
+  { title: 'Organic Chemistry', author: 'Morrison Boyd' },
+  { title: 'Inorganic Chemistry', author: 'J.D. Lee' },
+  { title: 'Biology NCERT Class XI', author: 'NCERT' },
+  { title: 'Biology NCERT Class XII', author: 'NCERT' },
+  { title: 'History of Modern India', author: 'Bipin Chandra' },
+  { title: 'Indian Geography', author: 'Majid Husain' },
+  { title: 'Economics NCERT', author: 'NCERT' },
+  { title: 'Accountancy Class XII', author: 'T.S. Grewal' },
+  { title: 'Computer Science with Python', author: 'Sumita Arora' },
+  { title: 'English Literature', author: 'Board Publication' },
+  { title: 'Hindi Sahitya', author: 'Various' },
+  { title: 'Wings of Fire', author: 'A.P.J. Abdul Kalam' },
+  { title: 'The Discovery of India', author: 'Jawaharlal Nehru' },
+  { title: 'Gitanjali', author: 'Rabindranath Tagore' },
+  { title: 'Train to Pakistan', author: 'Khushwant Singh' },
+  { title: 'God of Small Things', author: 'Arundhati Roy' },
 ];
 
-// --- 11. MEDICAL LOGS (structured) ---
-export const DUMMY_MEDICAL_LOGS = [
-  { id: 'med_1', time: '2026-01-10T09:30:00Z', student_id: 'std_9', issue: 'Fever', action: 'Paracetamol given, Parents called', school_id: SCHOOL_ID_1 },
-  { id: 'med_2', time: '2026-01-10T11:15:00Z', student_id: 'std_6', issue: 'Minor Cut', action: 'Dressed & Bandaged', school_id: SCHOOL_ID_1 },
-  { id: 'med_3', time: '2026-01-10T13:00:00Z', student_id: 'std_1', issue: 'Headache', action: 'Rest in infirmary', school_id: SCHOOL_ID_1 }
+function generateBooks(): DummyBook[] {
+  const books: DummyBook[] = [];
+
+  for (let i = 0; i < 50; i++) {
+    const bookInfo = BOOK_TITLES[i % BOOK_TITLES.length];
+    const quantity = 5 + (i % 10);
+    const issued = i % 5;
+
+    books.push({
+      isbn: `978-81-${(1000 + i).toString().padStart(4, '0')}-${(i % 100).toString().padStart(2, '0')}`,
+      title: i < BOOK_TITLES.length ? bookInfo.title : `Reference Book ${i + 1}`,
+      author: i < BOOK_TITLES.length ? bookInfo.author : `Author ${i + 1}`,
+      status: issued > 0 ? 'ISSUED' : 'AVAILABLE',
+      school_id: SCHOOL_ID,
+      quantity,
+      available: quantity - issued
+    });
+  }
+
+  return books;
+}
+
+export const DUMMY_BOOKS: DummyBook[] = generateBooks();
+
+// --- Book Loans ---
+export interface DummyBookLoan {
+  id: string;
+  book_isbn: string;
+  borrower_type: string;
+  student_id: string | null;
+  user_id: string | null;
+  school_id: string;
+  issue_date: Date;
+  due_date: Date;
+  return_date: Date | null;
+  fine_amount: number;
+  fine_paid: boolean;
+  status: LoanStatus;
+}
+
+function generateBookLoans(): DummyBookLoan[] {
+  const loans: DummyBookLoan[] = [];
+
+  const statuses: { status: LoanStatus; count: number }[] = [
+    { status: LoanStatus.ACTIVE, count: 15 },
+    { status: LoanStatus.RETURNED, count: 8 },
+    { status: LoanStatus.OVERDUE, count: 5 },
+    { status: LoanStatus.LOST, count: 2 }
+  ];
+
+  let loanIndex = 0;
+
+  for (const { status, count } of statuses) {
+    for (let i = 0; i < count; i++) {
+      loanIndex++;
+      const studentId = DUMMY_STUDENTS[loanIndex % DUMMY_STUDENTS.length].id;
+      const book = DUMMY_BOOKS[loanIndex % DUMMY_BOOKS.length];
+
+      const issueDate = new Date('2025-08-15');
+      issueDate.setDate(issueDate.getDate() + loanIndex);
+
+      const dueDate = new Date(issueDate);
+      dueDate.setDate(dueDate.getDate() + 14);
+
+      let returnDate: Date | null = null;
+      let fineAmount = 0;
+      let finePaid = false;
+
+      if (status === LoanStatus.RETURNED) {
+        returnDate = new Date(dueDate);
+        returnDate.setDate(returnDate.getDate() - 2);
+      } else if (status === LoanStatus.OVERDUE) {
+        fineAmount = 5 * (loanIndex % 10 + 1);
+      } else if (status === LoanStatus.LOST) {
+        fineAmount = 500;
+        finePaid = loanIndex % 2 === 0;
+      }
+
+      loans.push({
+        id: `loan_${loanIndex.toString().padStart(4, '0')}`,
+        book_isbn: book.isbn,
+        borrower_type: 'STUDENT',
+        student_id: studentId,
+        user_id: null,
+        school_id: SCHOOL_ID,
+        issue_date: issueDate,
+        due_date: dueDate,
+        return_date: returnDate,
+        fine_amount: fineAmount,
+        fine_paid: finePaid,
+        status
+      });
+    }
+  }
+
+  return loans;
+}
+
+export const DUMMY_BOOK_LOANS: DummyBookLoan[] = generateBookLoans();
+
+// --- Invoices ---
+export interface DummyInvoice {
+  id: string;
+  student_id: string;
+  base_amount: number;
+  discount_amount: number;
+  description: string;
+  due_date: Date;
+  status: InvoiceStatus;
+  utr: string | null;
+  school_id: string;
+}
+
+function generateInvoices(): DummyInvoice[] {
+  const invoices: DummyInvoice[] = [];
+
+  // Generate invoices for first 100 students
+  for (let i = 0; i < 100; i++) {
+    const student = DUMMY_STUDENTS[i];
+
+    let status: InvoiceStatus;
+    let utr: string | null = null;
+
+    if (i % 3 === 0) {
+      status = InvoiceStatus.PAID;
+      utr = `UPI${(1000000000 + i).toString()}`;
+    } else if (i % 3 === 1) {
+      status = InvoiceStatus.VERIFIED;
+      utr = `NEFT${(2000000000 + i).toString()}`;
+    } else {
+      status = InvoiceStatus.PENDING;
+    }
+
+    invoices.push({
+      id: `inv_${(i + 1).toString().padStart(4, '0')}`,
+      student_id: student.id,
+      base_amount: 25000 + (i % 5) * 1000,
+      discount_amount: i % 10 === 0 ? 2500 : 0,
+      description: 'Term 1 Fees 2025-26',
+      due_date: new Date('2025-05-15'),
+      status,
+      utr,
+      school_id: SCHOOL_ID
+    });
+  }
+
+  return invoices;
+}
+
+export const DUMMY_INVOICES: DummyInvoice[] = generateInvoices();
+
+// --- Timetable (Sample) ---
+export interface DummyTimetable {
+  id: string;
+  school_id: string;
+  class_id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  subject_id: string;
+  teacher_id: string | null;
+}
+
+function generateTimetable(): DummyTimetable[] {
+  const timetable: DummyTimetable[] = [];
+  let ttIndex = 0;
+
+  const periods = [
+    { start: '08:00', end: '08:45' },
+    { start: '08:45', end: '09:30' },
+    { start: '09:45', end: '10:30' },
+    { start: '10:30', end: '11:15' },
+    { start: '11:30', end: '12:15' },
+    { start: '12:15', end: '13:00' }
+  ];
+
+  // Generate timetable for Class 10-A (sample)
+  const classId = 'cls_10_A';
+  const classSubjects = DUMMY_CLASS_SUBJECTS.filter(cs => cs.class_id === classId);
+  const teachers = DUMMY_STAFF_USERS.filter(s => s.role === UserRole.TEACHER);
+
+  for (let day = 1; day <= 5; day++) { // Monday to Friday
+    for (let p = 0; p < periods.length; p++) {
+      ttIndex++;
+      const subjectIndex = (day * 6 + p) % classSubjects.length;
+      const teacherIndex = (day * 6 + p) % teachers.length;
+
+      timetable.push({
+        id: `tt_${ttIndex.toString().padStart(4, '0')}`,
+        school_id: SCHOOL_ID,
+        class_id: classId,
+        day_of_week: day,
+        start_time: periods[p].start,
+        end_time: periods[p].end,
+        subject_id: classSubjects[subjectIndex].subject_id,
+        teacher_id: teachers[teacherIndex].id
+      });
+    }
+  }
+
+  return timetable;
+}
+
+export const DUMMY_TIMETABLE: DummyTimetable[] = generateTimetable();
+
+// --- Buses ---
+export interface DummyBus {
+  id: string;
+  plateNumber: string;
+  driverName: string;
+  capacity: number;
+  routeId: string;
+  insuranceExpiry: Date;
+  school_id: string;
+}
+
+export const DUMMY_BUSES: DummyBus[] = [
+  { id: 'bus_1', plateNumber: 'MP-09-AB-0001', driverName: 'Ramesh Singh', capacity: 40, routeId: 'R-01', insuranceExpiry: new Date('2026-06-01'), school_id: SCHOOL_ID },
+  { id: 'bus_2', plateNumber: 'MP-09-AB-0002', driverName: 'Suresh Kumar', capacity: 35, routeId: 'R-02', insuranceExpiry: new Date('2026-07-15'), school_id: SCHOOL_ID },
+  { id: 'bus_3', plateNumber: 'MP-09-AB-0003', driverName: 'Mahesh Yadav', capacity: 50, routeId: 'R-03', insuranceExpiry: new Date('2026-08-20'), school_id: SCHOOL_ID },
+  { id: 'bus_4', plateNumber: 'MP-09-AB-0004', driverName: 'Dinesh Patel', capacity: 45, routeId: 'R-04', insuranceExpiry: new Date('2026-05-10'), school_id: SCHOOL_ID },
+  { id: 'bus_5', plateNumber: 'MP-09-AB-0005', driverName: 'Ganesh Sharma', capacity: 40, routeId: 'R-05', insuranceExpiry: new Date('2026-09-30'), school_id: SCHOOL_ID },
 ];
 
-// --- 12. GATE & RECEPTION LOGS ---
-export const DUMMY_GATE_LOGS = [
-  { id: 'g_1', type: 'VISITOR', name: 'Ramesh Courier', purpose: 'Amazon Delivery', time: '2026-01-10T10:30:00Z', status: 'EXITED', school_id: SCHOOL_ID_1 },
-  { id: 'g_2', type: 'PARENT', name: 'Mrs. Sharma', purpose: 'Fee Payment', time: '2026-01-10T11:15:00Z', status: 'INSIDE', student_id: 'std_2', school_id: SCHOOL_ID_1 }
-];
+// ============================================================================
+// SUMMARY - DATA COUNTS
+// ============================================================================
+// Academic Years: 2
+// Subjects: 15
+// Classes: 48
+// Class-Subject Links: ~380
+// Staff Users: ~94
+// Staff Profiles: ~94
+// Staff Financials: ~94
+// Staff Subjects: ~100
+// Staff Classes: ~200
+// Student Users: ~1920
+// Students: ~1920
+// Enrollments: ~1920
+// Parent Users: ~960
+// Parent Profiles: ~960
+// Parent-Student Links: ~2300
+// Exams: 2
+// Results: ~1850
+// Result Marks: ~15000
+// Attendance: ~500
+// Books: 50
+// Book Loans: 30
+// Invoices: 100
+// Timetable: 30
+// Buses: 5
+// ============================================================================
 
-export const DUMMY_RECEPTION_VISITORS = [
-  { id: 'rv_1', name: 'Vikram Singh', student_id: 'std_9', purpose: 'Meeting Principal', time: '2026-01-10T09:00:00Z', status: 'WAITING' },
-  { id: 'rv_2', name: 'Anita Desai', student_id: 'std_12', purpose: 'Early Pickup', time: '2026-01-10T12:30:00Z', status: 'APPROVED' }
-];
-
-// --- 13. MAINTENANCE TICKETS ---
-export const DUMMY_TICKETS = [
-  { id: 'T-101', location: 'Chemistry Lab', issue: 'Leaking Tap', priority: 'MEDIUM', status: 'OPEN', reportedBy: 'HOD Physics' },
-  { id: 'T-102', location: 'Class 5-B', issue: 'Broken Bench', priority: 'LOW', status: 'ASSIGNED', reportedBy: 'Class Teacher' }
-];
-
-// --- 14. SYLLABUS ---
-export const DUMMY_SYLLABUS = [
-  { id: 1, teacher: 'HOD Physics', subject: 'Physics', class: '10-A', completed: 65, target: 70, status: 'ON_TRACK' },
-  { id: 2, teacher: 'Teacher Maths', subject: 'Maths', class: '10-A', completed: 80, target: 80, status: 'AHEAD' }
-];
-
-// --- 15. COUNSELING SESSIONS ---
-export const DUMMY_COUNSELING = [
-  { id: 'c_1', student_id: 'std_21', category: 'Behavioral', note: 'Showing signs of withdrawal. Recommended art therapy.', date: '2026-01-08T10:00:00Z', school_id: SCHOOL_ID_1 },
-  { id: 'c_2', student_id: 'std_12', category: 'Academic Stress', note: 'Anxious about exams. Counseling scheduled.', date: '2026-01-09T11:00:00Z', school_id: SCHOOL_ID_1 }
-];
-
-// --- MASTER EXPORT ---
-export const SOVEREIGN_GENESIS_DATA = {
-  parents: DUMMY_PARENTS,
-  parentStudent: DUMMY_PARENT_STUDENT,
-  students: DUMMY_STUDENTS,
-  staff: DUMMY_STAFF,
-  documents: DUMMY_DOCUMENTS,
-  books: DUMMY_BOOKS,
-  buses: DUMMY_BUSES,
-  hostel: DUMMY_HOSTEL,
-  invoices: DUMMY_INVOICES,
-  homework: DUMMY_HOMEWORK,
-  medicalLogs: DUMMY_MEDICAL_LOGS,
-  gateLogs: DUMMY_GATE_LOGS,
-  visitors: DUMMY_RECEPTION_VISITORS,
-  tickets: DUMMY_TICKETS,
-  syllabus: DUMMY_SYLLABUS,
-  counseling: DUMMY_COUNSELING
-};
