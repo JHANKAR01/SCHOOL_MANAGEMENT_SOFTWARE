@@ -54,6 +54,9 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
   };
 
   const performLogin = async (emailStr: string, passStr: string) => {
+    // DEBUG - remove after testing
+    alert(`Attempting login with: ${emailStr}`);
+
     setLoading(true);
     setError('');
 
