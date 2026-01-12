@@ -526,7 +526,7 @@ function generateStaffData(): {
       users.push({
         id: userId,
         name,
-        email: generateEmail(name, 'sovereign.edu'),
+        email: `staff.${staffIndex}.${name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z.]/g, '')}@sovereign.edu`,
         phone: generatePhone(staffIndex + 1000),
         password: 'password123',
         role: roleConfig.role,
@@ -977,7 +977,7 @@ function generateParentsData(): {
       : FIRST_NAMES_FEMALE[i % FIRST_NAMES_FEMALE.length];
     const name = `${prefix} ${firstName} ${lastName}`;
 
-    const email = generateEmail(`${firstName} ${lastName}`, 'parent.sovereign.edu');
+    const email = `parent.${parentIndex}.${firstName.toLowerCase()}.${lastName.toLowerCase()}@sovereign.edu`;
     const addr = generateAddress(parentIndex + 2000);
 
     users.push({

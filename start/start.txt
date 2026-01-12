@@ -7,3 +7,12 @@ npm run dev
 
 START BACKEND  - 
 npx tsx packages/api/src/server.ts
+
+
+
+
+🔐 TEST CREDENTIALS:
+   ├─ Super Admin: super@sovereign.edu / SuperAdmin@123
+   ├─ School Admin: admin@sovereign.edu / Admin@123
+   ├─ Finance: finance@sovereign.edu / Finance@123
+   └─ All Others: [email] / password123

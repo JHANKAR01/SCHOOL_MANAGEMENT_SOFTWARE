@@ -12,10 +12,42 @@ import {
   AttendanceStatus,
   LoanStatus
 } from '@prisma/client';
-import { SOVEREIGN_GENESIS_DATA } from './dummy-data.ts';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
+
+// Import data from dummy-data.ts
+import {
+  SCHOOL_ID,
+  DUMMY_ACADEMIC_YEARS,
+  DUMMY_SUBJECTS,
+  DUMMY_CLASSES,
+  DUMMY_CLASS_SUBJECTS,
+  DUMMY_STAFF_USERS,
+  DUMMY_STAFF_PROFILES,
+  DUMMY_STAFF_FINANCIALS,
+  DUMMY_STAFF_SUBJECTS,
+  DUMMY_STAFF_CLASSES,
+  DUMMY_STUDENT_USERS,
+  DUMMY_STUDENTS,
+  DUMMY_ENROLLMENTS,
+  DUMMY_PARENT_USERS,
+  DUMMY_PARENT_PROFILES,
+  DUMMY_PARENT_STUDENT_LINKS,
+  DUMMY_EXAMS,
+  DUMMY_RESULTS,
+  DUMMY_RESULT_MARKS,
+  DUMMY_ATTENDANCE,
+  DUMMY_BOOKS,
+  DUMMY_BOOK_LOANS,
+  DUMMY_INVOICES,
+  DUMMY_TIMETABLE,
+  DUMMY_BUSES,
+} from './dummy-data.ts';
+
+// ============================================================================
+// DATABASE CONNECTION - Supabase SSL Config
+// ============================================================================
 
 // 🔍 sanity check
 console.log('DB URL at runtime:', process.env.DATABASE_URL);
@@ -35,605 +67,832 @@ const adapter = new PrismaPg(pool, { schema: 'schoolmanagementsystem' });
 // ✅ PrismaClient WITH adapter
 const prisma = new PrismaClient({ adapter });
 
-// --- Constants ---
-const SCHOOL_ID = 'sch_123';
-const ACADEMIC_YEAR_ID = 'ay_2025_2026';
-
-// --- Helper: Parse class string to grade and section ---
-function parseClassString(classStr: string): { grade: string; section: Section } {
-  // Handle formats like "10-A", "9-B", "12-Sci", "11-Com", "11-Arts", "6-A", "7-B", "8-C"
-  const parts = classStr.split('-');
-  const grade = parts[0];
-
-  // Map section/stream to Section enum
-  let section: Section = Section.A;
-  if (parts[1]) {
-    const sectionPart = parts[1].toUpperCase();
-    if (sectionPart === 'A' || sectionPart === 'SCI') section = Section.A;
-    else if (sectionPart === 'B' || sectionPart === 'COM') section = Section.B;
-    else if (sectionPart === 'C' || sectionPart === 'ARTS') section = Section.C;
-    else if (sectionPart === 'D') section = Section.D;
-    else if (sectionPart === 'E') section = Section.E;
-    else if (sectionPart === 'F') section = Section.F;
-  }
-
-  return { grade, section };
-}
+// ============================================================================
+// PART 1: MAIN FUNCTION - SETUP, CLEANUP & BASE TABLES
+// ============================================================================
 
 async function main() {
-  console.log('🌱 Starting Sovereign Genesis Seed (3NF Schema)');
-
-  // Hash the default password "password123"
-  const hashedPassword = await bcrypt.hash('password123', 10);
-  console.log('🔐 Generated hash for "password123"');
+  console.log('🌱 Starting Sovereign Genesis Seed (3NF Schema) - Part 1: Setup & Base Tables');
+  console.log('='.repeat(70));
 
   // =========================================================================
-  // STEP 1: CLEAR EXISTING DATA (in correct order due to FKs)
+  // STEP 1: CLEAR EXISTING DATA (in correct FK order - children first)
   // =========================================================================
-  console.log('🧹 Clearing existing data...');
+  console.log('\n🧹 STEP 1: Clearing existing data in FK-safe order...');
 
-  // Clear in reverse FK order
+  // Delete in reverse FK order (child tables first)
+  console.log('   └─ Clearing ResultMark...');
   await prisma.resultMark.deleteMany();
+
+  console.log('   └─ Clearing Result...');
   await prisma.result.deleteMany();
+
+  console.log('   └─ Clearing Exam...');
+  await prisma.exam.deleteMany();
+
+  console.log('   └─ Clearing BookLoan...');
   await prisma.bookLoan.deleteMany();
-  await prisma.staffClass.deleteMany();
-  await prisma.staffSubject.deleteMany();
-  await prisma.staffFinancial.deleteMany();
-  await prisma.staffProfile.deleteMany();
-  await prisma.parentProfile.deleteMany();
-  await prisma.studentEnrollment.deleteMany();
-  await prisma.classSubject.deleteMany();
-  await prisma.attendance.deleteMany();
-  await prisma.identityDocument.deleteMany();
-  await prisma.parentStudent.deleteMany();
-  await prisma.medicalLog.deleteMany();
-  await prisma.counseling.deleteMany();
-  await prisma.invoice.deleteMany();
-  await prisma.syllabus.deleteMany();
-  await prisma.paper.deleteMany();
-  await prisma.liveClass.deleteMany();
-  await prisma.homework.deleteMany();
-  await prisma.substitution.deleteMany();
-  await prisma.timetable.deleteMany();
-  await prisma.class.deleteMany();
-  await prisma.subject.deleteMany();
-  await prisma.academicYear.deleteMany();
-  await prisma.student.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.bus.deleteMany();
+
+  console.log('   └─ Clearing Book...');
   await prisma.book.deleteMany();
+
+  console.log('   └─ Clearing Attendance...');
+  await prisma.attendance.deleteMany();
+
+  console.log('   └─ Clearing Invoice...');
+  await prisma.invoice.deleteMany();
+
+  console.log('   └─ Clearing MedicalLog...');
+  await prisma.medicalLog.deleteMany();
+
+  console.log('   └─ Clearing Counseling...');
+  await prisma.counseling.deleteMany();
+
+  console.log('   └─ Clearing IdentityDocument...');
+  await prisma.identityDocument.deleteMany();
+
+  console.log('   └─ Clearing ParentStudent...');
+  await prisma.parentStudent.deleteMany();
+
+  console.log('   └─ Clearing ParentProfile...');
+  await prisma.parentProfile.deleteMany();
+
+  console.log('   └─ Clearing StudentEnrollment...');
+  await prisma.studentEnrollment.deleteMany();
+
+  console.log('   └─ Clearing StaffClass...');
+  await prisma.staffClass.deleteMany();
+
+  console.log('   └─ Clearing StaffSubject...');
+  await prisma.staffSubject.deleteMany();
+
+  console.log('   └─ Clearing StaffFinancial...');
+  await prisma.staffFinancial.deleteMany();
+
+  console.log('   └─ Clearing StaffProfile...');
+  await prisma.staffProfile.deleteMany();
+
+  console.log('   └─ Clearing Timetable...');
+  await prisma.timetable.deleteMany();
+
+  console.log('   └─ Clearing Homework...');
+  await prisma.homework.deleteMany();
+
+  console.log('   └─ Clearing LiveClass...');
+  await prisma.liveClass.deleteMany();
+
+  console.log('   └─ Clearing Paper...');
+  await prisma.paper.deleteMany();
+
+  console.log('   └─ Clearing Syllabus...');
+  await prisma.syllabus.deleteMany();
+
+  console.log('   └─ Clearing Substitution...');
+  await prisma.substitution.deleteMany();
+
+  console.log('   └─ Clearing ClassSubject...');
+  await prisma.classSubject.deleteMany();
+
+  console.log('   └─ Clearing Class...');
+  await prisma.class.deleteMany();
+
+  console.log('   └─ Clearing Subject...');
+  await prisma.subject.deleteMany();
+
+  console.log('   └─ Clearing AcademicYear...');
+  await prisma.academicYear.deleteMany();
+
+  console.log('   └─ Clearing Student...');
+  await prisma.student.deleteMany();
+
+  console.log('   └─ Clearing User...');
+  await prisma.user.deleteMany();
+
+  console.log('   └─ Clearing Bus...');
+  await prisma.bus.deleteMany();
+
+  console.log('   └─ Clearing SystemSettings...');
+  await prisma.systemSettings.deleteMany();
+
+  console.log('   └─ Clearing School...');
   await prisma.school.deleteMany();
+
+  console.log('   ✅ All tables cleared successfully!');
 
   // =========================================================================
   // STEP 2: SEED SCHOOL
   // =========================================================================
-  console.log('🏫 Seeding School');
+  console.log('\n🏫 STEP 2: Seeding School...');
   await prisma.school.create({
     data: {
       id: SCHOOL_ID,
-      name: 'Sovereign High',
+      name: 'Sovereign High School',
       settings_json: {
         theme: 'sovereign-blue',
         timezone: 'Asia/Kolkata',
-        academicYearStart: 'April'
+        academicYearStart: 'April',
+        schoolMotto: 'Excellence Through Knowledge',
+        affiliation: 'CBSE',
+        establishedYear: 2010
       }
     }
   });
+  console.log('   ✅ School created: Sovereign High School (ID: ' + SCHOOL_ID + ')');
 
   // =========================================================================
-  // STEP 3: SEED ACADEMIC YEAR
+  // STEP 3: SEED SYSTEM SETTINGS
   // =========================================================================
-  console.log('📅 Seeding Academic Year');
-  await prisma.academicYear.create({
+  console.log('\n⚙️ STEP 3: Seeding System Settings...');
+  await prisma.systemSettings.create({
     data: {
-      id: ACADEMIC_YEAR_ID,
       school_id: SCHOOL_ID,
-      name: '2025-2026',
-      start_date: new Date('2025-04-01'),
-      end_date: new Date('2026-03-31'),
-      is_current: true
+      lockdown_mode: false,
+      low_data_mode: false,
+      announcement_ticker: 'Welcome to Sovereign High School - Academic Year 2025-2026!'
     }
   });
+  console.log('   ✅ System settings created for school');
 
   // =========================================================================
-  // STEP 4: SEED SUBJECTS
+  // STEP 4: SEED ACADEMIC YEARS
   // =========================================================================
-  console.log('📚 Seeding Subjects');
-  const subjects = [
-    { id: 'sub_math', code: 'MATH', name: 'Mathematics', is_optional: false },
-    { id: 'sub_eng', code: 'ENG', name: 'English', is_optional: false },
-    { id: 'sub_hin', code: 'HIN', name: 'Hindi', is_optional: false },
-    { id: 'sub_phy', code: 'PHY', name: 'Physics', is_optional: false },
-    { id: 'sub_chem', code: 'CHEM', name: 'Chemistry', is_optional: false },
-    { id: 'sub_bio', code: 'BIO', name: 'Biology', is_optional: false },
-    { id: 'sub_hist', code: 'HIST', name: 'History', is_optional: false },
-    { id: 'sub_geo', code: 'GEO', name: 'Geography', is_optional: false },
-    { id: 'sub_civics', code: 'CIV', name: 'Civics', is_optional: false },
-    { id: 'sub_eco', code: 'ECO', name: 'Economics', is_optional: true },
-    { id: 'sub_acc', code: 'ACC', name: 'Accountancy', is_optional: true },
-    { id: 'sub_bst', code: 'BST', name: 'Business Studies', is_optional: true },
-    { id: 'sub_cs', code: 'CS', name: 'Computer Science', is_optional: true },
-    { id: 'sub_pe', code: 'PE', name: 'Physical Education', is_optional: true },
-    { id: 'sub_music', code: 'MUS', name: 'Music', is_optional: true },
-  ];
-
-  const subjectCodeToIdMap = new Map<string, string>();
-  for (const sub of subjects) {
-    const created = await prisma.subject.create({
+  console.log('\n📅 STEP 4: Seeding Academic Years...');
+  for (const year of DUMMY_ACADEMIC_YEARS) {
+    await prisma.academicYear.create({
       data: {
-        id: sub.id,
-        school_id: SCHOOL_ID,
-        code: sub.code,
-        name: sub.name,
-        is_optional: sub.is_optional
+        id: year.id,
+        school_id: year.school_id,
+        name: year.name,
+        start_date: year.start_date,
+        end_date: year.end_date,
+        is_current: year.is_current
       }
     });
-    subjectCodeToIdMap.set(sub.code, created.id);
+    console.log(`   └─ Created: ${year.name} ${year.is_current ? '(CURRENT)' : ''}`);
   }
+  console.log(`   ✅ ${DUMMY_ACADEMIC_YEARS.length} academic years seeded`);
 
   // =========================================================================
-  // STEP 5: SEED CLASSES
   // =========================================================================
-  console.log('🏛️ Seeding Classes');
+  // PART 2: STAFF & ACADEMIC STRUCTURE
+  // =========================================================================
+  // =========================================================================
 
-  // Collect unique classes from student data
-  const uniqueClasses = [...new Set(SOVEREIGN_GENESIS_DATA.students.map(s => s.class))];
-  const classStringToIdMap = new Map<string, string>();
+  console.log('\n' + '='.repeat(70));
+  console.log('🎯 PART 2: Staff & Academic Structure');
+  console.log('='.repeat(70));
 
-  for (const classStr of uniqueClasses) {
-    const { grade, section } = parseClassString(classStr);
-    const classId = `cls_${grade}_${section}`;
+  // Hash the default password once (reused for all staff)
+  const hashedPassword = await bcrypt.hash('password123', 10);
+  console.log('\n🔐 Generated password hash for "password123"');
 
-    const created = await prisma.class.create({
-      data: {
-        id: classId,
-        school_id: SCHOOL_ID,
-        academic_year_id: ACADEMIC_YEAR_ID,
-        grade: grade,
-        section: section,
-        capacity: 40
-      }
-    });
-    classStringToIdMap.set(classStr, created.id);
-  }
+  // Maps to track created IDs for later steps
+  const staffUserIdMap = new Map<string, string>(); // dummy ID -> real DB ID
+  const staffProfileIdMap = new Map<string, string>(); // user ID -> profile ID
 
   // =========================================================================
-  // STEP 6: SEED PARENTS (as Users with ParentProfile)
+  // STEP 5: SEED STAFF USERS
   // =========================================================================
-  console.log('👨‍👩‍👧‍👦 Seeding Parents');
-  const parentRefToIdMap = new Map<string, string>();
+  console.log('\n👨‍🏫 STEP 5: Seeding Staff Users...');
 
-  for (const parent of SOVEREIGN_GENESIS_DATA.parents) {
-    // Create User
+  for (const staffUser of DUMMY_STAFF_USERS) {
+    // Hash specific passwords for known accounts, default for others
+    let passwordHash = hashedPassword;
+    if (staffUser.password !== 'password123') {
+      passwordHash = await bcrypt.hash(staffUser.password, 10);
+    }
+
     const createdUser = await prisma.user.create({
       data: {
-        name: parent.name,
-        email: parent.email,
-        phone: parent.primary_phone,
-        role: UserRole.PARENT,
-        school_id: SCHOOL_ID,
-        password_hash: hashedPassword
+        id: staffUser.id,
+        name: staffUser.name,
+        email: staffUser.email,
+        phone: staffUser.phone,
+        password_hash: passwordHash,
+        role: staffUser.role,
+        department: staffUser.department,
+        school_id: staffUser.school_id
       }
     });
-    parentRefToIdMap.set(parent.parent_ref, createdUser.id);
-
-    // Create ParentProfile
-    await prisma.parentProfile.create({
-      data: {
-        user_id: createdUser.id,
-        school_id: SCHOOL_ID,
-        occupation: 'Business',
-        is_emergency_contact: true
-      }
-    });
+    staffUserIdMap.set(staffUser.id, createdUser.id);
   }
+  console.log(`   ✅ ${DUMMY_STAFF_USERS.length} staff users created`);
 
   // =========================================================================
-  // STEP 7: SEED STAFF (as Users with StaffProfile + StaffFinancial)
+  // STEP 6: SEED STAFF PROFILES
   // =========================================================================
-  console.log('👨‍🏫 Seeding Staff');
-  const staffNoToIdMap = new Map<string, string>();
-  const staffNoToProfileIdMap = new Map<string, string>();
+  console.log('\n📋 STEP 6: Seeding Staff Profiles...');
 
-  for (const staff of SOVEREIGN_GENESIS_DATA.staff) {
-    // Create User
-    const createdUser = await prisma.user.create({
+  for (const profile of DUMMY_STAFF_PROFILES) {
+    const createdProfile = await prisma.staffProfile.create({
       data: {
-        name: staff.name,
-        email: staff.email,
-        role: staff.role as UserRole,
-        department: staff.department,
-        school_id: SCHOOL_ID,
-        password_hash: hashedPassword
+        id: profile.id,
+        user_id: profile.user_id,
+        school_id: profile.school_id,
+        employee_id: profile.employee_id,
+        designation: profile.designation,
+        department: profile.department,
+        employment_type: profile.employment_type,
+        joining_date: profile.joining_date,
+        qualification: profile.qualification,
+        experience_years: profile.experience_years,
+        date_of_birth: profile.date_of_birth,
+        gender: profile.gender,
+        blood_group: profile.blood_group,
+        address_line1: profile.address_line1,
+        city: profile.city,
+        state: profile.state,
+        pincode: profile.pincode,
+        aadhaar_number: profile.aadhaar_number,
+        pan_number: profile.pan_number,
+        emergency_contact_name: profile.emergency_contact_name,
+        emergency_contact_phone: profile.emergency_contact_phone,
+        status: profile.status
       }
     });
-    staffNoToIdMap.set(staff.staff_no, createdUser.id);
+    staffProfileIdMap.set(profile.user_id, createdProfile.id);
+  }
+  console.log(`   ✅ ${DUMMY_STAFF_PROFILES.length} staff profiles created`);
 
-    // Create StaffProfile
-    const staffProfile = await prisma.staffProfile.create({
-      data: {
-        user_id: createdUser.id,
-        school_id: SCHOOL_ID,
-        employee_id: staff.staff_no,
-        designation: staff.role,
-        department: staff.department,
-        employment_type: 'Permanent',
-        joining_date: new Date('2020-04-01'),
-        qualification: staff.role === 'TEACHER' ? 'M.A., B.Ed' : 'Graduate',
-        status: StaffStatus.ACTIVE
-      }
-    });
-    staffNoToProfileIdMap.set(staff.staff_no, staffProfile.id);
+  // =========================================================================
+  // STEP 7: SEED STAFF FINANCIALS
+  // =========================================================================
+  console.log('\n💰 STEP 7: Seeding Staff Financials...');
 
-    // Create StaffFinancial for all staff
+  for (const financial of DUMMY_STAFF_FINANCIALS) {
     await prisma.staffFinancial.create({
       data: {
-        staff_profile_id: staffProfile.id,
-        school_id: SCHOOL_ID,
-        salary_grade: staff.role === 'PRINCIPAL' ? 'Grade A' : staff.role === 'TEACHER' ? 'Grade B' : 'Grade C',
-        basic_salary: staff.role === 'PRINCIPAL' ? 80000 : staff.role === 'TEACHER' ? 45000 : 35000,
-        hra: 10000,
-        allowances: 5000,
-        deductions: 2000,
-        bank_name: 'State Bank of India',
-        bank_account_no: '1234567890',
-        ifsc_code: 'SBIN0001234'
+        id: financial.id,
+        staff_profile_id: financial.staff_profile_id,
+        school_id: financial.school_id,
+        salary_grade: financial.salary_grade,
+        basic_salary: financial.basic_salary,
+        hra: financial.hra,
+        allowances: financial.allowances,
+        deductions: financial.deductions,
+        bank_name: financial.bank_name,
+        bank_account_no: financial.bank_account_no,
+        ifsc_code: financial.ifsc_code
       }
     });
-
-    // Assign subjects to teachers
-    if (staff.role === 'TEACHER' || staff.role === 'HOD') {
-      const deptToSubject: Record<string, string> = {
-        'Physics': 'PHY',
-        'Mathematics': 'MATH',
-        'Hindi': 'HIN',
-        'Music': 'MUS',
-        'Physical Education': 'PE'
-      };
-
-      const subjectCode = deptToSubject[staff.department || ''];
-      if (subjectCode) {
-        const subjectId = subjectCodeToIdMap.get(subjectCode);
-        if (subjectId) {
-          await prisma.staffSubject.create({
-            data: {
-              school_id: SCHOOL_ID,
-              staff_profile_id: staffProfile.id,
-              subject_id: subjectId,
-              is_primary: true
-            }
-          });
-        }
-      }
-    }
   }
+  console.log(`   ✅ ${DUMMY_STAFF_FINANCIALS.length} staff financial records created`);
 
   // =========================================================================
-  // STEP 8: SEED STUDENTS (with User account and Enrollment)
+  // STEP 8: SEED SUBJECTS
   // =========================================================================
-  console.log('🎓 Seeding Students');
-  const admissionNoToIdMap = new Map<string, string>();
-  const dummyIdToRealIdMap = new Map<string, string>();
+  console.log('\n� STEP 8: Seeding Subjects...');
 
-  // Indian names for demographics
-  const genders = ['Male', 'Female'];
-  const bloodGroups = ['A+', 'B+', 'O+', 'AB+', 'A-', 'B-', 'O-', 'AB-'];
-  const categories = ['General', 'OBC', 'SC', 'ST', 'EWS'];
-  const religions = ['Hindu', 'Muslim', 'Christian', 'Sikh', 'Buddhist'];
-  const states = ['Madhya Pradesh', 'Maharashtra', 'Gujarat', 'Rajasthan', 'Delhi'];
-
-  for (let i = 0; i < SOVEREIGN_GENESIS_DATA.students.length; i++) {
-    const student = SOVEREIGN_GENESIS_DATA.students[i];
-    const { grade, section } = parseClassString(student.class);
-    const classId = classStringToIdMap.get(student.class);
-
-    if (!classId) {
-      console.warn(`Class not found for student ${student.name}: ${student.class}`);
-      continue;
-    }
-
-    // Create User account for student login
-    const studentUser = await prisma.user.create({
+  for (const subject of DUMMY_SUBJECTS) {
+    await prisma.subject.create({
       data: {
-        name: student.name,
-        email: student.email || `student.${student.admission_no}@sovereign.edu`,
-        role: UserRole.STUDENT,
-        school_id: SCHOOL_ID,
-        password_hash: hashedPassword
+        id: subject.id,
+        school_id: subject.school_id,
+        code: subject.code,
+        name: subject.name,
+        is_optional: subject.is_optional
       }
     });
+  }
+  console.log(`   ✅ ${DUMMY_SUBJECTS.length} subjects created`);
 
-    // Create Student with enhanced demographics
-    const created = await prisma.student.create({
+  // =========================================================================
+  // STEP 9: SEED CLASSES
+  // =========================================================================
+  console.log('\n🏛️ STEP 9: Seeding Classes...');
+
+  for (const cls of DUMMY_CLASSES) {
+    await prisma.class.create({
       data: {
-        admission_no: student.admission_no,
-        name: student.name,
-        email: student.email,
-        school_id: SCHOOL_ID,
-        user_id: studentUser.id,
-        // Demographics
-        gender: genders[i % 2],
-        date_of_birth: new Date(2010 - parseInt(grade) + 6, i % 12, (i % 28) + 1),
-        father_name: `Mr. ${student.name.split(' ')[1] || 'Kumar'}`,
-        mother_name: `Mrs. ${student.name.split(' ')[1] || 'Devi'}`,
-        blood_group: bloodGroups[i % bloodGroups.length],
-        nationality: 'Indian',
-        religion: religions[i % religions.length],
-        category: categories[i % categories.length],
-        mother_tongue: 'Hindi',
-        phone: `+91987654${(3210 + i).toString().padStart(4, '0')}`,
-        emergency_contact_name: `Emergency Contact for ${student.name}`,
-        emergency_contact_phone: `+91876543${(2100 + i).toString().padStart(4, '0')}`,
-        address_line1: `${100 + i}, Model Colony`,
-        city: 'Bhopal',
-        state: states[i % states.length],
-        pincode: `46200${i % 10}`,
-        status: StudentStatus.ACTIVE,
-        admission_date: new Date('2024-04-01')
+        id: cls.id,
+        school_id: cls.school_id,
+        academic_year_id: cls.academic_year_id,
+        grade: cls.grade,
+        section: cls.section,
+        capacity: cls.capacity,
+        class_teacher_id: cls.class_teacher_id // Already linked from dummy-data
       }
     });
+  }
+  console.log(`   ✅ ${DUMMY_CLASSES.length} classes created`);
 
-    admissionNoToIdMap.set(student.admission_no, created.id);
-    dummyIdToRealIdMap.set(student.id, created.id);
+  // =========================================================================
+  // STEP 10: SEED CLASS-SUBJECT LINKS
+  // =========================================================================
+  console.log('\n🔗 STEP 10: Seeding Class-Subject Links...');
 
-    // Create StudentEnrollment (roll number lives here now!)
-    await prisma.studentEnrollment.create({
+  for (const csLink of DUMMY_CLASS_SUBJECTS) {
+    await prisma.classSubject.create({
       data: {
-        school_id: SCHOOL_ID,
-        student_id: created.id,
-        class_id: classId,
-        academic_year_id: ACADEMIC_YEAR_ID,
-        roll_number: student.roll,
-        status: EnrollmentStatus.ACTIVE
+        id: csLink.id,
+        school_id: csLink.school_id,
+        class_id: csLink.class_id,
+        subject_id: csLink.subject_id
       }
     });
   }
+  console.log(`   ✅ ${DUMMY_CLASS_SUBJECTS.length} class-subject links created`);
 
   // =========================================================================
-  // STEP 9: LINK PARENTS & STUDENTS
+  // STEP 11: SEED STAFF-SUBJECT ASSIGNMENTS
   // =========================================================================
-  console.log('🔗 Linking Parents & Students');
-  for (const link of SOVEREIGN_GENESIS_DATA.parentStudent) {
-    const pId = parentRefToIdMap.get(link.parent_ref);
-    const sId = admissionNoToIdMap.get(link.admission_no);
-    if (pId && sId) {
-      await prisma.parentStudent.create({
-        data: {
-          parent_id: pId,
-          student_id: sId,
-          school_id: SCHOOL_ID,
-          relation: link.relation,
-          is_primary: link.is_primary,
-          can_pickup: true,
-          has_custody: true
-        }
-      });
-    }
+  console.log('\n📖 STEP 11: Seeding Staff-Subject Assignments...');
+
+  for (const ss of DUMMY_STAFF_SUBJECTS) {
+    await prisma.staffSubject.create({
+      data: {
+        id: ss.id,
+        school_id: ss.school_id,
+        staff_profile_id: ss.staff_profile_id,
+        subject_id: ss.subject_id,
+        is_primary: ss.is_primary
+      }
+    });
   }
+  console.log(`   ✅ ${DUMMY_STAFF_SUBJECTS.length} staff-subject assignments created`);
 
   // =========================================================================
-  // STEP 10: SEED DOCUMENTS
+  // STEP 12: SEED STAFF-CLASS ASSIGNMENTS
   // =========================================================================
-  console.log('📄 Seeding Documents');
-  for (const doc of SOVEREIGN_GENESIS_DATA.documents) {
-    const uId = doc.owner_type === 'PARENT' ? parentRefToIdMap.get(doc.owner_key) : staffNoToIdMap.get(doc.owner_key);
-    const sId = doc.owner_type === 'STUDENT' ? admissionNoToIdMap.get(doc.owner_key) : null;
-    if (uId || sId) {
-      await prisma.identityDocument.create({
-        data: {
-          doc_type: doc.doc_type,
-          file_ref: doc.file_ref,
-          masked_id: doc.id_last4,
-          school_id: SCHOOL_ID,
-          owner_user_id: uId || undefined,
-          owner_student_id: sId || undefined
-        }
-      });
-    }
+  console.log('\n🎓 STEP 12: Seeding Staff-Class Assignments...');
+
+  for (const sc of DUMMY_STAFF_CLASSES) {
+    await prisma.staffClass.create({
+      data: {
+        id: sc.id,
+        school_id: sc.school_id,
+        staff_profile_id: sc.staff_profile_id,
+        class_id: sc.class_id,
+        role: sc.role
+      }
+    });
   }
+  console.log(`   ✅ ${DUMMY_STAFF_CLASSES.length} staff-class assignments created`);
 
   // =========================================================================
-  // STEP 11: SEED LOGISTICS (Buses & Books)
   // =========================================================================
-  console.log('🚌 Seeding Logistics');
-  await prisma.bus.createMany({
-    data: SOVEREIGN_GENESIS_DATA.buses.map((b: any) => ({
-      ...b,
-      school_id: SCHOOL_ID,
-      insuranceExpiry: new Date(b.insuranceExpiry)
-    }))
+  // PART 3: STUDENTS & ENROLLMENTS (THE HEAVY PART)
+  // =========================================================================
+  // =========================================================================
+
+  console.log('\n' + '='.repeat(70));
+  console.log('🎯 PART 3: Students & Enrollments (~2000 records)');
+  console.log('='.repeat(70));
+
+  // =========================================================================
+  // STEP 13: SEED STUDENT USERS (Bulk Insert with createMany)
+  // =========================================================================
+  console.log('\n� STEP 13: Seeding Student Users (using createMany for performance)...');
+  console.log(`   └─ Preparing ${DUMMY_STUDENT_USERS.length} student user records...`);
+
+  // Prepare student user data with hashed passwords
+  const studentUserData = DUMMY_STUDENT_USERS.map(user => ({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    password_hash: hashedPassword, // Reuse the same hash for all students
+    role: user.role,
+    school_id: user.school_id
+  }));
+
+  // Bulk insert student users
+  const studentUsersResult = await prisma.user.createMany({
+    data: studentUserData,
+    skipDuplicates: true
   });
+  console.log(`   ✅ ${studentUsersResult.count} student users created`);
 
-  // Seed books with new schema (quantity, available)
-  for (const book of SOVEREIGN_GENESIS_DATA.books) {
-    await prisma.book.create({
+  // =========================================================================
+  // STEP 14: SEED STUDENTS (Bulk Insert with createMany)
+  // =========================================================================
+  console.log('\n🎓 STEP 14: Seeding Students (using createMany for performance)...');
+  console.log(`   └─ Preparing ${DUMMY_STUDENTS.length} student records...`);
+
+  // Prepare student data
+  const studentData = DUMMY_STUDENTS.map(student => ({
+    id: student.id,
+    admission_no: student.admission_no,
+    name: student.name,
+    email: student.email,
+    school_id: student.school_id,
+    user_id: student.user_id,
+    // Demographics
+    gender: student.gender,
+    date_of_birth: student.date_of_birth,
+    father_name: student.father_name,
+    mother_name: student.mother_name,
+    guardian_name: student.guardian_name,
+    blood_group: student.blood_group,
+    nationality: student.nationality,
+    religion: student.religion,
+    category: student.category,
+    caste: student.caste,
+    mother_tongue: student.mother_tongue,
+    // Contact
+    phone: student.phone,
+    alternate_phone: student.alternate_phone,
+    emergency_contact_name: student.emergency_contact_name,
+    emergency_contact_phone: student.emergency_contact_phone,
+    // Address
+    address_line1: student.address_line1,
+    address_line2: student.address_line2,
+    city: student.city,
+    state: student.state,
+    pincode: student.pincode,
+    // Identity
+    aadhaar_number: student.aadhaar_number,
+    birth_certificate_no: student.birth_certificate_no,
+    // Previous Education
+    previous_school: student.previous_school,
+    transfer_certificate_no: student.transfer_certificate_no,
+    // Status
+    status: student.status,
+    admission_date: student.admission_date,
+    leaving_date: student.leaving_date,
+    leaving_reason: student.leaving_reason
+  }));
+
+  // Bulk insert students
+  const studentsResult = await prisma.student.createMany({
+    data: studentData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${studentsResult.count} students created`);
+
+  // =========================================================================
+  // STEP 15: SEED STUDENT ENROLLMENTS (Critical - Roll Numbers!)
+  // =========================================================================
+  console.log('\n📝 STEP 15: Seeding Student Enrollments (using createMany)...');
+  console.log(`   └─ Preparing ${DUMMY_ENROLLMENTS.length} enrollment records...`);
+  console.log('   └─ This links students to classes with roll numbers...');
+
+  // Prepare enrollment data - this is where roll_number lives!
+  const enrollmentData = DUMMY_ENROLLMENTS.map(enrollment => ({
+    id: enrollment.id,
+    school_id: enrollment.school_id,
+    student_id: enrollment.student_id,
+    class_id: enrollment.class_id,
+    academic_year_id: enrollment.academic_year_id,
+    roll_number: enrollment.roll_number,
+    status: enrollment.status,
+    promoted_from_id: enrollment.promoted_from_id
+  }));
+
+  // Bulk insert enrollments
+  const enrollmentsResult = await prisma.studentEnrollment.createMany({
+    data: enrollmentData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${enrollmentsResult.count} student enrollments created`);
+
+  // =========================================================================
+  // =========================================================================
+  // PART 4: PARENTS, RESULTS & OPERATIONS (FINAL)
+  // =========================================================================
+  // =========================================================================
+
+  console.log('\n' + '='.repeat(70));
+  console.log('🎯 PART 4: Parents, Results & Operations (Final)');
+  console.log('='.repeat(70));
+
+  // =========================================================================
+  // STEP 16: SEED PARENT USERS
+  // =========================================================================
+  console.log('\n👨‍👩‍👧 STEP 16: Seeding Parent Users...');
+
+  const parentUserData = DUMMY_PARENT_USERS.map(user => ({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    password_hash: hashedPassword,
+    role: user.role,
+    school_id: user.school_id
+  }));
+
+  const parentUsersResult = await prisma.user.createMany({
+    data: parentUserData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${parentUsersResult.count} parent users created`);
+
+  // =========================================================================
+  // STEP 17: SEED PARENT PROFILES
+  // =========================================================================
+  console.log('\n📋 STEP 17: Seeding Parent Profiles...');
+
+  const parentProfileData = DUMMY_PARENT_PROFILES.map(profile => ({
+    id: profile.id,
+    user_id: profile.user_id,
+    school_id: profile.school_id,
+    date_of_birth: profile.date_of_birth,
+    gender: profile.gender,
+    occupation: profile.occupation,
+    organization: profile.organization,
+    annual_income: profile.annual_income,
+    qualification: profile.qualification,
+    alternate_phone: profile.alternate_phone,
+    office_phone: profile.office_phone,
+    address_line1: profile.address_line1,
+    address_line2: profile.address_line2,
+    city: profile.city,
+    state: profile.state,
+    pincode: profile.pincode,
+    aadhaar_number: profile.aadhaar_number,
+    is_emergency_contact: profile.is_emergency_contact
+  }));
+
+  const parentProfilesResult = await prisma.parentProfile.createMany({
+    data: parentProfileData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${parentProfilesResult.count} parent profiles created`);
+
+  // =========================================================================
+  // STEP 18: LINK PARENTS & STUDENTS
+  // =========================================================================
+  console.log('\n🔗 STEP 18: Linking Parents & Students...');
+
+  const parentStudentData = DUMMY_PARENT_STUDENT_LINKS.map(link => ({
+    parent_id: link.parent_id,
+    student_id: link.student_id,
+    school_id: link.school_id,
+    relation: link.relation,
+    is_primary: link.is_primary,
+    can_pickup: link.can_pickup,
+    has_custody: link.has_custody
+  }));
+
+  const parentStudentResult = await prisma.parentStudent.createMany({
+    data: parentStudentData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${parentStudentResult.count} parent-student links created`);
+
+  // =========================================================================
+  // STEP 19: SEED EXAMS
+  // =========================================================================
+  console.log('\n📝 STEP 19: Seeding Exams...');
+
+  for (const exam of DUMMY_EXAMS) {
+    await prisma.exam.create({
       data: {
-        isbn: book.isbn,
-        title: book.title,
-        author: book.author,
-        status: book.status,
-        school_id: SCHOOL_ID,
-        quantity: 5,
-        available: book.status === 'AVAILABLE' ? 5 : 4
+        id: exam.id,
+        school_id: exam.school_id,
+        name: exam.name,
+        type: exam.type,
+        start_date: exam.start_date,
+        end_date: exam.end_date
       }
     });
-
-    // Create BookLoan for issued books
-    if (book.issuedTo) {
-      const studentId = dummyIdToRealIdMap.get(book.issuedTo);
-      if (studentId) {
-        await prisma.bookLoan.create({
-          data: {
-            book_isbn: book.isbn,
-            borrower_type: 'STUDENT',
-            student_id: studentId,
-            school_id: SCHOOL_ID,
-            issue_date: new Date(),
-            due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 2 weeks
-            status: LoanStatus.ACTIVE
-          }
-        });
-      }
-    }
   }
+  console.log(`   ✅ ${DUMMY_EXAMS.length} exams created`);
 
   // =========================================================================
-  // STEP 12: SEED INVOICES
+  // STEP 20: SEED RESULTS
   // =========================================================================
-  console.log('💰 Seeding Invoices');
-  for (const inv of SOVEREIGN_GENESIS_DATA.invoices) {
-    const sId = dummyIdToRealIdMap.get(inv.student_id);
-    if (sId) {
-      await prisma.invoice.create({
-        data: {
-          student_id: sId,
-          base_amount: inv.base_amount,
-          discount_amount: inv.discount_amount,
-          description: inv.description,
-          due_date: new Date(inv.due_date),
-          status: inv.status as InvoiceStatus,
-          utr: inv.utr,
-          school_id: SCHOOL_ID
-        }
-      });
-    }
-  }
+  console.log('\n📊 STEP 20: Seeding Results...');
+
+  const resultData = DUMMY_RESULTS.map(result => ({
+    id: result.id,
+    school_id: result.school_id,
+    exam_id: result.exam_id,
+    student_id: result.student_id,
+    total_percentage: result.total_percentage,
+    grade: result.grade,
+    remarks: result.remarks
+  }));
+
+  const resultsResult = await prisma.result.createMany({
+    data: resultData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${resultsResult.count} results created`);
 
   // =========================================================================
-  // STEP 13: SEED MEDICAL & COUNSELING LOGS
+  // STEP 21: SEED RESULT MARKS (Normalized - No more JSON!)
   // =========================================================================
-  console.log('🏥 Seeding Medical & Counseling Logs');
-  for (const log of SOVEREIGN_GENESIS_DATA.medicalLogs) {
-    const sId = dummyIdToRealIdMap.get(log.student_id);
-    if (sId) {
-      await prisma.medicalLog.create({
-        data: {
-          student_id: sId,
-          time: new Date(log.time),
-          issue: log.issue,
-          action: log.action,
-          school_id: SCHOOL_ID
-        }
-      });
-    }
-  }
+  console.log('\n📈 STEP 21: Seeding Result Marks (normalized subject marks)...');
+  console.log(`   └─ This is the new normalized table replacing JSON...`);
 
-  for (const session of SOVEREIGN_GENESIS_DATA.counseling) {
-    const sId = dummyIdToRealIdMap.get(session.student_id);
-    if (sId) {
-      await prisma.counseling.create({
-        data: {
-          student_id: sId,
-          category: session.category,
-          note: session.note,
-          date: new Date(session.date),
-          school_id: SCHOOL_ID
-        }
-      });
-    }
-  }
+  const resultMarkData = DUMMY_RESULT_MARKS.map(mark => ({
+    id: mark.id,
+    school_id: mark.school_id,
+    result_id: mark.result_id,
+    subject_id: mark.subject_id,
+    marks_obtained: mark.marks_obtained,
+    max_marks: mark.max_marks,
+    grade: mark.grade,
+    remarks: mark.remarks
+  }));
+
+  const resultMarksResult = await prisma.resultMark.createMany({
+    data: resultMarkData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${resultMarksResult.count} result marks created`);
 
   // =========================================================================
-  // STEP 14: SEED SAMPLE ATTENDANCE
+  // STEP 22: SEED ATTENDANCE
   // =========================================================================
-  console.log('📋 Seeding Sample Attendance');
-  const today = new Date();
-  const firstStudent = SOVEREIGN_GENESIS_DATA.students[0];
-  const firstStudentId = admissionNoToIdMap.get(firstStudent.admission_no);
-  const principalId = staffNoToIdMap.get('STF_001');
+  console.log('\n📋 STEP 22: Seeding Attendance...');
 
-  if (firstStudentId) {
-    await prisma.attendance.create({
-      data: {
-        student_id: firstStudentId,
-        date: today,
-        status: AttendanceStatus.PRESENT,
-        period: 0, // Daily summary
-        school_id: SCHOOL_ID,
-        marked_by: principalId,
-        synced: true
-      }
-    });
-  }
+  const attendanceData = DUMMY_ATTENDANCE.map(att => ({
+    student_id: att.student_id,
+    date: att.date,
+    status: att.status,
+    period: att.period,
+    synced: att.synced,
+    school_id: att.school_id,
+    marked_by: att.marked_by
+  }));
+
+  const attendanceResult = await prisma.attendance.createMany({
+    data: attendanceData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${attendanceResult.count} attendance records created`);
 
   // =========================================================================
-  // STEP 15: SEED SAMPLE TIMETABLE
+  // STEP 23: SEED BOOKS
   // =========================================================================
-  console.log('🗓️ Seeding Sample Timetable');
-  const firstClassId = classStringToIdMap.get('10-A');
-  const mathSubjectId = subjectCodeToIdMap.get('MATH');
-  const mathTeacherId = staffNoToIdMap.get('STF_005');
+  console.log('\n📚 STEP 23: Seeding Books...');
 
-  if (firstClassId && mathSubjectId) {
+  const bookData = DUMMY_BOOKS.map(book => ({
+    isbn: book.isbn,
+    title: book.title,
+    author: book.author,
+    status: book.status,
+    school_id: book.school_id,
+    quantity: book.quantity,
+    available: book.available
+  }));
+
+  const booksResult = await prisma.book.createMany({
+    data: bookData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${booksResult.count} books created`);
+
+  // =========================================================================
+  // STEP 24: SEED BOOK LOANS
+  // =========================================================================
+  console.log('\n📖 STEP 24: Seeding Book Loans...');
+
+  const bookLoanData = DUMMY_BOOK_LOANS.map(loan => ({
+    id: loan.id,
+    book_isbn: loan.book_isbn,
+    borrower_type: loan.borrower_type,
+    student_id: loan.student_id,
+    user_id: loan.user_id,
+    school_id: loan.school_id,
+    issue_date: loan.issue_date,
+    due_date: loan.due_date,
+    return_date: loan.return_date,
+    fine_amount: loan.fine_amount,
+    fine_paid: loan.fine_paid,
+    status: loan.status
+  }));
+
+  const bookLoansResult = await prisma.bookLoan.createMany({
+    data: bookLoanData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${bookLoansResult.count} book loans created`);
+
+  // =========================================================================
+  // STEP 25: SEED INVOICES
+  // =========================================================================
+  console.log('\n💵 STEP 25: Seeding Invoices...');
+
+  const invoiceData = DUMMY_INVOICES.map(inv => ({
+    student_id: inv.student_id,
+    base_amount: inv.base_amount,
+    discount_amount: inv.discount_amount,
+    description: inv.description,
+    due_date: inv.due_date,
+    status: inv.status,
+    utr: inv.utr,
+    school_id: inv.school_id
+  }));
+
+  const invoicesResult = await prisma.invoice.createMany({
+    data: invoiceData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${invoicesResult.count} invoices created`);
+
+  // =========================================================================
+  // STEP 26: SEED BUSES
+  // =========================================================================
+  console.log('\n🚌 STEP 26: Seeding Buses...');
+
+  const busData = DUMMY_BUSES.map(bus => ({
+    id: bus.id,
+    plateNumber: bus.plateNumber,
+    driverName: bus.driverName,
+    capacity: bus.capacity,
+    routeId: bus.routeId,
+    insuranceExpiry: bus.insuranceExpiry,
+    school_id: bus.school_id
+  }));
+
+  const busesResult = await prisma.bus.createMany({
+    data: busData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${busesResult.count} buses created`);
+
+  // =========================================================================
+  // STEP 27: SEED TIMETABLE
+  // =========================================================================
+  console.log('\n🗓️ STEP 27: Seeding Timetable...');
+
+  for (const tt of DUMMY_TIMETABLE) {
     await prisma.timetable.create({
       data: {
-        id: 'tt_1',
-        school_id: SCHOOL_ID,
-        class_id: firstClassId,
-        day_of_week: 1, // Monday
-        start_time: '08:00',
-        end_time: '08:45',
-        subject_id: mathSubjectId,
-        teacher_id: mathTeacherId
+        id: tt.id,
+        school_id: tt.school_id,
+        class_id: tt.class_id,
+        day_of_week: tt.day_of_week,
+        start_time: tt.start_time,
+        end_time: tt.end_time,
+        subject_id: tt.subject_id,
+        teacher_id: tt.teacher_id
       }
     });
   }
+  console.log(`   ✅ ${DUMMY_TIMETABLE.length} timetable entries created`);
 
   // =========================================================================
-  // STEP 16: SEED SAMPLE EXAM & RESULTS
   // =========================================================================
-  console.log('📝 Seeding Sample Exam & Results');
-  const examId = 'exam_midterm_2025';
-  await prisma.exam.create({
-    data: {
-      id: examId,
-      school_id: SCHOOL_ID,
-      name: 'Mid-Term Examination 2025',
-      type: 'MIDTERM',
-      start_date: new Date('2025-09-15'),
-      end_date: new Date('2025-09-25')
-    }
-  });
+  // SEED COMPLETE - FINAL SUMMARY
+  // =========================================================================
+  // =========================================================================
+  console.log('\n\n' + '🎉'.repeat(35));
+  console.log('='.repeat(70));
+  console.log('✅ SOVEREIGN GENESIS SEED COMPLETE!');
+  console.log('='.repeat(70));
+  console.log('🎉'.repeat(35));
 
-  // Create result for first student
-  if (firstStudentId && mathSubjectId) {
-    const resultId = 'result_1';
-    await prisma.result.create({
-      data: {
-        id: resultId,
-        school_id: SCHOOL_ID,
-        exam_id: examId,
-        student_id: firstStudentId,
-        total_percentage: 85.5,
-        grade: 'A',
-        remarks: 'Excellent performance'
-      }
-    });
+  console.log('\n📊 FINAL COUNTS:');
+  console.log('─'.repeat(50));
 
-    // Create ResultMark (normalized - no more JSON!)
-    await prisma.resultMark.create({
-      data: {
-        school_id: SCHOOL_ID,
-        result_id: resultId,
-        subject_id: mathSubjectId,
-        marks_obtained: 85,
-        max_marks: 100,
-        grade: 'A',
-        remarks: 'Great work!'
-      }
-    });
-  }
+  console.log('\n🏫 ORGANIZATION:');
+  console.log('   ├─ 1 School');
+  console.log('   ├─ 1 System Settings');
+  console.log(`   └─ ${DUMMY_ACADEMIC_YEARS.length} Academic Years`);
 
-  console.log('✅ Seed Complete! New 3NF Schema fully populated.');
-  console.log('📊 Summary:');
-  console.log(`   - 1 School`);
-  console.log(`   - 1 Academic Year`);
-  console.log(`   - ${subjects.length} Subjects`);
-  console.log(`   - ${uniqueClasses.length} Classes`);
-  console.log(`   - ${SOVEREIGN_GENESIS_DATA.parents.length} Parents (with profiles)`);
-  console.log(`   - ${SOVEREIGN_GENESIS_DATA.staff.length} Staff (with profiles & financials)`);
-  console.log(`   - ${SOVEREIGN_GENESIS_DATA.students.length} Students (with enrollments)`);
+  console.log('\n👨‍🏫 STAFF & STRUCTURE:');
+  console.log(`   ├─ ${DUMMY_STAFF_USERS.length} Staff Users`);
+  console.log(`   ├─ ${DUMMY_STAFF_PROFILES.length} Staff Profiles`);
+  console.log(`   ├─ ${DUMMY_STAFF_FINANCIALS.length} Staff Financials`);
+  console.log(`   ├─ ${DUMMY_SUBJECTS.length} Subjects`);
+  console.log(`   ├─ ${DUMMY_CLASSES.length} Classes`);
+  console.log(`   ├─ ${DUMMY_CLASS_SUBJECTS.length} Class-Subject Links`);
+  console.log(`   ├─ ${DUMMY_STAFF_SUBJECTS.length} Staff-Subject Assignments`);
+  console.log(`   └─ ${DUMMY_STAFF_CLASSES.length} Staff-Class Assignments`);
+
+  console.log('\n🎓 STUDENTS:');
+  console.log(`   ├─ ${studentUsersResult.count} Student Users`);
+  console.log(`   ├─ ${studentsResult.count} Students`);
+  console.log(`   └─ ${enrollmentsResult.count} Enrollments`);
+
+  console.log('\n👨‍👩‍👧 PARENTS:');
+  console.log(`   ├─ ${parentUsersResult.count} Parent Users`);
+  console.log(`   ├─ ${parentProfilesResult.count} Parent Profiles`);
+  console.log(`   └─ ${parentStudentResult.count} Parent-Student Links`);
+
+  console.log('\n📝 ACADEMICS:');
+  console.log(`   ├─ ${DUMMY_EXAMS.length} Exams`);
+  console.log(`   ├─ ${resultsResult.count} Results`);
+  console.log(`   ├─ ${resultMarksResult.count} Result Marks`);
+  console.log(`   └─ ${attendanceResult.count} Attendance Records`);
+
+  console.log('\n📚 LIBRARY & FINANCE:');
+  console.log(`   ├─ ${booksResult.count} Books`);
+  console.log(`   ├─ ${bookLoansResult.count} Book Loans`);
+  console.log(`   └─ ${invoicesResult.count} Invoices`);
+
+  console.log('\n🚌 LOGISTICS:');
+  console.log(`   ├─ ${busesResult.count} Buses`);
+  console.log(`   └─ ${DUMMY_TIMETABLE.length} Timetable Entries`);
+
+  console.log('\n' + '─'.repeat(50));
+  console.log('🔐 TEST CREDENTIALS:');
+  console.log('   ├─ Super Admin: super@sovereign.edu / SuperAdmin@123');
+  console.log('   ├─ School Admin: admin@sovereign.edu / Admin@123');
+  console.log('   ├─ Finance: finance@sovereign.edu / Finance@123');
+  console.log('   └─ All Others: [email] / password123');
+  console.log('─'.repeat(50));
+
+  console.log('\n✅ Database is ready for development!');
 }
+
+// ============================================================================
+// EXECUTE
+// ============================================================================
 
 main()
   .catch(err => {
