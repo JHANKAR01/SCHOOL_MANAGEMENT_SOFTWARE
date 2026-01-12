@@ -11,14 +11,17 @@ if (!connectionString) {
   throw new Error('DATABASE_URL is not defined in environment variables');
 }
 
-// Create the Pool with SSL for Supabase
 const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
+  connectionTimeoutMillis: 10000, // Wait 10s before failing
+  options: '-c search_path=schoolmanagementsystem'
 });
 
 // Initialize Adapter and Client
-const adapter = new PrismaPg(pool);
+const adapter = new PrismaPg(pool, {
+  schema: 'schoolmanagementsystem'
+});
 const globalPrisma = new PrismaClient({ adapter });
 
 export default globalPrisma;
