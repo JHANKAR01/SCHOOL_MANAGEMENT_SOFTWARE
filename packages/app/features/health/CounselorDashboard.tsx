@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { SovereignTable, PageHeader, StatCard, SovereignBadge } from '../../components/SovereignComponents';
 import { Row, Col } from '../../components/Layout';
 import { HeartPulse, Brain, UserPlus } from 'lucide-react';
-import { SOVEREIGN_GENESIS_DATA } from '../../../api/src/data/dummy-data';
+import { DUMMY_STUDENTS } from '../../../api/src/data/dummy-data';
 
 interface CounselorNote {
   id: number | string;
@@ -18,10 +18,15 @@ export const CounselorDashboard = () => {
   const { data: notes } = useQuery<CounselorNote[]>({
     queryKey: ['counselor-notes'],
     queryFn: async () => {
-      const students = SOVEREIGN_GENESIS_DATA.students;
-      return SOVEREIGN_GENESIS_DATA.counseling.map(c => ({
+      // Mock counseling data - in production, fetch from API
+      const mockCounseling = [
+        { id: 1, student_id: 'std_0001', date: '2025-09-15', category: 'Academic', note: 'Student needs extra support in Math.' },
+        { id: 2, student_id: 'std_0010', date: '2025-09-16', category: 'Behavioral', note: 'Discussion about classroom behavior.' },
+        { id: 3, student_id: 'std_0025', date: '2025-09-17', category: 'Personal', note: 'Follow-up session scheduled.' },
+      ];
+      return mockCounseling.map(c => ({
         ...c,
-        student: students.find(s => s.id === c.student_id)?.name || c.student_id
+        student: DUMMY_STUDENTS.find(s => s.id === c.student_id)?.name || c.student_id
       }));
     }
   });

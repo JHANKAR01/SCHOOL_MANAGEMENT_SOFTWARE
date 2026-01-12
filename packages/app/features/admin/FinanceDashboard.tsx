@@ -5,7 +5,7 @@ import { StatCard, PageHeader, SovereignButton, SovereignTable, SovereignBadge, 
 import { Row, Col } from '../../components/Layout';
 import { Wallet, AlertCircle, TrendingUp, CheckCircle, Plus, DollarSign, Download, CreditCard } from 'lucide-react';
 import { useInteraction, Expense } from '../../provider/InteractionContext';
-import { SOVEREIGN_GENESIS_DATA } from '../../../api/src/data/dummy-data';
+import { DUMMY_STUDENTS } from '../../../api/src/data/dummy-data';
 import { ActionModal } from '../../components/ActionModal';
 
 export const FinanceDashboard: React.FC<{ school: SchoolConfig, activeModule: string }> = ({ school, activeModule }) => {
@@ -64,7 +64,7 @@ export const FinanceDashboard: React.FC<{ school: SchoolConfig, activeModule: st
   };
 
   // Helper to get student name
-  const getStudentName = (id: string) => SOVEREIGN_GENESIS_DATA.students.find(s => s.id === id)?.name || id;
+  const getStudentName = (id: string) => DUMMY_STUDENTS.find(s => s.id === id)?.name || id;
 
   const invoiceColumns = [
     { header: "Inv ID", accessor: "id" },
@@ -137,8 +137,8 @@ export const FinanceDashboard: React.FC<{ school: SchoolConfig, activeModule: st
               onChange={e => setInvoiceForm({ ...invoiceForm, studentId: e.target.value })}
             >
               <option value="">Select Student</option>
-              {SOVEREIGN_GENESIS_DATA.students.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.class})</option>
+              {DUMMY_STUDENTS.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
           </div>
