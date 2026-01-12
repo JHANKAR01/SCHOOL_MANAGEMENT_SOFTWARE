@@ -8,12 +8,18 @@ datasource db {
   schemas  = ["schoolmanagementsystem"]
 }
 
+// ============================================================================
+// CORE ORGANIZATION
+// ============================================================================
+
 model School {
-  id               String             @id @default(cuid())
-  name             String
-  settings_json    Json?
-  created_at       DateTime           @default(now())
-  updated_at       DateTime           @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  settings_json Json?
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @updatedAt
+
+  // Existing relations
   books            Book[]
   buses            Bus[]
   Exam             Exam[]
@@ -36,20 +42,136 @@ model School {
   users            User[]
   Visitor          Visitor[]
 
+  // NEW relations
+  academicYears      AcademicYear[]
+  classes            Class[]
+  subjects           Subject[]
+  staffProfiles      StaffProfile[]
+  staffFinancials    StaffFinancial[]
+  parentProfiles     ParentProfile[]
+  bookLoans          BookLoan[]
+  studentEnrollments StudentEnrollment[]
+  resultMarks        ResultMark[]
+  classSubjects      ClassSubject[]
+  staffSubjects      StaffSubject[]
+  staffClasses       StaffClass[]
+
   @@schema("schoolmanagementsystem")
 }
 
+// ============================================================================
+// ACADEMIC STRUCTURE (NEW)
+// ============================================================================
+
+/// Tracks school academic years/sessions (e.g., 2025-2026)
+/// NOTE: Only one AcademicYear per school can have is_current = true
+/// This must be enforced at application level or via partial unique index
+model AcademicYear {
+  id         String   @id @default(cuid())
+  school_id  String
+  name       String // "2025-2026"
+  start_date DateTime @db.Date
+  end_date   DateTime @db.Date
+  is_current Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  school      School              @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  classes     Class[]
+  enrollments StudentEnrollment[]
+
+  @@unique([school_id, name])
+  @@index([school_id])
+  @@index([school_id, is_current])
+  @@schema("schoolmanagementsystem")
+}
+
+/// Represents a class-section combination for a specific academic year
+model Class {
+  id               String   @id @default(cuid())
+  school_id        String
+  academic_year_id String
+  grade            String // "1", "2", ... "12", "LKG", "UKG", "Nursery"
+  section          Section // Enum: A, B, C, D, E, F
+  capacity         Int?     @default(40)
+  class_teacher_id String?
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  school        School       @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  academic_year AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+  class_teacher User?        @relation("ClassTeacher", fields: [class_teacher_id], references: [id], onDelete: SetNull)
+
+  enrollments   StudentEnrollment[]
+  timetables    Timetable[]
+  homework      Homework[]
+  liveClasses   LiveClass[]
+  papers        Paper[]
+  syllabi       Syllabus[]
+  classSubjects ClassSubject[]
+  staffClasses  StaffClass[]
+
+  @@unique([school_id, academic_year_id, grade, section])
+  @@index([school_id])
+  @@index([academic_year_id])
+  @@schema("schoolmanagementsystem")
+}
+
+/// Canonical list of subjects taught in the school
+model Subject {
+  id          String   @id @default(cuid())
+  school_id   String
+  code        String // "MATH", "ENG", "PHY"
+  name        String // "Mathematics", "English", "Physics"
+  is_optional Boolean  @default(false)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  school        School         @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  classSubjects ClassSubject[]
+  timetables    Timetable[]
+  homework      Homework[]
+  liveClasses   LiveClass[]
+  syllabi       Syllabus[]
+  staffSubjects StaffSubject[]
+  resultMarks   ResultMark[]
+  papers        Paper[]
+
+  @@unique([school_id, code])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+/// Which subjects are taught in which class
+model ClassSubject {
+  id         String @id @default(cuid())
+  school_id  String
+  class_id   String
+  subject_id String
+
+  school  School  @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [class_id], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subject_id], references: [id], onDelete: Cascade)
+
+  @@unique([class_id, subject_id])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// USER & AUTHENTICATION
+// ============================================================================
+
 model User {
-  id                                                    String             @id @default(cuid())
-  name                                                  String
-  email                                                 String             @unique
-  phone                                                 String?
-  password_hash                                         String
-  role                                                  UserRole
-  department                                            String?
-  school_id                                             String
-  created_at                                            DateTime           @default(now())
-  updated_at                                            DateTime           @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  phone         String?
+  password_hash String
+  role          UserRole
+  department    String?
+  school_id     String
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @updatedAt
+
+  // Existing relations
   documents                                             IdentityDocument[]
   LeaveApplication                                      LeaveApplication[]
   LiveClass                                             LiveClass[]
@@ -61,20 +183,97 @@ model User {
   Timetable                                             Timetable[]
   school                                                School             @relation(fields: [school_id], references: [id])
 
+  // NEW relations
+  student_account  Student? // For STUDENT role login (1-to-1)
+  staff_profile    StaffProfile? // For TEACHER/STAFF roles (1-to-1)
+  parent_profile   ParentProfile? // For PARENT role (1-to-1)
+  classTeacherOf   Class[]        @relation("ClassTeacher")
+  attendanceMarked Attendance[]   @relation("AttendanceMarkedBy")
+  bookLoans        BookLoan[]
+
   @@index([school_id])
   @@schema("schoolmanagementsystem")
 }
 
+// ============================================================================
+// STUDENT (ENHANCED)
+// ============================================================================
+
+/// Student entity with comprehensive Indian school demographic fields
+/// NOTE: roll number is NOT here - it's in StudentEnrollment (changes per year)
 model Student {
-  id           String             @id @default(cuid())
+  id           String   @id @default(cuid())
   admission_no String
   name         String
-  email        String?            @unique
-  class        String
-  roll         Int
+  email        String?  @unique
   school_id    String
-  created_at   DateTime           @default(now())
-  updated_at   DateTime           @updatedAt
+  user_id      String?  @unique // Link to User for login
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @updatedAt
+
+  // ============================================
+  // Demographics - Indian School Requirements
+  // ============================================
+  gender        String? // "Male", "Female", "Other"
+  date_of_birth DateTime? @db.Date
+  father_name   String?
+  mother_name   String?
+  guardian_name String? // If different from parents
+  blood_group   String? // "A+", "B-", "O+", etc.
+  nationality   String?   @default("Indian")
+  religion      String?
+  category      String? // "General", "OBC", "SC", "ST", "EWS"
+  caste         String?
+  mother_tongue String?
+
+  // ============================================
+  // Contact Information
+  // ============================================
+  phone                   String?
+  alternate_phone         String?
+  emergency_contact_name  String?
+  emergency_contact_phone String?
+
+  // ============================================
+  // Address
+  // ============================================
+  address_line1 String?
+  address_line2 String?
+  city          String?
+  state         String?
+  pincode       String?
+
+  // ============================================
+  // Identity Documents (Indian)
+  // ============================================
+  aadhaar_number       String? // Should be encrypted in production
+  birth_certificate_no String?
+
+  // ============================================
+  // Previous Education
+  // ============================================
+  previous_school         String?
+  transfer_certificate_no String?
+
+  // ============================================
+  // Media
+  // ============================================
+  photo_url String?
+
+  // ============================================
+  // Status & Dates
+  // ============================================
+  status         StudentStatus @default(ACTIVE)
+  admission_date DateTime?     @db.Date
+  leaving_date   DateTime?     @db.Date
+  leaving_reason String?
+
+  // ============================================
+  // Relationships
+  // ============================================
+  user         User?               @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  school       School              @relation(fields: [school_id], references: [id])
+  enrollments  StudentEnrollment[]
   attendance   Attendance[]
   counseling   Counseling[]
   HostelRoom   HostelRoom[]
@@ -82,27 +281,236 @@ model Student {
   invoices     Invoice[]
   medical_logs MedicalLog[]
   parents      ParentStudent[]
-  Result       Result[]
-  school       School             @relation(fields: [school_id], references: [id])
+  results      Result[]
   Visitor      Visitor[]
+  bookLoans    BookLoan[]
 
   @@unique([school_id, admission_no])
   @@index([school_id])
   @@schema("schoolmanagementsystem")
 }
 
-model ParentStudent {
-  parent_id  String
-  student_id String
-  school_id  String
-  relation   String
-  is_primary Boolean @default(false)
-  parent     User    @relation(fields: [parent_id], references: [id], onDelete: Cascade)
-  student    Student @relation(fields: [student_id], references: [id], onDelete: Cascade)
+/// Tracks which class a student is in for each academic year
+/// This is where roll_number lives - it changes per year
+model StudentEnrollment {
+  id               String           @id @default(cuid())
+  school_id        String
+  student_id       String
+  class_id         String
+  academic_year_id String
+  roll_number      Int // Roll number for THIS class in THIS year
+  status           EnrollmentStatus @default(ACTIVE)
+  promoted_from_id String? // FK to previous enrollment (for tracking chain)
+  created_at       DateTime         @default(now()) @db.Timestamptz(6)
 
-  @@id([parent_id, student_id])
+  school        School       @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  student       Student      @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  class         Class        @relation(fields: [class_id], references: [id])
+  academic_year AcademicYear @relation(fields: [academic_year_id], references: [id])
+
+  @@unique([student_id, academic_year_id]) // One enrollment per student per year
+  @@unique([class_id, roll_number]) // Unique roll within a class
+  @@index([school_id])
+  @@index([class_id])
+  @@index([academic_year_id])
   @@schema("schoolmanagementsystem")
 }
+
+// ============================================================================
+// STAFF PROFILE (NEW)
+// ============================================================================
+
+/// Staff/Teacher profile - stores employee details
+/// Salary info is in separate StaffFinancial table for RLS security
+model StaffProfile {
+  id        String @id @default(cuid())
+  user_id   String @unique
+  school_id String
+
+  // Employment Details
+  employee_id       String? // School-assigned employee code
+  designation       String // "Teacher", "HOD", "Clerk", etc.
+  department        String? // "Science", "Commerce", "Admin"
+  employment_type   String? // "Permanent", "Contract", "Visiting"
+  joining_date      DateTime? @db.Date
+  confirmation_date DateTime? @db.Date
+
+  // Qualifications
+  qualification    String? // "B.Ed", "M.Sc", "PhD"
+  experience_years Int?
+  specialization   String?
+
+  // Personal Details
+  date_of_birth DateTime? @db.Date
+  gender        String?
+  blood_group   String?
+
+  // Address
+  address_line1 String?
+  address_line2 String?
+  city          String?
+  state         String?
+  pincode       String?
+
+  // Identity (Indian)
+  aadhaar_number String?
+  pan_number     String?
+
+  // Emergency Contact
+  emergency_contact_name  String?
+  emergency_contact_phone String?
+
+  // Media
+  photo_url String?
+
+  // Status
+  status       StaffStatus @default(ACTIVE)
+  leaving_date DateTime?   @db.Date
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt
+
+  // Relationships
+  user             User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  school           School          @relation(fields: [school_id], references: [id])
+  staffSubjects    StaffSubject[]
+  staffClasses     StaffClass[]
+  financialDetails StaffFinancial? // 1-to-1 for RLS security
+
+  @@unique([school_id, employee_id])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+/// Staff financial/salary details - separated for Row-Level Security
+/// Only Finance/Admin roles should have access to this table
+model StaffFinancial {
+  id               String @id @default(cuid())
+  staff_profile_id String @unique
+  school_id        String
+
+  // Salary Structure
+  salary_grade String? // "Grade A", "Grade B"
+  basic_salary Float // Base salary
+  hra          Float?  @default(0) // House Rent Allowance
+  allowances   Float?  @default(0) // Other allowances
+  deductions   Float?  @default(0) // PF, TDS, etc.
+
+  // Bank Details
+  bank_name       String?
+  bank_account_no String?
+  ifsc_code       String?
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt
+
+  staff_profile StaffProfile @relation(fields: [staff_profile_id], references: [id], onDelete: Cascade)
+  school        School       @relation(fields: [school_id], references: [id])
+
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+/// Which subjects a teacher can teach
+model StaffSubject {
+  id               String  @id @default(cuid())
+  school_id        String
+  staff_profile_id String
+  subject_id       String
+  is_primary       Boolean @default(false)
+
+  school        School       @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  staff_profile StaffProfile @relation(fields: [staff_profile_id], references: [id], onDelete: Cascade)
+  subject       Subject      @relation(fields: [subject_id], references: [id], onDelete: Cascade)
+
+  @@unique([staff_profile_id, subject_id])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+/// Which classes a teacher is assigned to
+model StaffClass {
+  id               String @id @default(cuid())
+  school_id        String
+  staff_profile_id String
+  class_id         String
+  role             String @default("TEACHER") // "TEACHER", "CLASS_TEACHER", "ASSISTANT"
+
+  school        School       @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  staff_profile StaffProfile @relation(fields: [staff_profile_id], references: [id], onDelete: Cascade)
+  class         Class        @relation(fields: [class_id], references: [id], onDelete: Cascade)
+
+  @@unique([staff_profile_id, class_id])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// PARENT PROFILE (NEW)
+// ============================================================================
+
+/// Parent profile with detailed information
+model ParentProfile {
+  id        String @id @default(cuid())
+  user_id   String @unique
+  school_id String
+
+  // Personal Details
+  date_of_birth DateTime? @db.Date
+  gender        String?
+  occupation    String?
+  organization  String?
+  annual_income String? // "Below 2L", "2-5L", "5-10L", "Above 10L"
+  qualification String?
+
+  // Contact
+  alternate_phone String?
+  office_phone    String?
+
+  // Address
+  address_line1 String?
+  address_line2 String?
+  city          String?
+  state         String?
+  pincode       String?
+
+  // Identity
+  aadhaar_number String?
+
+  // Emergency
+  is_emergency_contact Boolean @default(true)
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt
+
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  school School @relation(fields: [school_id], references: [id])
+
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+/// Links parents to students with relationship details
+model ParentStudent {
+  parent_id   String
+  student_id  String
+  school_id   String
+  relation    String // "Father", "Mother", "Guardian"
+  is_primary  Boolean @default(false)
+  can_pickup  Boolean @default(true) // Authorized for pickup
+  has_custody Boolean @default(true) // Legal custody
+
+  parent  User    @relation(fields: [parent_id], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+  @@id([parent_id, student_id])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// IDENTITY DOCUMENTS
+// ============================================================================
 
 model IdentityDocument {
   id                  String         @id @default(cuid())
@@ -113,7 +521,7 @@ model IdentityDocument {
   masked_id           String?
   verification_status DocumentStatus @default(PENDING)
   school_id           String
-  created_at          DateTime       @default(now())
+  created_at          DateTime       @default(now()) @db.Timestamptz(6)
   owner_student       Student?       @relation(fields: [owner_student_id], references: [id])
   owner_user          User?          @relation(fields: [owner_user_id], references: [id])
 
@@ -121,32 +529,274 @@ model IdentityDocument {
   @@schema("schoolmanagementsystem")
 }
 
-model Bus {
-  id              String   @id @default(cuid())
-  plateNumber     String   @unique
-  driverName      String
-  capacity        Int
-  routeId         String
-  insuranceExpiry DateTime
-  school_id       String
-  school          School   @relation(fields: [school_id], references: [id])
+// ============================================================================
+// ATTENDANCE (ENHANCED)
+// ============================================================================
+
+/// Attendance with period support (0 = Daily Summary, 1-8 = Specific Periods)
+model Attendance {
+  id         String           @id @default(cuid())
+  student_id String
+  date       DateTime         @db.Date // Date only, not timestamp
+  status     AttendanceStatus
+  period     Int              @default(0) // 0 = Daily Summary, 1-8 = Specific Periods
+  synced     Boolean          @default(false)
+  school_id  String
+  marked_by  String? // FK to User who marked attendance
+
+  student        Student @relation(fields: [student_id], references: [id])
+  marked_by_user User?   @relation("AttendanceMarkedBy", fields: [marked_by], references: [id])
+
+  @@unique([student_id, date, period]) // Prevents duplicate attendance
+  @@index([school_id])
+  @@index([student_id])
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// ACADEMIC - EXAMS & RESULTS (NORMALIZED)
+// ============================================================================
+
+model Exam {
+  id         String    @id
+  school_id  String
+  name       String
+  type       ExamType? @default(INTERNAL)
+  start_date DateTime  @db.Timestamptz(6)
+  end_date   DateTime  @db.Timestamptz(6)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  School     School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  results    Result[]
 
   @@index([school_id])
   @@schema("schoolmanagementsystem")
 }
 
+/// Result header - subject_marks JSON removed, now uses ResultMark table
+model Result {
+  id               String    @id
+  school_id        String
+  exam_id          String
+  student_id       String
+  total_percentage Float?
+  grade            String?
+  remarks          String?
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+
+  // Normalized relation - replaces subject_marks JSON
+  marks   ResultMark[]
+  Exam    Exam         @relation(fields: [exam_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  School  School       @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Student Student      @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([school_id])
+  @@index([exam_id])
+  @@index([student_id])
+  @@schema("schoolmanagementsystem")
+}
+
+/// Normalized exam marks per subject - replaces Result.subject_marks JSON
+model ResultMark {
+  id             String  @id @default(cuid())
+  school_id      String
+  result_id      String
+  subject_id     String
+  marks_obtained Float
+  max_marks      Float
+  grade          String?
+  remarks        String?
+
+  school  School  @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  result  Result  @relation(fields: [result_id], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subject_id], references: [id])
+
+  @@unique([result_id, subject_id])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// ACADEMIC - TIMETABLE & CLASSES (FK CONVERTED)
+// ============================================================================
+
+/// Timetable with proper FKs to Class and Subject
+model Timetable {
+  id          String  @id
+  school_id   String
+  class_id    String // Now FK to Class
+  day_of_week Int
+  start_time  String
+  end_time    String
+  subject_id  String // Now FK to Subject (renamed from 'subject')
+  teacher_id  String?
+
+  class        Class          @relation(fields: [class_id], references: [id])
+  subject      Subject        @relation(fields: [subject_id], references: [id])
+  Substitution Substitution[]
+  School       School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  User         User?          @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([class_id])
+  @@index([subject_id])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+/// Homework with proper FKs to Class and Subject
+model Homework {
+  id          String          @id
+  school_id   String
+  title       String
+  subject_id  String // Now FK to Subject (renamed from 'subject')
+  description String?
+  due_date    DateTime        @db.Timestamptz(6)
+  status      HomeworkStatus? @default(PENDING)
+  class_id    String // Now FK to Class
+  created_at  DateTime?       @default(now()) @db.Timestamptz(6)
+
+  class   Class   @relation(fields: [class_id], references: [id])
+  subject Subject @relation(fields: [subject_id], references: [id])
+  School  School  @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([school_id])
+  @@index([class_id])
+  @@index([subject_id])
+  @@schema("schoolmanagementsystem")
+}
+
+/// LiveClass with proper FKs to Class and Subject
+model LiveClass {
+  id           String    @id
+  school_id    String
+  subject_id   String // Now FK to Subject (renamed from 'subject')
+  class_id     String // Now FK to Class
+  teacher_id   String
+  meeting_link String
+  is_active    Boolean?  @default(false)
+  start_time   DateTime? @default(now()) @db.Timestamptz(6)
+
+  class   Class   @relation(fields: [class_id], references: [id])
+  subject Subject @relation(fields: [subject_id], references: [id])
+  School  School  @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  User    User    @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([class_id])
+  @@index([subject_id])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+/// Paper with proper FKs to Class and Subject
+model Paper {
+  id         String       @id
+  school_id  String
+  title      String
+  subject_id String // Now FK to Subject (renamed from 'subject')
+  class_id   String // Now FK to Class
+  status     PaperStatus? @default(DRAFT)
+  created_at DateTime?    @default(now()) @db.Timestamptz(6)
+
+  class   Class   @relation(fields: [class_id], references: [id])
+  subject Subject @relation(fields: [subject_id], references: [id])
+  School  School  @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([class_id])
+  @@index([subject_id])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+/// Syllabus with proper FKs to Class and Subject
+model Syllabus {
+  id           String          @id
+  school_id    String
+  subject_id   String // Now FK to Subject (renamed from 'subject')
+  class_id     String // Now FK to Class
+  topic        String
+  status       SyllabusStatus? @default(NOT_STARTED)
+  teacher_id   String?
+  completed_at DateTime?       @db.Timestamptz(6)
+
+  class   Class   @relation(fields: [class_id], references: [id])
+  subject Subject @relation(fields: [subject_id], references: [id])
+  School  School  @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  User    User?   @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([class_id])
+  @@index([subject_id])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+model Substitution {
+  id                                            String     @id
+  school_id                                     String
+  date                                          DateTime   @default(dbgenerated("CURRENT_DATE")) @db.Date
+  original_teacher_id                           String?
+  substitute_teacher_id                         String?
+  timetable_id                                  String?
+  User_Substitution_original_teacher_idToUser   User?      @relation("Substitution_original_teacher_idToUser", fields: [original_teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  School                                        School     @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  User_Substitution_substitute_teacher_idToUser User?      @relation("Substitution_substitute_teacher_idToUser", fields: [substitute_teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Timetable                                     Timetable? @relation(fields: [timetable_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// LIBRARY (ENHANCED)
+// ============================================================================
+
+/// Book inventory with quantity tracking
 model Book {
-  isbn      String  @id
+  isbn      String @id
   title     String
   author    String
   status    String
-  issuedTo  String?
   school_id String
-  school    School  @relation(fields: [school_id], references: [id])
+  quantity  Int    @default(1) // Total copies
+  available Int    @default(1) // Currently available
+
+  school School     @relation(fields: [school_id], references: [id])
+  loans  BookLoan[]
 
   @@index([school_id])
   @@schema("schoolmanagementsystem")
 }
+
+/// Book loan records with proper tracking
+model BookLoan {
+  id            String  @id @default(cuid())
+  book_isbn     String
+  borrower_type String // "STUDENT", "STAFF"
+  student_id    String?
+  user_id       String? // For staff borrowers
+  school_id     String
+
+  issue_date  DateTime  @default(now()) @db.Timestamptz(6)
+  due_date    DateTime  @db.Timestamptz(6)
+  return_date DateTime? @db.Timestamptz(6)
+  fine_amount Float?    @default(0)
+  fine_paid   Boolean   @default(false)
+
+  status LoanStatus @default(ACTIVE)
+
+  book    Book     @relation(fields: [book_isbn], references: [isbn])
+  student Student? @relation(fields: [student_id], references: [id])
+  user    User?    @relation(fields: [user_id], references: [id])
+  school  School   @relation(fields: [school_id], references: [id])
+
+  @@index([book_isbn])
+  @@index([student_id])
+  @@index([user_id])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// FINANCE
+// ============================================================================
 
 model Invoice {
   id              String        @id @default(cuid())
@@ -154,56 +804,14 @@ model Invoice {
   base_amount     Float
   discount_amount Float
   description     String
-  due_date        DateTime
+  due_date        DateTime      @db.Timestamptz(6)
   status          InvoiceStatus @default(PENDING)
   utr             String?
   school_id       String
-  created_at      DateTime      @default(now())
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
   updated_at      DateTime      @updatedAt
   school          School        @relation(fields: [school_id], references: [id])
   student         Student       @relation(fields: [student_id], references: [id])
-
-  @@index([school_id])
-  @@index([student_id])
-  @@schema("schoolmanagementsystem")
-}
-
-model Attendance {
-  id         String           @id @default(cuid())
-  student_id String
-  date       DateTime
-  status     AttendanceStatus
-  synced     Boolean          @default(false)
-  school_id  String
-  student    Student          @relation(fields: [student_id], references: [id])
-
-  @@index([school_id])
-  @@index([student_id])
-  @@schema("schoolmanagementsystem")
-}
-
-model MedicalLog {
-  id         String   @id @default(cuid())
-  student_id String
-  time       DateTime
-  issue      String
-  action     String
-  school_id  String
-  student    Student  @relation(fields: [student_id], references: [id])
-
-  @@index([school_id])
-  @@index([student_id])
-  @@schema("schoolmanagementsystem")
-}
-
-model Counseling {
-  id         String   @id @default(cuid())
-  student_id String
-  category   String
-  note       String
-  date       DateTime
-  school_id  String
-  student    Student  @relation(fields: [student_id], references: [id])
 
   @@index([school_id])
   @@index([student_id])
@@ -223,21 +831,41 @@ model Expense {
   @@schema("schoolmanagementsystem")
 }
 
-model Homework {
-  id          String          @id
-  school_id   String
-  title       String
-  subject     String
-  description String?
-  due_date    DateTime        @db.Timestamptz(6)
-  status      HomeworkStatus? @default(PENDING)
-  class_id    String
-  created_at  DateTime?       @default(now()) @db.Timestamptz(6)
-  School      School          @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+// ============================================================================
+// MEDICAL & COUNSELING
+// ============================================================================
+
+model MedicalLog {
+  id         String   @id @default(cuid())
+  student_id String
+  time       DateTime @db.Timestamptz(6)
+  issue      String
+  action     String
+  school_id  String
+  student    Student  @relation(fields: [student_id], references: [id])
 
   @@index([school_id])
+  @@index([student_id])
   @@schema("schoolmanagementsystem")
 }
+
+model Counseling {
+  id         String   @id @default(cuid())
+  student_id String
+  category   String
+  note       String
+  date       DateTime @db.Timestamptz(6)
+  school_id  String
+  student    Student  @relation(fields: [student_id], references: [id])
+
+  @@index([school_id])
+  @@index([student_id])
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// HOSTEL & TRANSPORT
+// ============================================================================
 
 model HostelRoom {
   id          String    @id
@@ -249,8 +877,62 @@ model HostelRoom {
   School      School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   Student     Student?  @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([school_id])
   @@schema("schoolmanagementsystem")
 }
+
+model Bus {
+  id              String   @id @default(cuid())
+  plateNumber     String   @unique
+  driverName      String
+  capacity        Int
+  routeId         String
+  insuranceExpiry DateTime @db.Timestamptz(6)
+  school_id       String
+  school          School   @relation(fields: [school_id], references: [id])
+
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// VISITORS & GATE
+// ============================================================================
+
+model Visitor {
+  id         Int            @id @default(autoincrement())
+  school_id  String
+  name       String
+  student_id String?
+  purpose    String
+  status     VisitorStatus? @default(WAITING)
+  time       DateTime?      @default(now()) @db.Timestamptz(6)
+  School     School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Student    Student?       @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+model GateLog {
+  id          Int            @id @default(autoincrement())
+  school_id   String
+  person_type GatePersonType
+  person_id   String?
+  name        String
+  purpose     String
+  status      GateStatus?    @default(INSIDE)
+  entry_time  DateTime?      @default(now()) @db.Timestamptz(6)
+  exit_time   DateTime?      @db.Timestamptz(6)
+  School      School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// ADMISSIONS & INQUIRIES
+// ============================================================================
 
 model Inquiry {
   id           Int            @id @default(autoincrement())
@@ -262,8 +944,13 @@ model Inquiry {
   created_at   DateTime?      @default(now()) @db.Timestamptz(6)
   School       School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([school_id])
   @@schema("schoolmanagementsystem")
 }
+
+// ============================================================================
+// LEAVE & TICKETS
+// ============================================================================
 
 model LeaveApplication {
   id         String       @id
@@ -298,125 +985,9 @@ model Ticket {
   @@schema("schoolmanagementsystem")
 }
 
-model Visitor {
-  id         Int            @id @default(autoincrement())
-  school_id  String
-  name       String
-  student_id String?
-  purpose    String
-  status     VisitorStatus? @default(WAITING)
-  time       DateTime?      @default(now()) @db.Timestamptz(6)
-  School     School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Student    Student?       @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("schoolmanagementsystem")
-}
-
-model Exam {
-  id         String    @id
-  school_id  String
-  name       String
-  type       ExamType? @default(INTERNAL)
-  start_date DateTime  @db.Timestamptz(6)
-  end_date   DateTime  @db.Timestamptz(6)
-  created_at DateTime? @default(now()) @db.Timestamptz(6)
-  School     School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Result     Result[]
-
-  @@index([school_id])
-  @@schema("schoolmanagementsystem")
-}
-
-model GateLog {
-  id          Int            @id @default(autoincrement())
-  school_id   String
-  person_type GatePersonType
-  person_id   String?
-  name        String
-  purpose     String
-  status      GateStatus?    @default(INSIDE)
-  entry_time  DateTime?      @default(now()) @db.Timestamptz(6)
-  exit_time   DateTime?      @db.Timestamptz(6)
-  School      School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([school_id])
-  @@schema("schoolmanagementsystem")
-}
-
-model LiveClass {
-  id           String    @id
-  school_id    String
-  subject      String
-  class_id     String
-  teacher_id   String
-  meeting_link String
-  is_active    Boolean?  @default(false)
-  start_time   DateTime? @default(now()) @db.Timestamptz(6)
-  School       School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  User         User      @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("schoolmanagementsystem")
-}
-
-model Paper {
-  id         String       @id
-  school_id  String
-  title      String
-  subject    String
-  class_id   String
-  status     PaperStatus? @default(DRAFT)
-  created_at DateTime?    @default(now()) @db.Timestamptz(6)
-  School     School       @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("schoolmanagementsystem")
-}
-
-model Result {
-  id               String    @id
-  school_id        String
-  exam_id          String
-  student_id       String
-  subject_marks    Json
-  total_percentage Float?
-  grade            String?
-  remarks          String?
-  created_at       DateTime? @default(now()) @db.Timestamptz(6)
-  Exam             Exam      @relation(fields: [exam_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  School           School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Student          Student   @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@schema("schoolmanagementsystem")
-}
-
-model Substitution {
-  id                                            String     @id
-  school_id                                     String
-  date                                          DateTime   @default(dbgenerated("CURRENT_DATE")) @db.Date
-  original_teacher_id                           String?
-  substitute_teacher_id                         String?
-  timetable_id                                  String?
-  User_Substitution_original_teacher_idToUser   User?      @relation("Substitution_original_teacher_idToUser", fields: [original_teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  School                                        School     @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  User_Substitution_substitute_teacher_idToUser User?      @relation("Substitution_substitute_teacher_idToUser", fields: [substitute_teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Timetable                                     Timetable? @relation(fields: [timetable_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("schoolmanagementsystem")
-}
-
-model Syllabus {
-  id           String          @id
-  school_id    String
-  subject      String
-  class_id     String
-  topic        String
-  status       SyllabusStatus? @default(NOT_STARTED)
-  teacher_id   String?
-  completed_at DateTime?       @db.Timestamptz(6)
-  School       School          @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  User         User?           @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("schoolmanagementsystem")
-}
+// ============================================================================
+// SYSTEM SETTINGS
+// ============================================================================
 
 model SystemSettings {
   school_id           String    @id
@@ -429,20 +1000,57 @@ model SystemSettings {
   @@schema("schoolmanagementsystem")
 }
 
-model Timetable {
-  id           String         @id
-  school_id    String
-  class_id     String
-  day_of_week  Int
-  start_time   String
-  end_time     String
-  subject      String
-  teacher_id   String?
-  Substitution Substitution[]
-  School       School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  User         User?          @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+// ============================================================================
+// ENUMS
+// ============================================================================
 
-  @@index([class_id])
+enum Section {
+  A
+  B
+  C
+  D
+  E
+  F
+
+  @@schema("schoolmanagementsystem")
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  ALUMNI
+  TRANSFERRED
+  EXPELLED
+
+  @@schema("schoolmanagementsystem")
+}
+
+enum StaffStatus {
+  ACTIVE
+  ON_LEAVE
+  RESIGNED
+  RETIRED
+  TERMINATED
+
+  @@schema("schoolmanagementsystem")
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  PROMOTED
+  DETAINED
+  TRANSFERRED
+  COMPLETED
+
+  @@schema("schoolmanagementsystem")
+}
+
+enum LoanStatus {
+  ACTIVE
+  RETURNED
+  OVERDUE
+  LOST
+
   @@schema("schoolmanagementsystem")
 }
 
