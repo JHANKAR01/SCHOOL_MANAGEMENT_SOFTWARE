@@ -178,12 +178,19 @@ export interface InteractionContextType {
   allocateRoom: (roomNumber: string, studentId: string) => void;
 }
 
+
 const InteractionContext = createContext<InteractionContextType | undefined>(undefined);
 
-export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface InteractionProviderProps {
+  children: React.ReactNode;
+  isAuthenticated?: boolean;
+}
+
+export const InteractionProvider: React.FC<InteractionProviderProps> = ({ children, isAuthenticated = false }) => {
   const queryClient = useQueryClient();
 
   // --- 1. REAL DATA FETCHING (QUERIES) ---
+  // All queries use 'enabled: isAuthenticated' to prevent 401s before login
 
   // Students
   const { data: students = [] } = useQuery({
@@ -195,7 +202,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/students'); // Adjust route if needed
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Staff (Users)
@@ -205,7 +213,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/staff');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Invoices
@@ -215,7 +224,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/finance/invoices'); // Adjust route if needed
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Expenses
@@ -225,7 +235,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/finance/expenses');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Buses (Logistics)
@@ -235,7 +246,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/logistics/buses');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Books (Logistics)
@@ -245,7 +257,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/logistics/books');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Hostel Rooms (Logistics)
@@ -255,7 +268,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/logistics/rooms');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Medical Logs (Health)
@@ -265,7 +279,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/health/logs');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Homework
@@ -275,7 +290,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/academics/homework');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Operations
@@ -285,7 +301,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/operations/inquiries');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   const { data: visitors = [] } = useQuery({
@@ -294,7 +311,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/operations/visitors');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   const { data: tickets = [] } = useQuery({
@@ -303,7 +321,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/operations/tickets');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Exams
@@ -313,7 +332,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/academics/exams');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Syllabus
@@ -323,7 +343,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/academics/syllabus');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Gate Logs
@@ -333,7 +354,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/operations/gate-logs');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // System Settings (Lockdown Mode)
@@ -343,7 +365,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/operations/settings');
       return res.data;
     },
-    initialData: { lockdown_mode: false }
+    initialData: { lockdown_mode: false },
+    enabled: isAuthenticated
   });
   const lockdownMode = settings?.lockdown_mode || false;
 
@@ -354,7 +377,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/academics/leaves');
       return res.data;
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Live Classes
@@ -364,7 +388,8 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const res = await client.get('/academics/live-classes');
       return res.data as LiveClass[];
     },
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
 
   // Map Array to Record<Subject, Boolean>

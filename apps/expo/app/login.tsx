@@ -58,7 +58,6 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
     setError('');
 
     try {
-      // 1. Call the real Hono API (will hit /api/auth/login due to baseURL change)
       const response = await client.post('/auth/login', {
         email: emailStr,
         password: passStr,
@@ -66,24 +65,25 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
 
       const { token, user, school } = response.data;
 
-      // 2. Save the real JWT Token
+      // Save the JWT Token
       if (Platform.OS === 'web') {
         localStorage.setItem('sovereign_token', token);
       } else {
         await SecureStore.setItemAsync('sovereign_token', token);
       }
 
-      // 3. Save the session for biometrics
+      // Save the session for biometrics
       const authData = { user, school, token };
       if (Platform.OS !== 'web') {
         await SecureStore.setItemAsync('sovereign_user_session', JSON.stringify(authData));
       }
 
-      // 4. Update the app state
+      // Update the app state
       onLoginSuccess(authData);
+
     } catch (err: any) {
       console.error('Login Error:', err);
-      const message = err.response?.data?.error || 'Invalid credentials or server offline.';
+      const message = err.response?.data?.error || err.message || 'Login failed. Check your credentials.';
       setError(message);
     } finally {
       setLoading(false);

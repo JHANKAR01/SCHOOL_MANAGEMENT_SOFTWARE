@@ -38,14 +38,20 @@ client.interceptors.response.use(
     (response) => response,
     async (error) => {
         if (error.response && error.response.status === 401) {
-            // Token expired or invalid
-            console.warn('Session expired. Redirecting to login...');
-            // In a real app, you might trigger a global event emitter or Redux action to logout
-            if (Platform.OS === 'web') {
-                localStorage.removeItem('sovereign_token');
-                // window.location.href = '/login'; // Optional: Redirect
+            // Only clear token if the request actually HAD a token attached
+            // This prevents clearing during initial load when no token exists yet
+            const requestHadToken = error.config?.headers?.Authorization;
+
+            if (requestHadToken) {
+                console.warn('Session expired. Token was present but invalid.');
+                if (Platform.OS === 'web') {
+                    localStorage.removeItem('sovereign_token');
+                } else {
+                    await SecureStore.deleteItemAsync('sovereign_token');
+                }
             } else {
-                await SecureStore.deleteItemAsync('sovereign_token');
+                // 401 without token = expected, user is not logged in
+                console.log('401 received but no token was attached (expected during login flow)');
             }
         }
         return Promise.reject(error);
