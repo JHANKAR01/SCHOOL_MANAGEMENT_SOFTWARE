@@ -4,7 +4,8 @@ import { verify } from 'hono/jwt';
 import { UserRole } from '../../../../types';
 
 // Extend Hono Context via Generics or simply cast usage below.
-const JWT_SECRET = process.env.JWT_SECRET || 'sovereign_secret_key_123';
+// Hardcoded for consistency during debugging
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_do_not_use_in_prod';
 
 /**
  * JWT Authentication Middleware
@@ -13,7 +14,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'sovereign_secret_key_123';
  */
 export const authMiddleware = async (c: Context, next: Next) => {
   const authHeader = c.req.header('Authorization');
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return c.json({ error: 'Unauthorized: Missing Token' }, 401);
   }
@@ -22,7 +23,7 @@ export const authMiddleware = async (c: Context, next: Next) => {
 
   try {
     const payload = await verify(token, JWT_SECRET);
-    
+
     // Inject into Hono Context
     const userContext = {
       id: payload.sub as string,
@@ -31,7 +32,7 @@ export const authMiddleware = async (c: Context, next: Next) => {
     };
 
     c.set('user', userContext);
-    
+
     // CRITICAL: Set school_id at root context level for DB RLS Middleware
     c.set('school_id', payload.school_id);
 
@@ -40,7 +41,8 @@ export const authMiddleware = async (c: Context, next: Next) => {
 
     await next();
   } catch (e) {
-    return c.json({ error: 'Unauthorized: Invalid Token' }, 401);
+    console.error('[AUTH_MIDDLEWARE_ERROR]', e); // Log the specific verify error
+    return c.json({ error: 'Unauthorized: Invalid Token', details: String(e) }, 401);
   }
 };
 
@@ -51,13 +53,13 @@ export const authMiddleware = async (c: Context, next: Next) => {
 export const requireRole = (allowedRoles: UserRole[]) => {
   return async (c: Context, next: Next) => {
     const user = c.get('user') as any;
-    
+
     if (!user || !allowedRoles.includes(user.role)) {
       // Security: Audit this failure
       console.warn(`[SECURITY] RBAC Denial for User ${user?.id} requesting ${c.req.path}`);
       return c.json({ error: 'Forbidden: Insufficient Permissions' }, 403);
     }
-    
+
     await next();
   };
 };

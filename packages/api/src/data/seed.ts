@@ -38,7 +38,7 @@ import { PrismaClient, UserRole, InvoiceStatus } from '@prisma/client';
 import { SOVEREIGN_GENESIS_DATA } from './dummy-data.ts';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
-
+import bcrypt from 'bcryptjs'; // Import bcrypt
 
 // 🔍 sanity check
 console.log('DB URL at runtime:', process.env.DATABASE_URL);
@@ -49,26 +49,24 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false, // <-- THIS IS THE KEY
   },
+  options: '-c search_path=schoolmanagementsystem' // Ensure seed uses correct schema too
 });
 
 // ✅ Prisma v7 adapter
-const adapter = new PrismaPg(pool);
+const adapter = new PrismaPg(pool, { schema: 'schoolmanagementsystem' });
 
 // ✅ PrismaClient WITH adapter (this is REQUIRED)
 const prisma = new PrismaClient({ adapter });
 
-
-
-
-
-
-
-
-
-
 async function main() {
   console.log('🌱 Starting Sovereign Genesis Seed');
   const SCHOOL_ID = 'sch_123';
+
+  // Hash the default password "password123"
+  // Salt of 10 matches the app's update
+  const hashedPassword = await bcrypt.hash('password123', 10);
+  console.log('🔐 Generated hash for "password123":', hashedPassword);
+
 
 
   console.log('🧹 Clearing existing data...');
@@ -97,7 +95,7 @@ async function main() {
         phone: parent.primary_phone,
         role: UserRole.PARENT,
         school_id: SCHOOL_ID,
-        password_hash: 'seed_placeholder_hash'
+        password_hash: hashedPassword
       }
     });
     parentRefToIdMap.set(parent.parent_ref, created.id);
@@ -113,7 +111,7 @@ async function main() {
         role: staff.role as UserRole,
         department: staff.department,
         school_id: SCHOOL_ID,
-        password_hash: 'seed_placeholder_hash'
+        password_hash: hashedPassword
       }
     });
     staffNoToIdMap.set(staff.staff_no, created.id);

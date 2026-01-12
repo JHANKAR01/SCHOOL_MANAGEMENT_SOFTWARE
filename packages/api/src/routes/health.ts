@@ -33,6 +33,7 @@ healthRouter.post('/log', requireRole([UserRole.NURSE]), async (c) => {
   return c.json({ success: true, log });
 });
 
+healthRouter.use('*', requireRole([UserRole.PRINCIPAL, UserRole.SCHOOL_ADMIN, UserRole.NURSE, UserRole.COUNSELOR]));
 healthRouter.get('/logs', requireRole([UserRole.NURSE, UserRole.PRINCIPAL]), async (c) => {
   const user = c.get('user');
   const logs = await prisma.medicalLog.findMany({

@@ -14,7 +14,7 @@ type Variables = {
 
 const financeRouter = new Hono<{ Variables: Variables }>();
 financeRouter.use('*', authMiddleware);
-financeRouter.use('*', requireRole([UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.FINANCE_MANAGER]));
+financeRouter.use('*', requireRole([UserRole.PRINCIPAL, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.FINANCE_MANAGER]));
 
 // --- INVOICES ---
 financeRouter.get('/invoices', async (c) => {

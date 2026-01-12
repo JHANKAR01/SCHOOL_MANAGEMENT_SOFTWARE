@@ -5,7 +5,8 @@ import prisma from '../db.ts';
 import bcrypt from 'bcryptjs';
 
 const authRouter = new Hono();
-const JWT_SECRET = process.env.JWT_SECRET || 'sovereign_secret_key_123';
+// Hardcoded for consistency during debugging
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_do_not_use_in_prod';
 
 /**
  * LOGIN ENDPOINT
@@ -26,21 +27,17 @@ authRouter.post('/login', async (c) => {
             return c.json({ error: 'Invalid email or password' }, 401);
         }
 
-        // Allow 'admin123' for migration/testing purposes if the hash matches OR strictly during dev
-        // For production, we strictly use bcrypt.compare
+        // Standard bcrypt comparison
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-
-        // Fallback for initial dev/seed users who might just have plain text 'admin123' stored as hash (unlikely but "seed" mentioned)
-        // OR if the user manually seeded 'admin123' as the password field without hashing.
-        // Assuming the database has correct bcrypt hashes. If not, this might fail unless we handle plain text fallback.
-        // Given constraint: "verify credentials (accept 'admin123' for seed users)"
-        // We will assume "accept 'admin123'" means we check against the hash of 'admin123' OR a specific condition.
-        // If the DB has raw 'admin123' we need to handle that, but `password_hash` implies hashing.
-        // I will assume standard bcrypt compare.
 
         if (!isPasswordValid) {
             return c.json({ error: 'Invalid email or password' }, 401);
         }
+
+        // 3a. Fetch School Config
+        const school = await prisma.school.findUnique({
+            where: { id: user.school_id }
+        });
 
         // 3. Generate Token with Tenant Context (RLS)
         const payload = {
@@ -61,6 +58,21 @@ authRouter.post('/login', async (c) => {
                 role: user.role,
                 school_id: user.school_id,
                 school_name: user.school.name
+            },
+            school: {
+                school_id: school?.id,
+                name: school?.name,
+                logo_url: 'https://via.placeholder.com/150', // placeholder
+                primary_color: '#4F46E5', // default indigo
+                features: {
+                    attendance: true,
+                    fees: true,
+                    transport: true,
+                    library: true,
+                    hostel: true
+                },
+                location: { lat: 0, lng: 0 },
+                upi_vpa: 'school@upi'
             }
         });
     } catch (error) {

@@ -13,6 +13,7 @@ type Variables = {
 
 const operationsRouter = new Hono<{ Variables: Variables }>();
 operationsRouter.use('*', authMiddleware);
+operationsRouter.use('*', requireRole([UserRole.PRINCIPAL, UserRole.SCHOOL_ADMIN, UserRole.SECURITY_HEAD]));
 
 // --- VISITORS ---
 operationsRouter.get('/visitors', requireRole([UserRole.RECEPTIONIST, UserRole.PRINCIPAL, UserRole.SECURITY_HEAD]), async (c) => {

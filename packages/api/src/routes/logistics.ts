@@ -14,6 +14,7 @@ type Variables = {
 
 const logisticsRouter = new Hono<{ Variables: Variables }>();
 logisticsRouter.use('*', authMiddleware);
+logisticsRouter.use('*', requireRole([UserRole.PRINCIPAL, UserRole.SCHOOL_ADMIN, UserRole.FLEET_MANAGER, UserRole.LIBRARIAN, UserRole.WARDEN]));
 
 // --- LIBRARY ---
 logisticsRouter.get('/books', requireRole([UserRole.LIBRARIAN, UserRole.PRINCIPAL, UserRole.TEACHER]), async (c) => {

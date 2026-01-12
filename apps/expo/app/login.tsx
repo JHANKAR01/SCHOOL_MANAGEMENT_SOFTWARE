@@ -54,9 +54,6 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
   };
 
   const performLogin = async (emailStr: string, passStr: string) => {
-    // DEBUG - remove after testing
-    alert(`Attempting login with: ${emailStr}`);
-
     setLoading(true);
     setError('');
 
@@ -75,13 +72,13 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
         await SecureStore.setItemAsync('sovereign_token', token);
       }
 
-      // Save the session for biometrics
       const authData = { user, school, token };
+
+      // Save the session for biometrics
       if (Platform.OS !== 'web') {
         await SecureStore.setItemAsync('sovereign_user_session', JSON.stringify(authData));
       }
 
-      // Update the app state
       onLoginSuccess(authData);
 
     } catch (err: any) {

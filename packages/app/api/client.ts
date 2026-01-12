@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
@@ -39,19 +38,19 @@ client.interceptors.response.use(
     async (error) => {
         if (error.response && error.response.status === 401) {
             // Only clear token if the request actually HAD a token attached
-            // This prevents clearing during initial load when no token exists yet
             const requestHadToken = error.config?.headers?.Authorization;
 
             if (requestHadToken) {
-                console.warn('Session expired. Token was present but invalid.');
+                console.error('[AUTH] Session expired (401). clearing token.');
+
                 if (Platform.OS === 'web') {
                     localStorage.removeItem('sovereign_token');
                 } else {
                     await SecureStore.deleteItemAsync('sovereign_token');
                 }
             } else {
-                // 401 without token = expected, user is not logged in
-                console.log('401 received but no token was attached (expected during login flow)');
+                // 401 without token = expected during login flow
+                console.log('[DEBUG] 401 received without token (Normal pre-login behavior)');
             }
         }
         return Promise.reject(error);

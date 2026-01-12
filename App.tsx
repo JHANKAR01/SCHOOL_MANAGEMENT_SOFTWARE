@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LoginScreen from './apps/expo/app/login';
 import SuperAdminOnboarding from './apps/next/pages/super-admin/onboarding';
 import { SchoolConfig, UserRole, User, AuthResponse } from './types';
