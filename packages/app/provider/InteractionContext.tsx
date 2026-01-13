@@ -110,18 +110,99 @@ export interface LiveBus extends Bus {
 }
 
 // ============================================================================
-// PERMISSION GROUPS - Define which roles can access which data
+// PERMISSION GROUPS - Covers all 22 System Roles
 // ============================================================================
 const PERMISSIONS = {
-  FINANCE: [UserRole.ACCOUNTANT, UserRole.FINANCE_MANAGER, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.SUPER_ADMIN],
-  ACADEMICS: [UserRole.TEACHER, UserRole.HOD, UserRole.PRINCIPAL, UserRole.VICE_PRINCIPAL, UserRole.STUDENT, UserRole.PARENT, UserRole.EXAM_CELL],
-  OPERATIONS: [UserRole.RECEPTIONIST, UserRole.SCHOOL_ADMIN, UserRole.ESTATE_MANAGER, UserRole.SECURITY_HEAD, UserRole.PRINCIPAL],
-  HR: [UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN, UserRole.PRINCIPAL],
-  TRANSPORT: [UserRole.FLEET_MANAGER, UserRole.SCHOOL_ADMIN, UserRole.PARENT, UserRole.STUDENT],
-  LIBRARY: [UserRole.LIBRARIAN, UserRole.TEACHER, UserRole.STUDENT],
-  HEALTH: [UserRole.NURSE, UserRole.SCHOOL_ADMIN, UserRole.COUNSELOR],
-  HOSTEL: [UserRole.WARDEN, UserRole.SCHOOL_ADMIN],
-  ADMISSIONS: [UserRole.ADMISSIONS_OFFICER, UserRole.SCHOOL_ADMIN, UserRole.RECEPTIONIST],
+  // 💰 FINANCE (Money, Payroll, Fees)
+  FINANCE: [
+    UserRole.ACCOUNTANT,
+    UserRole.FINANCE_MANAGER,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+    UserRole.SUPER_ADMIN
+  ],
+
+  // 🎓 ACADEMICS (Grades, Syllabus, Homework)
+  ACADEMICS: [
+    UserRole.TEACHER,
+    UserRole.HOD,
+    UserRole.PRINCIPAL,
+    UserRole.VICE_PRINCIPAL,
+    UserRole.STUDENT,
+    UserRole.PARENT,
+    UserRole.EXAM_CELL
+  ],
+
+  // 🏫 OPERATIONS (Visitors, Tickets, Gate)
+  OPERATIONS: [
+    UserRole.RECEPTIONIST,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.ESTATE_MANAGER,
+    UserRole.SECURITY_HEAD,
+    UserRole.PRINCIPAL,
+    UserRole.IT_ADMIN // IT needs to see tickets too
+  ],
+
+  // 👥 HR & STAFF (Payroll, Leave Approvals)
+  HR: [
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SUPER_ADMIN,
+    UserRole.PRINCIPAL
+  ],
+
+  // 🚌 TRANSPORT (Buses, Tracking)
+  TRANSPORT: [
+    UserRole.FLEET_MANAGER,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PARENT,
+    UserRole.STUDENT,
+    UserRole.PRINCIPAL
+  ],
+
+  // 📚 LIBRARY (Books)
+  LIBRARY: [
+    UserRole.LIBRARIAN,
+    UserRole.TEACHER,
+    UserRole.STUDENT,
+    UserRole.PRINCIPAL
+  ],
+
+  // 🏥 HEALTH (Medical Logs)
+  HEALTH: [
+    UserRole.NURSE,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.COUNSELOR,
+    UserRole.PRINCIPAL
+  ],
+
+  // 🛏️ HOSTEL (Rooms)
+  HOSTEL: [
+    UserRole.WARDEN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL
+  ],
+
+  // 🤝 ADMISSIONS (Inquiries)
+  ADMISSIONS: [
+    UserRole.ADMISSIONS_OFFICER,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.RECEPTIONIST,
+    UserRole.PRINCIPAL
+  ],
+
+  // 📦 INVENTORY (Assets)
+  INVENTORY: [
+    UserRole.INVENTORY_MANAGER,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL
+  ],
+
+  // 💻 IT & SYSTEMS (Logs, Settings)
+  IT_SYSTEMS: [
+    UserRole.IT_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.SUPER_ADMIN
+  ]
 };
 
 export interface InteractionContextType {
