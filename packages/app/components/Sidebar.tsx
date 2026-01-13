@@ -34,27 +34,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
     let items: MenuItem[] = [];
 
     switch (role) {
-      case UserRole.SCHOOL_ADMIN: // HR Manager
+      case UserRole.SCHOOL_ADMIN: // HR Manager + Technical Backup
         items = [
           { id: 'STAFF_MGMT', label: 'Staff & HR', icon: '👥' },
           { id: 'ACCESS_LOGS', label: 'Audit Logs', icon: '🛡️' },
           { id: 'SETTINGS', label: 'School Settings', icon: '⚙️' },
         ];
+        if (features.fees) items.push({ id: 'FINANCE', label: 'Finance', icon: '💰' });
         break;
 
-      case UserRole.PRINCIPAL: // Academic Head
+      case UserRole.PRINCIPAL: // Academic Head + Oversight
         items = [
           { id: 'OVERVIEW', label: 'School Overview', icon: '📊' },
           { id: 'CLASSROOMS', label: 'Classrooms', icon: '🏫' },
           { id: 'RESULTS', label: 'Publish Results', icon: '📢' },
         ];
         if (features.attendance) items.push({ id: 'ATTENDANCE_REP', label: 'Attendance Reports', icon: '📋' });
+        if (features.fees) items.push({ id: 'FINANCE', label: 'Finance', icon: '💰' });
         break;
 
-      case UserRole.FINANCE_MANAGER: // Accountant
+      case UserRole.FINANCE_MANAGER: // Finance Approver
+      case UserRole.ACCOUNTANT: // Primary Operator
         if (features.fees) {
           items = [
-            { id: 'COLLECTIONS', label: 'Fee Collections', icon: '💰' },
+            { id: 'FINANCE', label: 'Finance Dashboard', icon: '💰' },
+            { id: 'COLLECTIONS', label: 'Fee Collections', icon: '💵' },
             { id: 'RECONCILIATION', label: 'Bank Reconcile', icon: '🏦' },
             { id: 'PAYROLL', label: 'Staff Payroll', icon: '💸' },
           ];
@@ -173,8 +177,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClose();
                 }}
                 className={`flex-row w-full items-center px-4 py-3.5 mb-1 rounded-lg ${isActive
-                    ? 'bg-gray-50 shadow-sm'
-                    : 'bg-transparent'
+                  ? 'bg-gray-50 shadow-sm'
+                  : 'bg-transparent'
                   }`}
               >
                 {/* Active Indicator Line */}

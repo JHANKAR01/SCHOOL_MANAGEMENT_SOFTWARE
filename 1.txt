@@ -1,0 +1,369 @@
+is this pormpt good tell the advantages and disadvantes of this-
+
+MASTER PROMPT — SUPER ADMIN PLATFORM DASHBOARD (FINAL, EXPANDED)
+
+🧠 CONTEXT
+
+This is a multi-tenant School Management Platform.
+
+
+
+Multiple schools exist as independent tenants
+
+Each school has:
+
+Students
+
+Parents
+
+Staff
+
+Academic data
+
+Financial data
+
+The SUPER ADMIN is the platform owner (not a school employee)
+
+The database schema is largely finalized, but platform-level and governance-related tables may be added if required.
+
+This task focuses on building a powerful, safe, auditable Super Admin dashboard.
+
+🎯 OBJECTIVE
+
+Design and implement a Super Admin dashboard that provides:
+
+
+
+Complete visibility across all schools
+
+Controlled ability to modify even sensitive academic and financial data
+
+Strong safeguards to prevent misuse
+
+Full auditability for compliance and accountability
+
+This dashboard must behave like a “god-mode control panel with seatbelts”.
+
+🧩 CORE SUPER ADMIN CAPABILITIES
+
+1️⃣ School & Tenant Management
+
+Create / update schools
+
+View full school profile
+
+Suspend, lock, archive schools
+
+Assign plans / limits
+
+Switch context between schools safely
+
+2️⃣ Data Visibility (FULL ACCESS)
+
+For the selected school, Super Admin can view:
+
+
+
+Students
+
+Parents
+
+Staff
+
+Classes & enrollments
+
+Timetable
+
+Exams & results
+
+Attendance
+
+Library
+
+Hostel
+
+Transport
+
+Invoices & payments
+
+Internal remarks & notes
+
+Sensitive data must be masked by default.
+
+3️⃣ DATA MODIFICATION POWERS (NEW – HIGH PRIVILEGE)
+
+Super Admin IS ALLOWED to modify the following with strict controls:
+
+
+
+✅ Student Marks
+
+Modify individual subject marks
+
+Modify grades / percentages
+
+Recalculate totals
+
+View original vs modified values
+
+Mandatory reason required
+
+✅ Attendance
+
+Modify daily or period-wise attendance
+
+Add / remove attendance entries
+
+See who originally marked attendance
+
+Mandatory reason required
+
+✅ Financial Transactions
+
+Modify invoice status
+
+Correct amounts (only via adjustment records)
+
+Mark payments as verified / reversed
+
+Cannot silently overwrite original financial values
+
+✅ Internal Remarks
+
+Add, edit, or redact internal remarks
+
+View who created original remarks
+
+Remarks are versioned (history preserved)
+
+🚨 SAFETY & GOVERNANCE RULES (NON-NEGOTIABLE)
+
+🔒 Modification Guardrails
+
+Every Super Admin modification must:
+
+
+
+Require explicit confirmation
+
+Require a reason/comment
+
+Be logged immutably
+
+Preserve original data (history)
+
+Be visible to School Admin as “Super Admin override”
+
+No silent edits. Ever.
+
+📜 Audit Logging (MANDATORY)
+
+All Super Admin actions must be logged:
+
+
+
+Who (Super Admin identity)
+
+What was changed
+
+Old value → New value
+
+Affected school
+
+Timestamp
+
+Reason
+
+Audit logs must be:
+
+
+
+Immutable
+
+Filterable
+
+Exportable (admin-only)
+
+🔍 Change History / Versioning
+
+For these entities:
+
+
+
+Marks
+
+Attendance
+
+Financial records
+
+Remarks
+
+Maintain:
+
+
+
+Original value
+
+Modification history
+
+Latest effective value
+
+Users should be able to:
+
+
+
+View change timeline
+
+See who changed what and why
+
+🧭 UI / UX REQUIREMENTS
+
+Super Admin Dashboard Structure
+
+Global Header
+
+Add School
+
+School Selector
+
+Platform Settings
+
+Audit Logs
+
+Super Admin Profile
+
+Logout
+
+School Context Area
+
+Once a school is selected:
+
+
+
+Overview dashboard
+
+Configuration & feature toggles
+
+Data Explorer
+
+Override Actions
+
+Audit & History
+
+Data Explorer (Enhanced)
+
+Tab-based explorer:
+
+
+
+Students
+
+Staff
+
+Attendance
+
+Results
+
+Finance
+
+Remarks
+
+Each row:
+
+
+
+View details
+
+“Override / Modify” button
+
+Clear warning label: SUPER ADMIN ACTION
+
+Override UX Pattern
+
+When modifying sensitive data:
+
+
+
+Show original data
+
+Show editable fields
+
+Require reason
+
+Show warning:
+
+
+
+“This action will be permanently logged and visible to school administrators.”
+
+Confirm → Save → Log
+
+🔐 SECURITY & ISOLATION RULES
+
+Tenant isolation is mandatory
+
+No cross-school leakage
+
+No bulk destructive actions
+
+No bypassing audit logs
+
+Sensitive fields masked by default
+
+Full data visible only when explicitly expanded
+
+🧪 SPECIAL SUPER ADMIN MODES
+
+Impersonation Mode
+
+Super Admin can “enter” a school as School Admin
+
+Read-only by default
+
+Explicit unlock required for edits
+
+Fully logged
+
+Emergency Mode
+
+Freeze school operations
+
+Disable logins
+
+Lock data changes
+
+Display maintenance banner
+
+❌ NON-GOALS (DO NOT IMPLEMENT)
+
+No automated academic decisions
+
+No mass grade manipulation
+
+No deletion of historical data
+
+No disabling audit logs
+
+No silent overrides
+
+📦 OUTPUT REQUIREMENTS
+
+The implementation must include:
+
+
+
+Full dashboard UI
+
+Context switching logic
+
+Safe edit workflows
+
+Audit log system
+
+Change history views
+
+Clear permission enforcement
+
+Well-documented logic
+
+No TODOs. No placeholders.

@@ -38,19 +38,37 @@ interface Props {
 }
 
 export const RoleBasedRouter: React.FC<Props> = ({ role, school, activeModule }) => {
-  switch(role) {
+  // Helper to check if Finance module is active for multi-module roles
+  const isFinanceActive = activeModule === 'FINANCE';
+
+  switch (role) {
     // Top Management
     case UserRole.SUPER_ADMIN:
-    case UserRole.SCHOOL_ADMIN: return <StaffManagement />;
-    case UserRole.PRINCIPAL: return <PrincipalDashboard activeModule={activeModule} />;
-    case UserRole.VICE_PRINCIPAL: return <VicePrincipalDashboard />;
-    case UserRole.FINANCE_MANAGER: return <FinanceDashboard school={school} activeModule={activeModule} />;
-    
+      return <StaffManagement />;
+
+    case UserRole.SCHOOL_ADMIN:
+      // SCHOOL_ADMIN: Technical backup - can access Finance if module selected
+      if (isFinanceActive) return <FinanceDashboard school={school} activeModule={activeModule} />;
+      return <StaffManagement />;
+
+    case UserRole.PRINCIPAL:
+      // PRINCIPAL: Oversight/Audit - can access Finance if module selected
+      if (isFinanceActive) return <FinanceDashboard school={school} activeModule={activeModule} />;
+      return <PrincipalDashboard activeModule={activeModule} />;
+
+    case UserRole.VICE_PRINCIPAL:
+      return <VicePrincipalDashboard />;
+
+    // Finance Roles - Direct access to Finance Dashboard
+    case UserRole.FINANCE_MANAGER:
+    case UserRole.ACCOUNTANT:
+      return <FinanceDashboard school={school} activeModule={activeModule} />;
+
     // Academic Heads
     case UserRole.HOD: return <HODDashboard />;
     case UserRole.EXAM_CELL: return <ExamCellDashboard />;
     case UserRole.TEACHER: return <TeacherDashboard school={school} activeModule={activeModule} />;
-    
+
     // Operations & Admin
     case UserRole.SECURITY_HEAD: return <SecurityDashboard />;
     case UserRole.ESTATE_MANAGER: return <EstateDashboard />;
@@ -60,22 +78,22 @@ export const RoleBasedRouter: React.FC<Props> = ({ role, school, activeModule })
     case UserRole.NURSE: return <InfirmaryDashboard />;
     case UserRole.COUNSELOR: return <CounselorDashboard />;
     case UserRole.IT_ADMIN: return <ITAdminDashboard />;
-    
+
     // Facilities
     case UserRole.FLEET_MANAGER: return <BusFleet />;
     case UserRole.LIBRARIAN: return <LibraryManagement />;
     case UserRole.WARDEN: return <HostelWarden />;
 
     // End Users
-    case UserRole.PARENT: 
+    case UserRole.PARENT:
     case UserRole.STUDENT:
-        return <ParentDashboard school={school} activeModule={activeModule} role={role} />;
-    
+      return <ParentDashboard school={school} activeModule={activeModule} role={role} />;
+
     // Fallback for unmapped roles
     default: return (
-       <div className="flex items-center justify-center h-full text-red-500 font-bold">
-         Configuration Error: Role {role} has no assigned dashboard.
-       </div>
+      <div className="flex items-center justify-center h-full text-red-500 font-bold">
+        Configuration Error: Role {role} has no assigned dashboard.
+      </div>
     );
   }
 };
