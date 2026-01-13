@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
-import { useInteraction, LiveBus } from '../../provider/InteractionContext';
+import { useTransport, LiveBus } from '../../hooks/useTransport';
+import { useInteraction } from '../../provider/InteractionContext'; // Still need addExpense
 import { SovereignButton, SovereignTable, SovereignBadge, SovereignInput, StatCard, PageHeader, Column } from '../../components/SovereignComponents';
 import { ActionModal } from '../../components/ActionModal';
 import { Row, Col } from '../../components/Layout';
 import { Bus, MapPin, Fuel, UserPlus, PlayCircle, StopCircle } from 'lucide-react';
 
 export const BusFleet = () => {
-  const { buses, updateBusStatus, assignBusDriver, addExpense } = useInteraction();
+  // Use new Transport hook for buses data and mutations
+  const { buses, updateBusStatus, assignBusDriver } = useTransport();
+  // Still get addExpense from InteractionContext (will be migrated in Batch 2)
+  const { addExpense } = useInteraction();
 
   const [driverModalOpen, setDriverModalOpen] = useState(false);
   const [fuelModalOpen, setFuelModalOpen] = useState(false);
@@ -80,8 +84,8 @@ export const BusFleet = () => {
       <Pressable
         onPress={() => toggleTrip(row)}
         className={`flex-row items-center gap-1 px-2 py-1 rounded border ${row.status === 'ON_ROUTE'
-            ? 'bg-red-50 border-red-200'
-            : 'bg-green-50 border-green-200'
+          ? 'bg-red-50 border-red-200'
+          : 'bg-green-50 border-green-200'
           }`}
       >
         {row.status === 'ON_ROUTE' ? (

@@ -8,7 +8,7 @@ import { StatCard, PageHeader, SovereignButton, SovereignInput, SovereignBadge, 
 import { Row, Col } from '../../components/Layout';
 import { Users, BookOpen, Clock, Plus, Video, Calendar, UploadCloud } from 'lucide-react';
 import { useGeofencing } from '../../../../hooks/useGeofencing';
-import { useInteraction } from '../../provider/InteractionContext';
+import { useAcademics } from '../../hooks/useAcademics';
 import { ActionModal } from '../../components/ActionModal';
 
 interface Props {
@@ -20,8 +20,8 @@ export const TeacherDashboard: React.FC<Props> = ({ school, activeModule }) => {
   const { isWithinFence, isMockLocation, loading: geoLoading } = useGeofencing(school.location);
   const [checkedIn, setCheckedIn] = useState(false);
 
-  // Interaction Context
-  const { homeworks, addHomework, applyLeave, leaves, liveClasses, toggleLiveClass } = useInteraction();
+  // Use new Academics hook instead of InteractionContext
+  const { homeworks, addHomework, applyLeave, leaves, liveClasses, toggleLiveClass } = useAcademics();
 
   // Modal States
   const [isHwModalOpen, setHwModalOpen] = useState(false);

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { useInteraction } from '../../provider/InteractionContext';
+import { useEstate } from '../../hooks/useOperations';
 import { SovereignTable, PageHeader, SovereignBadge, SovereignButton, SovereignInput, StatCard } from '../../components/SovereignComponents';
 import { Row, Col } from '../../components/Layout';
 import { ActionModal } from '../../components/ActionModal';
 import { Plus, Wrench, CheckCircle } from 'lucide-react';
 
 export const EstateDashboard = () => {
-  const { tickets, addTicket, resolveTicket } = useInteraction();
+  // Use new Estate hook instead of InteractionContext
+  const { tickets, addTicket, resolveTicket } = useEstate();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ location: '', issue: '', priority: 'LOW' as const, reportedBy: 'Estate Manager' });
 
@@ -29,8 +30,8 @@ export const EstateDashboard = () => {
     <button
       onClick={() => resolveTicket(row.id)}
       className={`text-xs px-2 py-1 rounded font-bold border transition-colors ${row.status === 'RESOLVED'
-          ? 'bg-gray-100 text-gray-500 border-gray-200'
-          : 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200'
+        ? 'bg-gray-100 text-gray-500 border-gray-200'
+        : 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200'
         }`}
     >
       {row.status === 'RESOLVED' ? 'Re-open' : 'Mark Fixed'}

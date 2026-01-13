@@ -1,51 +1,23 @@
-import React, { createContext, useContext, useMemo, useEffect } from 'react';
+/**
+ * InteractionContext.tsx
+ * 
+ * SLIMMED DOWN VERSION (Batch 1 Migration Complete)
+ * 
+ * Migrated to hooks:
+ * - Transport (buses, updateBusStatus, assignBusDriver) → useTransport.ts
+ * - Academics (homeworks, exams, syllabus, leaves, liveClasses) → useAcademics.ts
+ * 
+ * Remaining modules (to be migrated in future batches):
+ * - Operations (inquiries, visitors, tickets, gateLogs)
+ * - Finance (invoices, expenses) → already has FinanceDashboard component-level fetching
+ * - Library (books)
+ * - Health (medicalLogs)
+ * - Hostel (hostelRooms)
+ */
+import React, { createContext, useContext, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../api/client';
-import { UserRole, Invoice, Bus, Book, HostelRoom, MedicalLog } from '../../../types';
-
-// --- ACADEMIC TYPES ---
-export interface Homework {
-  id: string;
-  title: string;
-  subject: string;
-  description: string;
-  dueDate: string;
-  status: 'PENDING' | 'SUBMITTED' | 'GRADED';
-  classId: string;
-}
-
-export interface LiveClass {
-  id: string;
-  subject: string;
-  class_id: string;
-  is_active: boolean;
-  meeting_link: string;
-}
-
-export interface LeaveApplication {
-  id: string;
-  teacherName: string;
-  type: 'SICK' | 'CASUAL' | 'EARNED';
-  startDate: string;
-  endDate: string;
-  reason: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-}
-
-export interface Exam {
-  id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-  classes: string[];
-}
-
-export interface StudentProfile {
-  id: string;
-  name: string;
-  class: string;
-  roll: number;
-}
+import { UserRole, Invoice, Book, HostelRoom, MedicalLog } from '../../../types';
 
 // --- OPERATIONS TYPES ---
 export interface Inquiry {
@@ -92,6 +64,13 @@ export interface LocalStaff {
   joinedAt: string;
 }
 
+export interface StudentProfile {
+  id: string;
+  name: string;
+  class: string;
+  roll: number;
+}
+
 // --- FINANCE TYPES ---
 export interface Expense {
   id: string;
@@ -101,41 +80,41 @@ export interface Expense {
   date: string;
 }
 
-// --- FLEET TYPES ---
-export interface LiveBus extends Bus {
-  status: 'IDLE' | 'ON_ROUTE' | 'MAINTENANCE';
-  lat: number;
-  lng: number;
-  speed: number;
-}
+// ============================================================================
+// PERMISSION GROUPS - Covers all 22 System Roles (Source of Truth)
+// ============================================================================
+export const PERMISSIONS = {
+  FINANCE: [UserRole.ACCOUNTANT, UserRole.FINANCE_MANAGER, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.SUPER_ADMIN],
+  ACADEMICS: [UserRole.TEACHER, UserRole.HOD, UserRole.PRINCIPAL, UserRole.VICE_PRINCIPAL, UserRole.STUDENT, UserRole.PARENT, UserRole.EXAM_CELL],
+  OPERATIONS: [UserRole.RECEPTIONIST, UserRole.SCHOOL_ADMIN, UserRole.ESTATE_MANAGER, UserRole.SECURITY_HEAD, UserRole.PRINCIPAL, UserRole.IT_ADMIN],
+  HR: [UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN, UserRole.PRINCIPAL],
+  TRANSPORT: [UserRole.FLEET_MANAGER, UserRole.SCHOOL_ADMIN, UserRole.PARENT, UserRole.STUDENT, UserRole.PRINCIPAL],
+  LIBRARY: [UserRole.LIBRARIAN, UserRole.TEACHER, UserRole.STUDENT, UserRole.PRINCIPAL],
+  HEALTH: [UserRole.NURSE, UserRole.SCHOOL_ADMIN, UserRole.COUNSELOR, UserRole.PRINCIPAL],
+  HOSTEL: [UserRole.WARDEN, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL],
+  ADMISSIONS: [UserRole.ADMISSIONS_OFFICER, UserRole.SCHOOL_ADMIN, UserRole.RECEPTIONIST, UserRole.PRINCIPAL],
+  INVENTORY: [UserRole.INVENTORY_MANAGER, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL],
+  IT_SYSTEMS: [UserRole.IT_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN]
+};
 
+// ============================================================================
+// CONTEXT TYPE - Slimmed down, only includes remaining modules
+// ============================================================================
 export interface InteractionContextType {
-  homeworks: Homework[];
-  leaves: LeaveApplication[];
-  liveClasses: Record<string, boolean>;
-  syllabus: any[];
-  exams: Exam[];
+  // Global State
+  lockdownMode: boolean;
+  toggleLockdown: () => void;
+
+  // Students & Staff (HR)
   students: StudentProfile[];
+  localStaff: LocalStaff[];
+  addStaff: (staff: Omit<LocalStaff, 'id'>) => void;
+
+  // Operations (Batch 2)
   inquiries: Inquiry[];
   visitors: Visitor[];
   tickets: Ticket[];
   gateLogs: GateLog[];
-  localStaff: LocalStaff[];
-  lockdownMode: boolean;
-  invoices: Invoice[];
-  expenses: Expense[];
-  buses: LiveBus[];
-  books: Book[];
-  medicalLogs: MedicalLog[];
-  hostelRooms: HostelRoom[];
-
-  addHomework: (hw: Omit<Homework, 'id' | 'status'>) => void;
-  submitHomework: (id: string) => void;
-  applyLeave: (leave: Omit<LeaveApplication, 'id' | 'status' | 'teacherName'>) => void;
-  updateLeaveStatus: (id: string, status: 'APPROVED' | 'REJECTED') => void;
-  toggleLiveClass: (subject: string, isActive: boolean) => void;
-  approveSyllabus: (id: number) => void;
-  addExam: (exam: Omit<Exam, 'id'>) => void;
   addInquiry: (inq: Omit<Inquiry, 'id' | 'status'>) => void;
   convertInquiry: (id: number) => void;
   addVisitor: (vis: Omit<Visitor, 'id' | 'status' | 'time'>) => void;
@@ -143,182 +122,164 @@ export interface InteractionContextType {
   addTicket: (ticket: Omit<Ticket, 'id' | 'status'>) => void;
   resolveTicket: (id: string) => void;
   logGateEntry: (entry: Omit<GateLog, 'id' | 'time' | 'date'>) => void;
-  addStaff: (staff: Omit<LocalStaff, 'id'>) => void;
-  toggleLockdown: () => void;
+
+  // Finance (Batch 2 - keep until FinanceDashboard is fully migrated)
+  invoices: Invoice[];
+  expenses: Expense[];
   addInvoice: (inv: Omit<Invoice, 'id' | 'status'>) => void;
   markInvoicePaid: (id: string, method: 'CASH' | 'CHEQUE' | 'ONLINE') => void;
   addExpense: (exp: Omit<Expense, 'id' | 'date'>) => void;
-  updateBusStatus: (id: string, status: LiveBus['status']) => void;
-  assignBusDriver: (busId: string, driverName: string) => void;
+
+  // Library (Batch 3)
+  books: Book[];
   addBook: (book: Book) => void;
   issueBook: (isbn: string, studentId: string) => void;
   returnBook: (isbn: string) => void;
+
+  // Health (Batch 3)
+  medicalLogs: MedicalLog[];
   addMedicalLog: (log: Omit<MedicalLog, 'id' | 'time' | 'date'>) => void;
+
+  // Hostel (Batch 3)
+  hostelRooms: HostelRoom[];
   allocateRoom: (roomNumber: string, studentId: string) => void;
 }
 
 const InteractionContext = createContext<InteractionContextType | undefined>(undefined);
 
-// EXPLICITLY DESTRUCTURE isAuthenticated with proper typing
-export const InteractionProvider: React.FC<{ children: React.ReactNode; isAuthenticated: boolean }> = ({ children, isAuthenticated }) => {
+// ============================================================================
+// PROVIDER
+// ============================================================================
+export const InteractionProvider: React.FC<{
+  children: React.ReactNode;
+  isAuthenticated: boolean;
+  role?: UserRole;
+}> = ({ children, isAuthenticated, role }) => {
   const queryClient = useQueryClient();
 
-  // DEBUG LOG - Shows in console to verify auth state
-  useEffect(() => {
-    console.log(`[InteractionContext] Auth State: ${isAuthenticated} (Queries ${isAuthenticated ? 'ENABLED' : 'DISABLED'})`);
-  }, [isAuthenticated]);
-
-  // COMMON QUERY OPTIONS - retry: false prevents 401 flood
-  const queryOptions = {
-    enabled: isAuthenticated === true, // Explicit check
-    initialData: [] as any[],
-    retry: false,
-    refetchOnWindowFocus: false
+  const canAccess = (allowedRoles: UserRole[]): boolean => {
+    return isAuthenticated && !!role && allowedRoles.includes(role);
   };
 
-  // --- DATA FETCHING (QUERIES) ---
+  useEffect(() => {
+    console.log(`[InteractionContext] Auth: ${isAuthenticated}, Role: ${role || 'NONE'}`);
+  }, [isAuthenticated, role]);
 
+  const queryOptions = {
+    initialData: [] as any[],
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5,
+  };
+
+  // =========================================================================
+  // REMAINING QUERIES (Transport & Academics moved to hooks)
+  // =========================================================================
+
+  // Students
   const { data: students = [] } = useQuery({
     queryKey: ['students'],
     queryFn: async () => (await client.get('/students')).data,
+    enabled: canAccess([UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.TEACHER, UserRole.HOD, UserRole.SUPER_ADMIN]),
     ...queryOptions
   });
 
+  // Staff
   const { data: localStaff = [] } = useQuery({
     queryKey: ['staff'],
     queryFn: async () => (await client.get('/staff')).data,
+    enabled: canAccess(PERMISSIONS.HR),
     ...queryOptions
   });
 
+  // Finance
   const { data: invoices = [] } = useQuery({
     queryKey: ['invoices'],
     queryFn: async () => (await client.get('/finance/invoices')).data,
+    enabled: canAccess(PERMISSIONS.FINANCE),
     ...queryOptions
   });
 
   const { data: expenses = [] } = useQuery({
     queryKey: ['expenses'],
     queryFn: async () => (await client.get('/finance/expenses')).data,
+    enabled: canAccess(PERMISSIONS.FINANCE),
     ...queryOptions
   });
 
-  const { data: buses = [] } = useQuery({
-    queryKey: ['buses'],
-    queryFn: async () => (await client.get('/logistics/buses')).data,
-    ...queryOptions
-  });
-
+  // Library
   const { data: books = [] } = useQuery({
     queryKey: ['books'],
     queryFn: async () => (await client.get('/logistics/books')).data,
+    enabled: canAccess(PERMISSIONS.LIBRARY),
     ...queryOptions
   });
 
+  // Hostel
   const { data: hostelRooms = [] } = useQuery({
     queryKey: ['hostelRooms'],
     queryFn: async () => (await client.get('/logistics/rooms')).data,
+    enabled: canAccess(PERMISSIONS.HOSTEL),
     ...queryOptions
   });
 
+  // Health
   const { data: medicalLogs = [] } = useQuery({
     queryKey: ['medicalLogs'],
     queryFn: async () => (await client.get('/health/logs')).data,
+    enabled: canAccess(PERMISSIONS.HEALTH),
     ...queryOptions
   });
 
-  const { data: homeworks = [] } = useQuery({
-    queryKey: ['homeworks'],
-    queryFn: async () => (await client.get('/academics/homework')).data,
-    ...queryOptions
-  });
-
+  // Operations
   const { data: inquiries = [] } = useQuery({
     queryKey: ['inquiries'],
     queryFn: async () => (await client.get('/operations/inquiries')).data,
+    enabled: canAccess(PERMISSIONS.ADMISSIONS),
     ...queryOptions
   });
 
   const { data: visitors = [] } = useQuery({
     queryKey: ['visitors'],
     queryFn: async () => (await client.get('/operations/visitors')).data,
+    enabled: canAccess([UserRole.RECEPTIONIST, UserRole.SECURITY_HEAD, UserRole.SCHOOL_ADMIN]),
     ...queryOptions
   });
 
   const { data: tickets = [] } = useQuery({
     queryKey: ['tickets'],
     queryFn: async () => (await client.get('/operations/tickets')).data,
-    ...queryOptions
-  });
-
-  const { data: exams = [] } = useQuery({
-    queryKey: ['exams'],
-    queryFn: async () => (await client.get('/academics/exams')).data,
-    ...queryOptions
-  });
-
-  const { data: syllabus = [] } = useQuery({
-    queryKey: ['syllabus'],
-    queryFn: async () => (await client.get('/academics/syllabus')).data,
+    enabled: canAccess([UserRole.ESTATE_MANAGER, UserRole.SCHOOL_ADMIN]),
     ...queryOptions
   });
 
   const { data: gateLogs = [] } = useQuery({
     queryKey: ['gateLogs'],
     queryFn: async () => (await client.get('/operations/gate-logs')).data,
+    enabled: canAccess([UserRole.SECURITY_HEAD, UserRole.SCHOOL_ADMIN]),
     ...queryOptions
   });
 
+  // Global Settings
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => (await client.get('/operations/settings')).data,
     initialData: { lockdown_mode: false },
-    enabled: isAuthenticated === true,
+    enabled: isAuthenticated,
     retry: false,
     refetchOnWindowFocus: false
   });
   const lockdownMode = settings?.lockdown_mode || false;
 
-  const { data: leaves = [] } = useQuery({
-    queryKey: ['leaves'],
-    queryFn: async () => (await client.get('/academics/leaves')).data,
-    ...queryOptions
-  });
+  // =========================================================================
+  // MUTATIONS
+  // =========================================================================
 
-  const { data: liveClassesList = [] } = useQuery({
-    queryKey: ['liveClasses'],
-    queryFn: async () => (await client.get('/academics/live-classes')).data,
-    initialData: [] as any[],
-    enabled: isAuthenticated === true,
-    retry: false,
-    refetchOnWindowFocus: false
-  });
-
-  const liveClasses = useMemo(() => {
-    const map: Record<string, boolean> = {};
-    liveClassesList.forEach((c: any) => {
-      if (c.subject) map[c.subject] = c.is_active;
-    });
-    return map;
-  }, [liveClassesList]);
-
-  // --- MUTATIONS ---
   const toggleLockdownMutation = useMutation({
     mutationFn: (enabled: boolean) => client.post('/operations/settings/toggle-lockdown', { enabled }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings'] })
   });
   const toggleLockdown = () => toggleLockdownMutation.mutate(!lockdownMode);
-
-  const addExamMutation = useMutation({
-    mutationFn: (newExam: any) => client.post('/academics/exams', newExam),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['exams'] })
-  });
-  const addExam = (exam: Omit<Exam, 'id'>) => addExamMutation.mutate(exam);
-
-  const addHomeworkMutation = useMutation({
-    mutationFn: (newHw: Omit<Homework, 'id' | 'status'>) => client.post('/academics/homework', newHw),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['homeworks'] })
-  });
-  const addHomework = (hw: Omit<Homework, 'id' | 'status'>) => addHomeworkMutation.mutate(hw);
 
   const addExpenseMutation = useMutation({
     mutationFn: (newExp: Omit<Expense, 'id' | 'date'>) => client.post('/finance/expenses', { ...newExp, date: new Date() }),
@@ -356,35 +317,11 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode; isAuthen
   });
   const returnBook = (isbn: string) => returnBookMutation.mutate(isbn);
 
-  const applyLeaveMutation = useMutation({
-    mutationFn: (leave: Omit<LeaveApplication, 'id' | 'status' | 'teacherName'>) => client.post('/academics/leaves', leave),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leaves'] })
-  });
-  const applyLeave = (leave: Omit<LeaveApplication, 'id' | 'status' | 'teacherName'>) => applyLeaveMutation.mutate(leave);
-
-  const updateLeaveStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string, status: 'APPROVED' | 'REJECTED' }) => client.patch(`/academics/leaves/${id}`, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leaves'] })
-  });
-  const updateLeaveStatus = (id: string, status: 'APPROVED' | 'REJECTED') => updateLeaveStatusMutation.mutate({ id, status });
-
-  const approveSyllabusMutation = useMutation({
-    mutationFn: (id: number) => client.patch(`/academics/syllabus/${id}/approve`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['syllabus'] })
-  });
-  const approveSyllabus = (id: number) => approveSyllabusMutation.mutate(id);
-
   const markInvoicePaidMutation = useMutation({
     mutationFn: ({ id, method }: { id: string, method: string }) => client.patch(`/finance/invoices/${id}/pay`, { method }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invoices'] })
   });
   const markInvoicePaid = (id: string, method: 'CASH' | 'CHEQUE' | 'ONLINE') => markInvoicePaidMutation.mutate({ id, method });
-
-  const toggleLiveClassMutation = useMutation({
-    mutationFn: (data: { subject: string, isActive: boolean, classId: string }) => client.post('/academics/live-classes/toggle', data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['liveClasses'] })
-  });
-  const toggleLiveClass = (subject: string, isActive: boolean) => toggleLiveClassMutation.mutate({ subject, isActive, classId: '10A' });
 
   const addInvoiceMutation = useMutation({
     mutationFn: (newInv: Omit<Invoice, 'id' | 'status'>) => client.post('/finance/invoices', newInv),
@@ -393,13 +330,10 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode; isAuthen
   const addInvoice = (inv: Omit<Invoice, 'id' | 'status'>) => addInvoiceMutation.mutate(inv);
 
   // Stubs
-  const submitHomework = (id: string) => { };
   const resolveTicket = (id: string) => { };
   const logGateEntry = (entry: Omit<GateLog, 'id' | 'time' | 'date'>) => { };
   const convertInquiry = (id: number) => { };
   const approveVisitor = (id: number) => { };
-  const updateBusStatus = (id: string, status: LiveBus['status']) => { };
-  const assignBusDriver = (busId: string, driverName: string) => { };
   const addBook = (book: Book) => { };
   const issueBook = (isbn: string, studentId: string) => { };
   const addMedicalLog = (log: any) => { };
@@ -407,16 +341,14 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode; isAuthen
 
   return (
     <InteractionContext.Provider value={{
-      homeworks, leaves, liveClasses, syllabus, exams, students,
-      inquiries, visitors, tickets, gateLogs, localStaff, lockdownMode,
-      invoices, expenses,
-      buses, books, medicalLogs, hostelRooms,
-      addHomework, submitHomework, applyLeave, updateLeaveStatus, toggleLiveClass, approveSyllabus, addExam,
-      addInquiry, convertInquiry, addVisitor, approveVisitor, addTicket, resolveTicket, logGateEntry, addStaff, toggleLockdown,
-      addInvoice, markInvoicePaid, addExpense,
-      updateBusStatus, assignBusDriver,
-      addBook, issueBook, returnBook,
-      addMedicalLog, allocateRoom
+      lockdownMode, toggleLockdown,
+      students, localStaff, addStaff,
+      inquiries, visitors, tickets, gateLogs,
+      addInquiry, convertInquiry, addVisitor, approveVisitor, addTicket, resolveTicket, logGateEntry,
+      invoices, expenses, addInvoice, markInvoicePaid, addExpense,
+      books, addBook, issueBook, returnBook,
+      medicalLogs, addMedicalLog,
+      hostelRooms, allocateRoom
     }}>
       {children}
     </InteractionContext.Provider>

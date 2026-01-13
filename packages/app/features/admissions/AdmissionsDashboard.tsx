@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { useInteraction } from '../../provider/InteractionContext';
+import { useAdmissions } from '../../hooks/useAdmissions';
 import { SovereignButton, SovereignTable, SovereignInput, SovereignBadge, PageHeader } from '../../components/SovereignComponents';
 import { Row, Col } from '../../components/Layout';
 import { ActionModal } from '../../components/ActionModal';
 import { Plus, UserCheck } from 'lucide-react';
 
 export const AdmissionsDashboard = () => {
-  const { inquiries, addInquiry, convertInquiry } = useInteraction();
+  // Use new Admissions hook instead of InteractionContext
+  const { inquiries, addInquiry, convertInquiry } = useAdmissions();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ parent_name: '', phone: '', target_class: '' });
 
