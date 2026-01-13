@@ -1,13 +1,18 @@
 
 import React, { useState } from 'react';
-import { useInteraction } from '../../provider/InteractionContext';
+import { useHealth } from '../../hooks/useHealth';
+import { useHR } from '../../hooks/useHR';
 import { PageHeader, SovereignButton, SovereignInput, SovereignBadge, StatCard } from '../../components/SovereignComponents';
 import { Row, Col } from '../../components/Layout';
 import { ActionModal } from '../../components/ActionModal';
 import { Plus, Activity, Thermometer } from 'lucide-react';
 
 export const InfirmaryDashboard = () => {
-  const { medicalLogs, students, addMedicalLog } = useInteraction();
+  // Use new Health hook for medical logs
+  const { medicalLogs, addMedicalLog } = useHealth();
+  // Use new HR hook for students
+  const { students } = useHR();
+
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ studentId: '', issue: '', action: '' });
 

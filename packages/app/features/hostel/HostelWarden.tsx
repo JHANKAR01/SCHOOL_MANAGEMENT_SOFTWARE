@@ -1,14 +1,19 @@
 
 import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
-import { useInteraction } from '../../provider/InteractionContext';
+import { useHostel } from '../../hooks/useHostel';
+import { useHR } from '../../hooks/useHR';
 import { SovereignButton, SovereignBadge, PageHeader } from '../../components/SovereignComponents';
 import { ActionModal } from '../../components/ActionModal';
 import { Row, Col } from '../../components/Layout';
 import { Bed } from 'lucide-react';
 
 export const HostelWarden = () => {
-  const { hostelRooms, students, allocateRoom } = useInteraction();
+  // Use new Hostel hook for rooms data
+  const { hostelRooms, allocateRoom } = useHostel();
+  // Use new HR hook for students
+  const { students } = useHR();
+
   const [view, setView] = useState<'ALLOCATION' | 'ATTENDANCE'>('ALLOCATION');
 
   const [modalOpen, setModalOpen] = useState(false);

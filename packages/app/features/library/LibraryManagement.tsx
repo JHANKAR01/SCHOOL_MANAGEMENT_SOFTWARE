@@ -1,14 +1,19 @@
 
 import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
-import { useInteraction } from '../../provider/InteractionContext';
+import { useLibrary } from '../../hooks/useLibrary';
+import { useHR } from '../../hooks/useHR';
 import { SovereignButton, SovereignInput, SovereignTable, SovereignBadge, PageHeader } from '../../components/SovereignComponents';
 import { ActionModal } from '../../components/ActionModal';
 import { Row, Col } from '../../components/Layout';
 import { Plus, BookOpen, RotateCcw } from 'lucide-react';
 
 export const LibraryManagement = () => {
-  const { books, students, addBook, issueBook, returnBook } = useInteraction();
+  // Use new Library hook for books data
+  const { books, addBook, issueBook, returnBook } = useLibrary();
+  // Use new HR hook for students
+  const { students } = useHR();
+
   const [returnIsbn, setReturnIsbn] = useState('');
 
   // Modal States
@@ -21,7 +26,7 @@ export const LibraryManagement = () => {
 
   const handleAddBook = () => {
     if (!newBook.isbn || !newBook.title) return alert("Required fields missing");
-    addBook({ ...newBook, status: 'AVAILABLE' });
+    addBook({ ...newBook, status: 'AVAILABLE' } as any);
     setAddModalOpen(false);
     setNewBook({ isbn: '', title: '', author: '' });
   };

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useTransport, LiveBus } from '../../hooks/useTransport';
-import { useInteraction } from '../../provider/InteractionContext'; // Still need addExpense
+import { useFinance } from '../../hooks/useFinance';
 import { SovereignButton, SovereignTable, SovereignBadge, SovereignInput, StatCard, PageHeader, Column } from '../../components/SovereignComponents';
 import { ActionModal } from '../../components/ActionModal';
 import { Row, Col } from '../../components/Layout';
@@ -10,8 +10,8 @@ import { Bus, MapPin, Fuel, UserPlus, PlayCircle, StopCircle } from 'lucide-reac
 export const BusFleet = () => {
   // Use new Transport hook for buses data and mutations
   const { buses, updateBusStatus, assignBusDriver } = useTransport();
-  // Still get addExpense from InteractionContext (will be migrated in Batch 2)
-  const { addExpense } = useInteraction();
+  // Use new Finance hook for expense logging
+  const { addExpense } = useFinance();
 
   const [driverModalOpen, setDriverModalOpen] = useState(false);
   const [fuelModalOpen, setFuelModalOpen] = useState(false);
