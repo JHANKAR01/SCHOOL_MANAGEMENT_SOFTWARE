@@ -1,4 +1,6 @@
 // packages/api/src/server.ts
+import 'dotenv/config'; // Load .env before anything else
+
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
