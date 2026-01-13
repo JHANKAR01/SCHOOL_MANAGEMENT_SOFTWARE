@@ -43,6 +43,22 @@ import {
   DUMMY_INVOICES,
   DUMMY_TIMETABLE,
   DUMMY_BUSES,
+  // NEW: Operational tables (15)
+  DUMMY_EXPENSES,
+  DUMMY_HOMEWORK,
+  DUMMY_LIVE_CLASSES,
+  DUMMY_PAPERS,
+  DUMMY_SYLLABUS,
+  DUMMY_SUBSTITUTIONS,
+  DUMMY_MEDICAL_LOGS,
+  DUMMY_COUNSELING,
+  DUMMY_HOSTEL_ROOMS,
+  DUMMY_VISITORS,
+  DUMMY_GATE_LOGS,
+  DUMMY_INQUIRIES,
+  DUMMY_LEAVE_APPLICATIONS,
+  DUMMY_TICKETS,
+  DUMMY_IDENTITY_DOCUMENTS,
 } from './dummy-data.ts';
 
 // ============================================================================
@@ -101,6 +117,27 @@ async function main() {
 
   console.log('   └─ Clearing Invoice...');
   await prisma.invoice.deleteMany();
+
+  console.log('   └─ Clearing Expense...');
+  await prisma.expense.deleteMany();
+
+  console.log('   └─ Clearing Ticket...');
+  await prisma.ticket.deleteMany();
+
+  console.log('   └─ Clearing LeaveApplication...');
+  await prisma.leaveApplication.deleteMany();
+
+  console.log('   └─ Clearing Inquiry...');
+  await prisma.inquiry.deleteMany();
+
+  console.log('   └─ Clearing GateLog...');
+  await prisma.gateLog.deleteMany();
+
+  console.log('   └─ Clearing Visitor...');
+  await prisma.visitor.deleteMany();
+
+  console.log('   └─ Clearing HostelRoom...');
+  await prisma.hostelRoom.deleteMany();
 
   console.log('   └─ Clearing MedicalLog...');
   await prisma.medicalLog.deleteMany();
@@ -193,7 +230,15 @@ async function main() {
         academicYearStart: 'April',
         schoolMotto: 'Excellence Through Knowledge',
         affiliation: 'CBSE',
-        establishedYear: 2010
+        establishedYear: 2010,
+        // IMPORTANT: Feature flags - controls which modules are enabled
+        features: {
+          fees: true,
+          transport: true,
+          attendance: true,
+          library: true,
+          hostel: true
+        }
       }
     }
   });
@@ -242,9 +287,10 @@ async function main() {
   console.log('🎯 PART 2: Staff & Academic Structure');
   console.log('='.repeat(70));
 
-  // Hash the default password once (reused for all staff)
-  const hashedPassword = await bcrypt.hash('password123', 10);
-  console.log('\n🔐 Generated password hash for "password123"');
+  // Use pre-computed password hash for all users (password: password123)
+  // This hash is: $2a$10$kLh8IArLCS1JOqeUcMFre.D1Gtq2.d1mn5/Rq3H9hE5n.kcIYe0Tq
+  const hashedPassword = '$2a$10$kLh8IArLCS1JOqeUcMFre.D1Gtq2.d1mn5/Rq3H9hE5n.kcIYe0Tq';
+  console.log('\n🔐 Using pre-computed password hash for all users');
 
   // Maps to track created IDs for later steps
   const staffUserIdMap = new Map<string, string>(); // dummy ID -> real DB ID
@@ -256,11 +302,8 @@ async function main() {
   console.log('\n👨‍🏫 STEP 5: Seeding Staff Users...');
 
   for (const staffUser of DUMMY_STAFF_USERS) {
-    // Hash specific passwords for known accounts, default for others
-    let passwordHash = hashedPassword;
-    if (staffUser.password !== 'password123') {
-      passwordHash = await bcrypt.hash(staffUser.password, 10);
-    }
+    // Use the same pre-computed hash for ALL users
+    const passwordHash = hashedPassword;
 
     const createdUser = await prisma.user.create({
       data: {
@@ -827,6 +870,310 @@ async function main() {
 
   // =========================================================================
   // =========================================================================
+  // PART 5: OPERATIONAL DATA (15 New Tables)
+  // =========================================================================
+  // =========================================================================
+
+  console.log('\n' + '='.repeat(70));
+  console.log('🎯 PART 5: Operational Data (15 Tables)');
+  console.log('='.repeat(70));
+
+  // =========================================================================
+  // STEP 28: SEED EXPENSES
+  // =========================================================================
+  console.log('\n💸 STEP 28: Seeding Expenses...');
+
+  const expensesResult = await prisma.expense.createMany({
+    data: DUMMY_EXPENSES.map(exp => ({
+      id: exp.id,
+      school_id: exp.school_id,
+      category: exp.category,
+      amount: exp.amount,
+      description: exp.description,
+      date: exp.date
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${expensesResult.count} expenses created`);
+
+  // =========================================================================
+  // STEP 29: SEED HOMEWORK
+  // =========================================================================
+  console.log('\n📝 STEP 29: Seeding Homework...');
+
+  const homeworkResult = await prisma.homework.createMany({
+    data: DUMMY_HOMEWORK.map(hw => ({
+      id: hw.id,
+      school_id: hw.school_id,
+      title: hw.title,
+      subject_id: hw.subject_id,
+      description: hw.description,
+      due_date: hw.due_date,
+      status: hw.status,
+      class_id: hw.class_id,
+      created_at: hw.created_at
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${homeworkResult.count} homework assignments created`);
+
+  // =========================================================================
+  // STEP 30: SEED LIVE CLASSES
+  // =========================================================================
+  console.log('\n📹 STEP 30: Seeding Live Classes...');
+
+  const liveClassResult = await prisma.liveClass.createMany({
+    data: DUMMY_LIVE_CLASSES.map(lc => ({
+      id: lc.id,
+      school_id: lc.school_id,
+      subject_id: lc.subject_id,
+      class_id: lc.class_id,
+      teacher_id: lc.teacher_id,
+      meeting_link: lc.meeting_link,
+      is_active: lc.is_active,
+      start_time: lc.start_time
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${liveClassResult.count} live classes created`);
+
+  // =========================================================================
+  // STEP 31: SEED PAPERS
+  // =========================================================================
+  console.log('\n📄 STEP 31: Seeding Papers...');
+
+  const papersResult = await prisma.paper.createMany({
+    data: DUMMY_PAPERS.map(p => ({
+      id: p.id,
+      school_id: p.school_id,
+      title: p.title,
+      subject_id: p.subject_id,
+      class_id: p.class_id,
+      status: p.status,
+      created_at: p.created_at
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${papersResult.count} papers created`);
+
+  // =========================================================================
+  // STEP 32: SEED SYLLABUS
+  // =========================================================================
+  console.log('\n📖 STEP 32: Seeding Syllabus...');
+
+  const syllabusResult = await prisma.syllabus.createMany({
+    data: DUMMY_SYLLABUS.map(s => ({
+      id: s.id,
+      school_id: s.school_id,
+      subject_id: s.subject_id,
+      class_id: s.class_id,
+      topic: s.topic,
+      status: s.status,
+      teacher_id: s.teacher_id,
+      completed_at: s.completed_at
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${syllabusResult.count} syllabus topics created`);
+
+  // =========================================================================
+  // STEP 33: SEED SUBSTITUTIONS
+  // =========================================================================
+  console.log('\n🔄 STEP 33: Seeding Substitutions...');
+
+  const substitutionsResult = await prisma.substitution.createMany({
+    data: DUMMY_SUBSTITUTIONS.map(sub => ({
+      id: sub.id,
+      school_id: sub.school_id,
+      date: sub.date,
+      original_teacher_id: sub.original_teacher_id,
+      substitute_teacher_id: sub.substitute_teacher_id,
+      timetable_id: sub.timetable_id
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${substitutionsResult.count} substitutions created`);
+
+  // =========================================================================
+  // STEP 34: SEED MEDICAL LOGS
+  // =========================================================================
+  console.log('\n🏥 STEP 34: Seeding Medical Logs...');
+
+  const medicalLogsResult = await prisma.medicalLog.createMany({
+    data: DUMMY_MEDICAL_LOGS.map(log => ({
+      id: log.id,
+      student_id: log.student_id,
+      time: log.time,
+      issue: log.issue,
+      action: log.action,
+      school_id: log.school_id
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${medicalLogsResult.count} medical logs created`);
+
+  // =========================================================================
+  // STEP 35: SEED COUNSELING
+  // =========================================================================
+  console.log('\n🧠 STEP 35: Seeding Counseling Sessions...');
+
+  const counselingResult = await prisma.counseling.createMany({
+    data: DUMMY_COUNSELING.map(c => ({
+      id: c.id,
+      student_id: c.student_id,
+      category: c.category,
+      note: c.note,
+      date: c.date,
+      school_id: c.school_id
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${counselingResult.count} counseling sessions created`);
+
+  // =========================================================================
+  // STEP 36: SEED HOSTEL ROOMS
+  // =========================================================================
+  console.log('\n🛏️ STEP 36: Seeding Hostel Rooms...');
+
+  const hostelRoomsResult = await prisma.hostelRoom.createMany({
+    data: DUMMY_HOSTEL_ROOMS.map(r => ({
+      id: r.id,
+      school_id: r.school_id,
+      room_number: r.room_number,
+      student_id: r.student_id,
+      capacity: r.capacity,
+      created_at: r.created_at
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${hostelRoomsResult.count} hostel rooms created`);
+
+  // =========================================================================
+  // STEP 37: SEED VISITORS
+  // =========================================================================
+  console.log('\n👋 STEP 37: Seeding Visitors...');
+
+  // Visitors use auto-increment ID, so we don't pass id
+  for (const visitor of DUMMY_VISITORS) {
+    await prisma.visitor.create({
+      data: {
+        school_id: visitor.school_id,
+        name: visitor.name,
+        student_id: visitor.student_id,
+        purpose: visitor.purpose,
+        status: visitor.status,
+        time: visitor.time
+      }
+    });
+  }
+  console.log(`   ✅ ${DUMMY_VISITORS.length} visitors created`);
+
+  // =========================================================================
+  // STEP 38: SEED GATE LOGS
+  // =========================================================================
+  console.log('\n🚪 STEP 38: Seeding Gate Logs...');
+
+  // GateLogs use auto-increment ID, so we don't pass id
+  for (const log of DUMMY_GATE_LOGS) {
+    await prisma.gateLog.create({
+      data: {
+        school_id: log.school_id,
+        person_type: log.person_type,
+        person_id: log.person_id,
+        name: log.name,
+        purpose: log.purpose,
+        status: log.status,
+        entry_time: log.entry_time,
+        exit_time: log.exit_time
+      }
+    });
+  }
+  console.log(`   ✅ ${DUMMY_GATE_LOGS.length} gate logs created`);
+
+  // =========================================================================
+  // STEP 39: SEED INQUIRIES
+  // =========================================================================
+  console.log('\n❓ STEP 39: Seeding Inquiries...');
+
+  // Inquiries use auto-increment ID, so we don't pass id
+  for (const inquiry of DUMMY_INQUIRIES) {
+    await prisma.inquiry.create({
+      data: {
+        school_id: inquiry.school_id,
+        parent_name: inquiry.parent_name,
+        phone: inquiry.phone,
+        target_class: inquiry.target_class,
+        status: inquiry.status,
+        created_at: inquiry.created_at
+      }
+    });
+  }
+  console.log(`   ✅ ${DUMMY_INQUIRIES.length} inquiries created`);
+
+  // =========================================================================
+  // STEP 40: SEED LEAVE APPLICATIONS
+  // =========================================================================
+  console.log('\n🏖️ STEP 40: Seeding Leave Applications...');
+
+  const leaveResult = await prisma.leaveApplication.createMany({
+    data: DUMMY_LEAVE_APPLICATIONS.map(l => ({
+      id: l.id,
+      school_id: l.school_id,
+      user_id: l.user_id,
+      type: l.type,
+      start_date: l.start_date,
+      end_date: l.end_date,
+      reason: l.reason,
+      status: l.status,
+      created_at: l.created_at
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${leaveResult.count} leave applications created`);
+
+  // =========================================================================
+  // STEP 41: SEED TICKETS
+  // =========================================================================
+  console.log('\n🎫 STEP 41: Seeding Tickets...');
+
+  const ticketsResult = await prisma.ticket.createMany({
+    data: DUMMY_TICKETS.map(t => ({
+      id: t.id,
+      school_id: t.school_id,
+      location: t.location,
+      issue: t.issue,
+      priority: t.priority,
+      status: t.status,
+      reported_by: t.reported_by,
+      created_at: t.created_at
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${ticketsResult.count} tickets created`);
+
+  // =========================================================================
+  // STEP 42: SEED IDENTITY DOCUMENTS
+  // =========================================================================
+  console.log('\n📑 STEP 42: Seeding Identity Documents...');
+
+  const idDocsResult = await prisma.identityDocument.createMany({
+    data: DUMMY_IDENTITY_DOCUMENTS.map(doc => ({
+      id: doc.id,
+      owner_user_id: doc.owner_user_id,
+      owner_student_id: doc.owner_student_id,
+      doc_type: doc.doc_type,
+      file_ref: doc.file_ref,
+      masked_id: doc.masked_id,
+      verification_status: doc.verification_status,
+      school_id: doc.school_id,
+      created_at: doc.created_at
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${idDocsResult.count} identity documents created`);
+
+  // =========================================================================
+  // =========================================================================
   // SEED COMPLETE - FINAL SUMMARY
   // =========================================================================
   // =========================================================================
@@ -868,23 +1215,41 @@ async function main() {
   console.log(`   ├─ ${DUMMY_EXAMS.length} Exams`);
   console.log(`   ├─ ${resultsResult.count} Results`);
   console.log(`   ├─ ${resultMarksResult.count} Result Marks`);
-  console.log(`   └─ ${attendanceResult.count} Attendance Records`);
+  console.log(`   ├─ ${attendanceResult.count} Attendance Records`);
+  console.log(`   ├─ ${homeworkResult.count} Homework Assignments`);
+  console.log(`   ├─ ${liveClassResult.count} Live Classes`);
+  console.log(`   ├─ ${papersResult.count} Exam Papers`);
+  console.log(`   └─ ${syllabusResult.count} Syllabus Topics`);
 
   console.log('\n📚 LIBRARY & FINANCE:');
   console.log(`   ├─ ${booksResult.count} Books`);
   console.log(`   ├─ ${bookLoansResult.count} Book Loans`);
-  console.log(`   └─ ${invoicesResult.count} Invoices`);
+  console.log(`   ├─ ${invoicesResult.count} Invoices`);
+  console.log(`   └─ ${expensesResult.count} Expenses`);
 
   console.log('\n🚌 LOGISTICS:');
   console.log(`   ├─ ${busesResult.count} Buses`);
-  console.log(`   └─ ${DUMMY_TIMETABLE.length} Timetable Entries`);
+  console.log(`   ├─ ${DUMMY_TIMETABLE.length} Timetable Entries`);
+  console.log(`   └─ ${substitutionsResult.count} Substitutions`);
+
+  console.log('\n🏥 HEALTH & WELFARE:');
+  console.log(`   ├─ ${medicalLogsResult.count} Medical Logs`);
+  console.log(`   ├─ ${counselingResult.count} Counseling Sessions`);
+  console.log(`   └─ ${hostelRoomsResult.count} Hostel Rooms`);
+
+  console.log('\n🚪 OPERATIONS:');
+  console.log(`   ├─ ${DUMMY_VISITORS.length} Visitors`);
+  console.log(`   ├─ ${DUMMY_GATE_LOGS.length} Gate Logs`);
+  console.log(`   ├─ ${DUMMY_INQUIRIES.length} Inquiries`);
+  console.log(`   ├─ ${leaveResult.count} Leave Applications`);
+  console.log(`   ├─ ${ticketsResult.count} Tickets`);
+  console.log(`   └─ ${idDocsResult.count} Identity Documents`);
 
   console.log('\n' + '─'.repeat(50));
   console.log('🔐 TEST CREDENTIALS:');
-  console.log('   ├─ Super Admin: super@sovereign.edu / SuperAdmin@123');
-  console.log('   ├─ School Admin: admin@sovereign.edu / Admin@123');
-  console.log('   ├─ Finance: finance@sovereign.edu / Finance@123');
-  console.log('   └─ All Others: [email] / password123');
+  console.log('   ├─ ALL accounts use the same password hash');
+  console.log('   ├─ Password: password123');
+  console.log('   └─ Hash: $2a$10$kLh8IArLCS1JOqeUcMFre.D1Gtq2.d1mn5/Rq3H9hE5n.kcIYe0Tq');
   console.log('─'.repeat(50));
 
   console.log('\n✅ Database is ready for development!');

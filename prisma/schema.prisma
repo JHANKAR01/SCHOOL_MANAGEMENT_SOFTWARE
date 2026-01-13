@@ -661,6 +661,8 @@ model Homework {
   @@index([school_id])
   @@index([class_id])
   @@index([subject_id])
+  @@index([status])      // Teacher: grading queue
+  @@index([due_date])    // Students: upcoming assignments
   @@schema("schoolmanagementsystem")
 }
 
@@ -683,6 +685,8 @@ model LiveClass {
   @@index([class_id])
   @@index([subject_id])
   @@index([school_id])
+  @@index([teacher_id])  // Teacher's live classes
+  @@index([is_active])   // Active class filter
   @@schema("schoolmanagementsystem")
 }
 
@@ -725,6 +729,8 @@ model Syllabus {
   @@index([class_id])
   @@index([subject_id])
   @@index([school_id])
+  @@index([teacher_id])  // Teacher's syllabus progress
+  @@index([status])      // Completion status filter
   @@schema("schoolmanagementsystem")
 }
 
@@ -791,6 +797,8 @@ model BookLoan {
   @@index([student_id])
   @@index([user_id])
   @@index([school_id])
+  @@index([status])      // Library: overdue books filter
+  @@index([due_date])    // Library: upcoming due dates
   @@schema("schoolmanagementsystem")
 }
 
@@ -815,6 +823,8 @@ model Invoice {
 
   @@index([school_id])
   @@index([student_id])
+  @@index([status])      // Dashboard: pending/paid filter
+  @@index([due_date])    // Reports: overdue invoices
   @@schema("schoolmanagementsystem")
 }
 
@@ -828,6 +838,7 @@ model Expense {
   School      School          @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([school_id])
+  @@index([date])        // Reports: monthly expenses
   @@schema("schoolmanagementsystem")
 }
 
@@ -927,6 +938,9 @@ model GateLog {
   School      School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([school_id])
+  @@index([entry_time])  // Security: daily log
+  @@index([status])      // Who's inside/exited
+  @@index([person_type]) // Filter by type
   @@schema("schoolmanagementsystem")
 }
 
@@ -945,6 +959,7 @@ model Inquiry {
   School       School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([school_id])
+  @@index([status])      // Admissions: NEW/FOLLOW_UP filter
   @@schema("schoolmanagementsystem")
 }
 
@@ -966,6 +981,9 @@ model LeaveApplication {
   User       User         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([school_id])
+  @@index([user_id])     // Staff's leave history
+  @@index([status])      // HR: pending approvals
+  @@index([start_date])  // Leave calendar
   @@schema("schoolmanagementsystem")
 }
 
@@ -982,6 +1000,9 @@ model Ticket {
   School      School          @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([school_id])
+  @@index([reported_by]) // User's tickets
+  @@index([status])      // Help desk: open tickets
+  @@index([priority])    // Critical tickets first
   @@schema("schoolmanagementsystem")
 }
 

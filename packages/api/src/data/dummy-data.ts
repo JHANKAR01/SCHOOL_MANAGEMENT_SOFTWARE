@@ -1572,6 +1572,616 @@ export const DUMMY_BUSES: DummyBus[] = [
 ];
 
 // ============================================================================
+// PART 5: OPERATIONAL DATA (15 Missing Tables)
+// ============================================================================
+
+// --- Expenses ---
+export interface DummyExpense {
+  id: string;
+  school_id: string;
+  category: 'UTILITY' | 'VENDOR' | 'SALARY' | 'MAINTENANCE';
+  amount: number;
+  description: string;
+  date: Date;
+}
+
+function generateExpenses(): DummyExpense[] {
+  const expenses: DummyExpense[] = [];
+  const categories: ('UTILITY' | 'VENDOR' | 'SALARY' | 'MAINTENANCE')[] = ['UTILITY', 'VENDOR', 'SALARY', 'MAINTENANCE'];
+  const descriptions = [
+    ['Electricity Bill', 'Water Bill', 'Internet Bill', 'Phone Bill'],
+    ['Stationery Purchase', 'Lab Equipment', 'Sports Equipment', 'Furniture'],
+    ['Driver Salary', 'Security Guard Salary', 'Cleaning Staff Salary', 'Helper Salary'],
+    ['AC Repair', 'Plumbing Work', 'Painting', 'Generator Service']
+  ];
+
+  const baseDate = new Date();
+  for (let i = 0; i < 20; i++) {
+    const catIndex = i % 4;
+    const descIndex = Math.floor(i / 4) % 4;
+    const date = new Date(baseDate);
+    date.setDate(date.getDate() - (i * 2)); // Spread across current month
+
+    expenses.push({
+      id: `exp_${(i + 1).toString().padStart(4, '0')}`,
+      school_id: SCHOOL_ID,
+      category: categories[catIndex],
+      amount: 5000 + (i * 1000) + (catIndex * 2500),
+      description: descriptions[catIndex][descIndex],
+      date
+    });
+  }
+  return expenses;
+}
+
+export const DUMMY_EXPENSES: DummyExpense[] = generateExpenses();
+
+// --- Homework ---
+export interface DummyHomework {
+  id: string;
+  school_id: string;
+  title: string;
+  subject_id: string;
+  description: string;
+  due_date: Date;
+  status: 'PENDING' | 'SUBMITTED' | 'GRADED';
+  class_id: string;
+  created_at: Date;
+}
+
+function generateHomework(): DummyHomework[] {
+  const homeworks: DummyHomework[] = [];
+  const titles = ['Chapter Review Questions', 'Practice Problems Set', 'Weekly Assignment', 'Project Work', 'Case Study Analysis'];
+  const statuses: ('PENDING' | 'SUBMITTED' | 'GRADED')[] = ['PENDING', 'SUBMITTED', 'GRADED'];
+
+  const baseDate = new Date();
+  const classes = ['cls_6_A', 'cls_7_B', 'cls_8_C', 'cls_9_A', 'cls_10_B'];
+  const subjects = ['sub_math', 'sub_eng', 'sub_sci', 'sub_sst', 'sub_hin'];
+
+  for (let i = 0; i < 20; i++) {
+    const dueDate = new Date(baseDate);
+    dueDate.setDate(dueDate.getDate() + (i % 14) - 7); // Some past, some future
+
+    homeworks.push({
+      id: `hw_${(i + 1).toString().padStart(4, '0')}`,
+      school_id: SCHOOL_ID,
+      title: `${titles[i % 5]} - Week ${Math.floor(i / 5) + 1}`,
+      subject_id: subjects[i % 5],
+      description: `Complete all questions from the assigned chapter. Submit before the due date.`,
+      due_date: dueDate,
+      status: statuses[i % 3],
+      class_id: classes[i % 5],
+      created_at: new Date(dueDate.getTime() - 7 * 24 * 60 * 60 * 1000) // 1 week before due
+    });
+  }
+  return homeworks;
+}
+
+export const DUMMY_HOMEWORK: DummyHomework[] = generateHomework();
+
+// --- Live Classes ---
+export interface DummyLiveClass {
+  id: string;
+  school_id: string;
+  subject_id: string;
+  class_id: string;
+  teacher_id: string;
+  meeting_link: string;
+  is_active: boolean;
+  start_time: Date;
+}
+
+function generateLiveClasses(): DummyLiveClass[] {
+  const liveClasses: DummyLiveClass[] = [];
+  const teachers = DUMMY_STAFF_USERS.filter(u => u.role === UserRole.TEACHER);
+  const classes = ['cls_6_A', 'cls_7_B', 'cls_8_C', 'cls_9_A', 'cls_10_B'];
+  const subjects = ['sub_math', 'sub_eng', 'sub_sci', 'sub_phy', 'sub_chem'];
+
+  const baseDate = new Date();
+
+  for (let i = 0; i < 15; i++) {
+    const startTime = new Date(baseDate);
+    startTime.setHours(9 + (i % 6), 0, 0, 0);
+
+    liveClasses.push({
+      id: `lc_${(i + 1).toString().padStart(4, '0')}`,
+      school_id: SCHOOL_ID,
+      subject_id: subjects[i % 5],
+      class_id: classes[i % 5],
+      teacher_id: teachers[i % teachers.length].id,
+      meeting_link: `https://meet.sovereign.edu/class-${i + 1}`,
+      is_active: i < 3, // First 3 are active
+      start_time: startTime
+    });
+  }
+  return liveClasses;
+}
+
+export const DUMMY_LIVE_CLASSES: DummyLiveClass[] = generateLiveClasses();
+
+// --- Papers ---
+export interface DummyPaper {
+  id: string;
+  school_id: string;
+  title: string;
+  subject_id: string;
+  class_id: string;
+  status: 'DRAFT' | 'PRINTED' | 'DISTRIBUTED';
+  created_at: Date;
+}
+
+function generatePapers(): DummyPaper[] {
+  const papers: DummyPaper[] = [];
+  const statuses: ('DRAFT' | 'PRINTED' | 'DISTRIBUTED')[] = ['DRAFT', 'PRINTED', 'DISTRIBUTED'];
+  const classes = ['cls_9_A', 'cls_10_B', 'cls_11_A', 'cls_12_B'];
+  const subjects = ['sub_math', 'sub_phy', 'sub_chem', 'sub_bio', 'sub_eng'];
+
+  for (let i = 0; i < 15; i++) {
+    papers.push({
+      id: `ppr_${(i + 1).toString().padStart(4, '0')}`,
+      school_id: SCHOOL_ID,
+      title: `Mid-Term Paper - ${subjects[i % 5].replace('sub_', '').toUpperCase()} - Class ${classes[i % 4].split('_')[1]}`,
+      subject_id: subjects[i % 5],
+      class_id: classes[i % 4],
+      status: statuses[i % 3],
+      created_at: new Date()
+    });
+  }
+  return papers;
+}
+
+export const DUMMY_PAPERS: DummyPaper[] = generatePapers();
+
+// --- Syllabus ---
+export interface DummySyllabus {
+  id: string;
+  school_id: string;
+  subject_id: string;
+  class_id: string;
+  topic: string;
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+  teacher_id: string | null;
+  completed_at: Date | null;
+}
+
+function generateSyllabus(): DummySyllabus[] {
+  const syllabusList: DummySyllabus[] = [];
+  const teachers = DUMMY_STAFF_USERS.filter(u => u.role === UserRole.TEACHER);
+  const statuses: ('NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED')[] = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED'];
+  const topics = ['Introduction', 'Fundamentals', 'Advanced Concepts', 'Applications', 'Revision'];
+  const classes = ['cls_6_A', 'cls_7_B', 'cls_8_C', 'cls_9_A'];
+  const subjects = ['sub_math', 'sub_sci', 'sub_eng', 'sub_sst'];
+
+  for (let i = 0; i < 20; i++) {
+    const status = statuses[i % 3];
+    syllabusList.push({
+      id: `syl_${(i + 1).toString().padStart(4, '0')}`,
+      school_id: SCHOOL_ID,
+      subject_id: subjects[i % 4],
+      class_id: classes[i % 4],
+      topic: `${topics[i % 5]} - Unit ${Math.floor(i / 5) + 1}`,
+      status,
+      teacher_id: teachers[i % teachers.length].id,
+      completed_at: status === 'COMPLETED' ? new Date() : null
+    });
+  }
+  return syllabusList;
+}
+
+export const DUMMY_SYLLABUS: DummySyllabus[] = generateSyllabus();
+
+// --- Substitutions ---
+export interface DummySubstitution {
+  id: string;
+  school_id: string;
+  date: Date;
+  original_teacher_id: string;
+  substitute_teacher_id: string;
+  timetable_id: string | null;
+}
+
+function generateSubstitutions(): DummySubstitution[] {
+  const substitutions: DummySubstitution[] = [];
+  const teachers = DUMMY_STAFF_USERS.filter(u => u.role === UserRole.TEACHER);
+
+  const baseDate = new Date();
+  for (let i = 0; i < 10; i++) {
+    const date = new Date(baseDate);
+    date.setDate(date.getDate() - i);
+
+    substitutions.push({
+      id: `sub_${(i + 1).toString().padStart(4, '0')}`,
+      school_id: SCHOOL_ID,
+      date,
+      original_teacher_id: teachers[i % teachers.length].id,
+      substitute_teacher_id: teachers[(i + 10) % teachers.length].id,
+      timetable_id: i < DUMMY_TIMETABLE.length ? DUMMY_TIMETABLE[i].id : null
+    });
+  }
+  return substitutions;
+}
+
+export const DUMMY_SUBSTITUTIONS: DummySubstitution[] = generateSubstitutions();
+
+// --- Medical Logs ---
+export interface DummyMedicalLog {
+  id: string;
+  student_id: string;
+  time: Date;
+  issue: string;
+  action: string;
+  school_id: string;
+}
+
+function generateMedicalLogs(): DummyMedicalLog[] {
+  const logs: DummyMedicalLog[] = [];
+  const issues = ['Headache', 'Fever', 'Stomach ache', 'Minor injury', 'Allergic reaction', 'Nausea', 'Fatigue'];
+  const actions = ['Rest prescribed', 'Medicine given', 'Parents informed', 'First aid applied', 'Sent home', 'Referred to hospital'];
+
+  const baseDate = new Date();
+  for (let i = 0; i < 20; i++) {
+    const time = new Date(baseDate);
+    time.setDate(time.getDate() - (i % 15));
+    time.setHours(9 + (i % 6), (i * 15) % 60, 0, 0);
+
+    logs.push({
+      id: `med_${(i + 1).toString().padStart(4, '0')}`,
+      student_id: DUMMY_STUDENTS[i % 100].id,
+      time,
+      issue: issues[i % issues.length],
+      action: actions[i % actions.length],
+      school_id: SCHOOL_ID
+    });
+  }
+  return logs;
+}
+
+export const DUMMY_MEDICAL_LOGS: DummyMedicalLog[] = generateMedicalLogs();
+
+// --- Counseling ---
+export interface DummyCounseling {
+  id: string;
+  student_id: string;
+  category: string;
+  note: string;
+  date: Date;
+  school_id: string;
+}
+
+function generateCounseling(): DummyCounseling[] {
+  const sessions: DummyCounseling[] = [];
+  const categories = ['Academic', 'Behavioral', 'Personal', 'Career', 'Social'];
+  const notes = [
+    'Student needs extra support in studies',
+    'Discussion about classroom behavior improvement',
+    'Follow-up session scheduled',
+    'Career counseling completed',
+    'Peer relationship issues addressed'
+  ];
+
+  const baseDate = new Date();
+  for (let i = 0; i < 15; i++) {
+    const date = new Date(baseDate);
+    date.setDate(date.getDate() - (i * 2));
+
+    sessions.push({
+      id: `cns_${(i + 1).toString().padStart(4, '0')}`,
+      student_id: DUMMY_STUDENTS[(i * 5) % 100].id,
+      category: categories[i % categories.length],
+      note: notes[i % notes.length],
+      date,
+      school_id: SCHOOL_ID
+    });
+  }
+  return sessions;
+}
+
+export const DUMMY_COUNSELING: DummyCounseling[] = generateCounseling();
+
+// --- Hostel Rooms ---
+export interface DummyHostelRoom {
+  id: string;
+  school_id: string;
+  room_number: string;
+  student_id: string | null;
+  capacity: number;
+  created_at: Date;
+}
+
+function generateHostelRooms(): DummyHostelRoom[] {
+  const rooms: DummyHostelRoom[] = [];
+  const genderWings = ['BOYS', 'GIRLS'];
+
+  for (let i = 0; i < 20; i++) {
+    const wing = genderWings[i % 2];
+    const roomNum = `${wing[0]}${(101 + i).toString()}`;
+
+    rooms.push({
+      id: `hr_${(i + 1).toString().padStart(4, '0')}`,
+      school_id: SCHOOL_ID,
+      room_number: roomNum,
+      student_id: i < 15 ? DUMMY_STUDENTS[i * 10].id : null, // 15 occupied, 5 empty
+      capacity: i % 3 === 0 ? 4 : 2,
+      created_at: new Date()
+    });
+  }
+  return rooms;
+}
+
+export const DUMMY_HOSTEL_ROOMS: DummyHostelRoom[] = generateHostelRooms();
+
+// --- Visitors ---
+export interface DummyVisitor {
+  id: number;
+  school_id: string;
+  name: string;
+  student_id: string | null;
+  purpose: string;
+  status: 'WAITING' | 'APPROVED' | 'COMPLETED';
+  time: Date;
+}
+
+function generateVisitors(): DummyVisitor[] {
+  const visitors: DummyVisitor[] = [];
+  const purposes = ['Parent-Teacher Meeting', 'Fee Payment', 'Admission Inquiry', 'Document Collection', 'General Visit'];
+  const statuses: ('WAITING' | 'APPROVED' | 'COMPLETED')[] = ['WAITING', 'APPROVED', 'COMPLETED'];
+
+  const baseDate = new Date();
+  for (let i = 0; i < 15; i++) {
+    const time = new Date(baseDate);
+    time.setDate(time.getDate() - (i % 7));
+    time.setHours(9 + (i % 8), (i * 10) % 60, 0, 0);
+
+    visitors.push({
+      id: i + 1, // Auto-increment ID
+      school_id: SCHOOL_ID,
+      name: `Visitor ${FIRST_NAMES_MALE[i % FIRST_NAMES_MALE.length]} ${LAST_NAMES[i % LAST_NAMES.length]}`,
+      student_id: i % 3 === 0 ? DUMMY_STUDENTS[i * 5].id : null,
+      purpose: purposes[i % purposes.length],
+      status: statuses[i % 3],
+      time
+    });
+  }
+  return visitors;
+}
+
+export const DUMMY_VISITORS: DummyVisitor[] = generateVisitors();
+
+// --- Gate Logs ---
+export interface DummyGateLog {
+  id: number;
+  school_id: string;
+  person_type: 'STUDENT' | 'STAFF' | 'VISITOR';
+  person_id: string | null;
+  name: string;
+  purpose: string;
+  status: 'INSIDE' | 'EXITED';
+  entry_time: Date;
+  exit_time: Date | null;
+}
+
+function generateGateLogs(): DummyGateLog[] {
+  const logs: DummyGateLog[] = [];
+  const personTypes: ('STUDENT' | 'STAFF' | 'VISITOR')[] = ['STUDENT', 'STAFF', 'VISITOR'];
+  const purposes = ['Regular Entry', 'Late Entry', 'Early Exit', 'Official Work', 'Meeting'];
+  const statuses: ('INSIDE' | 'EXITED')[] = ['INSIDE', 'EXITED'];
+
+  const baseDate = new Date();
+  for (let i = 0; i < 20; i++) {
+    const personType = personTypes[i % 3];
+    const entryTime = new Date(baseDate);
+    entryTime.setDate(entryTime.getDate() - (i % 5));
+    entryTime.setHours(7 + (i % 4), (i * 5) % 60, 0, 0);
+
+    const status = statuses[i % 2];
+    let exitTime: Date | null = null;
+    if (status === 'EXITED') {
+      exitTime = new Date(entryTime);
+      exitTime.setHours(exitTime.getHours() + 6 + (i % 3));
+    }
+
+    let personId: string | null = null;
+    let name: string;
+    if (personType === 'STUDENT') {
+      personId = DUMMY_STUDENTS[i % 50].id;
+      name = DUMMY_STUDENTS[i % 50].name;
+    } else if (personType === 'STAFF') {
+      personId = DUMMY_STAFF_USERS[i % 30].id;
+      name = DUMMY_STAFF_USERS[i % 30].name;
+    } else {
+      name = `Visitor ${i + 1}`;
+    }
+
+    logs.push({
+      id: i + 1,
+      school_id: SCHOOL_ID,
+      person_type: personType,
+      person_id: personId,
+      name,
+      purpose: purposes[i % purposes.length],
+      status,
+      entry_time: entryTime,
+      exit_time: exitTime
+    });
+  }
+  return logs;
+}
+
+export const DUMMY_GATE_LOGS: DummyGateLog[] = generateGateLogs();
+
+// --- Inquiries ---
+export interface DummyInquiry {
+  id: number;
+  school_id: string;
+  parent_name: string;
+  phone: string;
+  target_class: string;
+  status: 'NEW' | 'FOLLOW_UP' | 'CONVERTED';
+  created_at: Date;
+}
+
+function generateInquiries(): DummyInquiry[] {
+  const inquiries: DummyInquiry[] = [];
+  const statuses: ('NEW' | 'FOLLOW_UP' | 'CONVERTED')[] = ['NEW', 'FOLLOW_UP', 'CONVERTED'];
+  const grades = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+
+  const baseDate = new Date();
+  for (let i = 0; i < 15; i++) {
+    const date = new Date(baseDate);
+    date.setDate(date.getDate() - (i * 2));
+
+    inquiries.push({
+      id: i + 1,
+      school_id: SCHOOL_ID,
+      parent_name: `${FIRST_NAMES_MALE[i % FIRST_NAMES_MALE.length]} ${LAST_NAMES[i % LAST_NAMES.length]}`,
+      phone: generatePhone(i + 8000),
+      target_class: grades[i % grades.length],
+      status: statuses[i % 3],
+      created_at: date
+    });
+  }
+  return inquiries;
+}
+
+export const DUMMY_INQUIRIES: DummyInquiry[] = generateInquiries();
+
+// --- Leave Applications ---
+export interface DummyLeaveApplication {
+  id: string;
+  school_id: string;
+  user_id: string;
+  type: 'SICK' | 'CASUAL' | 'EARNED';
+  start_date: Date;
+  end_date: Date;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  created_at: Date;
+}
+
+function generateLeaveApplications(): DummyLeaveApplication[] {
+  const leaves: DummyLeaveApplication[] = [];
+  const leaveTypes: ('SICK' | 'CASUAL' | 'EARNED')[] = ['SICK', 'CASUAL', 'EARNED'];
+  const statuses: ('PENDING' | 'APPROVED' | 'REJECTED')[] = ['PENDING', 'APPROVED', 'REJECTED'];
+  const reasons = ['Medical reasons', 'Family function', 'Personal work', 'Out of station', 'Health checkup'];
+
+  const baseDate = new Date();
+  for (let i = 0; i < 15; i++) {
+    const startDate = new Date(baseDate);
+    startDate.setDate(startDate.getDate() + (i % 10) - 5);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + (i % 3) + 1);
+
+    leaves.push({
+      id: `leave_${(i + 1).toString().padStart(4, '0')}`,
+      school_id: SCHOOL_ID,
+      user_id: DUMMY_STAFF_USERS[i % 30].id,
+      type: leaveTypes[i % 3],
+      start_date: startDate,
+      end_date: endDate,
+      reason: reasons[i % reasons.length],
+      status: statuses[i % 3],
+      created_at: new Date(startDate.getTime() - 2 * 24 * 60 * 60 * 1000)
+    });
+  }
+  return leaves;
+}
+
+export const DUMMY_LEAVE_APPLICATIONS: DummyLeaveApplication[] = generateLeaveApplications();
+
+// --- Tickets ---
+export interface DummyTicket {
+  id: string;
+  school_id: string;
+  location: string;
+  issue: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  status: 'OPEN' | 'RESOLVED' | 'ASSIGNED' | 'PENDING';
+  reported_by: string;
+  created_at: Date;
+}
+
+function generateTickets(): DummyTicket[] {
+  const tickets: DummyTicket[] = [];
+  const locations = ['Computer Lab', 'Library', 'Classroom 5A', 'Staff Room', 'Principal Office', 'Boys Washroom', 'Canteen', 'Sports Ground'];
+  const issues = ['AC not working', 'Projector malfunction', 'Broken desk', 'Water leakage', 'Electrical issue', 'Network down', 'Door lock broken', 'Fan not working'];
+  const priorities: ('LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL')[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+  const statuses: ('OPEN' | 'RESOLVED' | 'ASSIGNED' | 'PENDING')[] = ['OPEN', 'RESOLVED', 'ASSIGNED', 'PENDING'];
+
+  const baseDate = new Date();
+  for (let i = 0; i < 15; i++) {
+    const date = new Date(baseDate);
+    date.setDate(date.getDate() - (i % 10));
+
+    tickets.push({
+      id: `tkt_${(i + 1).toString().padStart(4, '0')}`,
+      school_id: SCHOOL_ID,
+      location: locations[i % locations.length],
+      issue: issues[i % issues.length],
+      priority: priorities[i % 4],
+      status: statuses[i % 4],
+      reported_by: DUMMY_STAFF_USERS[i % 20].id,
+      created_at: date
+    });
+  }
+  return tickets;
+}
+
+export const DUMMY_TICKETS: DummyTicket[] = generateTickets();
+
+// --- Identity Documents ---
+export interface DummyIdentityDocument {
+  id: string;
+  owner_user_id: string | null;
+  owner_student_id: string | null;
+  doc_type: string;
+  file_ref: string;
+  masked_id: string;
+  verification_status: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  school_id: string;
+  created_at: Date;
+}
+
+function generateIdentityDocuments(): DummyIdentityDocument[] {
+  const docs: DummyIdentityDocument[] = [];
+  const docTypes = ['AADHAAR', 'PAN', 'BIRTH_CERTIFICATE', 'TRANSFER_CERTIFICATE', 'PASSPORT'];
+  const statuses: ('PENDING' | 'VERIFIED' | 'REJECTED')[] = ['PENDING', 'VERIFIED', 'REJECTED'];
+
+  // 15 student documents
+  for (let i = 0; i < 15; i++) {
+    docs.push({
+      id: `doc_std_${(i + 1).toString().padStart(4, '0')}`,
+      owner_user_id: null,
+      owner_student_id: DUMMY_STUDENTS[i].id,
+      doc_type: docTypes[i % docTypes.length],
+      file_ref: `/documents/student_${i + 1}_${docTypes[i % docTypes.length].toLowerCase()}.pdf`,
+      masked_id: generateMaskedAadhaar(i + 1000),
+      verification_status: statuses[i % 3],
+      school_id: SCHOOL_ID,
+      created_at: new Date()
+    });
+  }
+
+  // 5 staff documents
+  for (let i = 0; i < 5; i++) {
+    docs.push({
+      id: `doc_staff_${(i + 1).toString().padStart(4, '0')}`,
+      owner_user_id: DUMMY_STAFF_USERS[i].id,
+      owner_student_id: null,
+      doc_type: i % 2 === 0 ? 'AADHAAR' : 'PAN',
+      file_ref: `/documents/staff_${i + 1}_${(i % 2 === 0 ? 'aadhaar' : 'pan')}.pdf`,
+      masked_id: i % 2 === 0 ? generateMaskedAadhaar(i + 2000) : generateMaskedPAN(i + 2000),
+      verification_status: 'VERIFIED',
+      school_id: SCHOOL_ID,
+      created_at: new Date()
+    });
+  }
+
+  return docs;
+}
+
+export const DUMMY_IDENTITY_DOCUMENTS: DummyIdentityDocument[] = generateIdentityDocuments();
+
+// ============================================================================
 // SUMMARY - DATA COUNTS
 // ============================================================================
 // Academic Years: 2
@@ -1597,6 +2207,23 @@ export const DUMMY_BUSES: DummyBus[] = [
 // Book Loans: 30
 // Invoices: 100
 // Timetable: 30
+// Buses: 5
+// --- NEW OPERATIONAL DATA ---
+// Expenses: 20
+// Homework: 20
+// Live Classes: 15
+// Papers: 15
+// Syllabus: 20
+// Substitutions: 10
+// Medical Logs: 20
+// Counseling: 15
+// Hostel Rooms: 20
+// Visitors: 15
+// Gate Logs: 20
+// Inquiries: 15
+// Leave Applications: 15
+// Tickets: 15
+// Identity Documents: 20
 // Buses: 5
 // ============================================================================
 
