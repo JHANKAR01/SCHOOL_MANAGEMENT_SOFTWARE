@@ -109,6 +109,21 @@ export interface LiveBus extends Bus {
   speed: number;
 }
 
+// ============================================================================
+// PERMISSION GROUPS - Define which roles can access which data
+// ============================================================================
+const PERMISSIONS = {
+  FINANCE: [UserRole.ACCOUNTANT, UserRole.FINANCE_MANAGER, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.SUPER_ADMIN],
+  ACADEMICS: [UserRole.TEACHER, UserRole.HOD, UserRole.PRINCIPAL, UserRole.VICE_PRINCIPAL, UserRole.STUDENT, UserRole.PARENT, UserRole.EXAM_CELL],
+  OPERATIONS: [UserRole.RECEPTIONIST, UserRole.SCHOOL_ADMIN, UserRole.ESTATE_MANAGER, UserRole.SECURITY_HEAD, UserRole.PRINCIPAL],
+  HR: [UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN, UserRole.PRINCIPAL],
+  TRANSPORT: [UserRole.FLEET_MANAGER, UserRole.SCHOOL_ADMIN, UserRole.PARENT, UserRole.STUDENT],
+  LIBRARY: [UserRole.LIBRARIAN, UserRole.TEACHER, UserRole.STUDENT],
+  HEALTH: [UserRole.NURSE, UserRole.SCHOOL_ADMIN, UserRole.COUNSELOR],
+  HOSTEL: [UserRole.WARDEN, UserRole.SCHOOL_ADMIN],
+  ADMISSIONS: [UserRole.ADMISSIONS_OFFICER, UserRole.SCHOOL_ADMIN, UserRole.RECEPTIONIST],
+};
+
 export interface InteractionContextType {
   homeworks: Homework[];
   leaves: LeaveApplication[];
@@ -159,128 +174,127 @@ export interface InteractionContextType {
 
 const InteractionContext = createContext<InteractionContextType | undefined>(undefined);
 
-// EXPLICITLY DESTRUCTURE isAuthenticated with proper typing
-export const InteractionProvider: React.FC<{ children: React.ReactNode; isAuthenticated: boolean }> = ({ children, isAuthenticated }) => {
+// ============================================================================
+// PROVIDER - Now accepts 'role' prop for conditional fetching
+// ============================================================================
+export const InteractionProvider: React.FC<{
+  children: React.ReactNode;
+  isAuthenticated: boolean;
+  role?: UserRole;  // NEW: Role prop for permission-based fetching
+}> = ({ children, isAuthenticated, role }) => {
   const queryClient = useQueryClient();
+
+  // Helper to check if current role has permission
+  const canAccess = (allowedRoles: UserRole[]): boolean => {
+    return isAuthenticated && !!role && allowedRoles.includes(role);
+  };
 
   // DEBUG LOG - Shows in console to verify auth state
   useEffect(() => {
-    console.log(`[InteractionContext] Auth State: ${isAuthenticated} (Queries ${isAuthenticated ? 'ENABLED' : 'DISABLED'})`);
-  }, [isAuthenticated]);
+    console.log(`[InteractionContext] Auth: ${isAuthenticated}, Role: ${role || 'NONE'}`);
+  }, [isAuthenticated, role]);
 
-  // COMMON QUERY OPTIONS - retry: false prevents 401 flood
+  // COMMON QUERY OPTIONS
   const queryOptions = {
-    enabled: isAuthenticated === true, // Explicit check
     initialData: [] as any[],
     retry: false,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   };
 
-  // --- DATA FETCHING (QUERIES) ---
+  // =========================================================================
+  // DATA FETCHING - Role-Based Conditional Queries
+  // =========================================================================
 
+  // 1. STUDENTS (Teachers, Principals, Admin only)
   const { data: students = [] } = useQuery({
     queryKey: ['students'],
     queryFn: async () => (await client.get('/students')).data,
+    enabled: canAccess([UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.TEACHER, UserRole.HOD, UserRole.SUPER_ADMIN]),
     ...queryOptions
   });
 
+  // 2. STAFF (HR roles only)
   const { data: localStaff = [] } = useQuery({
     queryKey: ['staff'],
     queryFn: async () => (await client.get('/staff')).data,
+    enabled: canAccess(PERMISSIONS.HR),
     ...queryOptions
   });
 
+  // 3. FINANCE (Finance roles only)
   const { data: invoices = [] } = useQuery({
     queryKey: ['invoices'],
     queryFn: async () => (await client.get('/finance/invoices')).data,
+    enabled: canAccess(PERMISSIONS.FINANCE),
     ...queryOptions
   });
 
   const { data: expenses = [] } = useQuery({
     queryKey: ['expenses'],
     queryFn: async () => (await client.get('/finance/expenses')).data,
+    enabled: canAccess(PERMISSIONS.FINANCE),
     ...queryOptions
   });
 
+  // 4. TRANSPORT (Fleet, Parents, Students)
   const { data: buses = [] } = useQuery({
     queryKey: ['buses'],
     queryFn: async () => (await client.get('/logistics/buses')).data,
+    enabled: canAccess(PERMISSIONS.TRANSPORT),
     ...queryOptions
   });
 
+  // 5. LIBRARY (Librarian, Teachers, Students)
   const { data: books = [] } = useQuery({
     queryKey: ['books'],
     queryFn: async () => (await client.get('/logistics/books')).data,
+    enabled: canAccess(PERMISSIONS.LIBRARY),
     ...queryOptions
   });
 
+  // 6. HOSTEL (Warden only)
   const { data: hostelRooms = [] } = useQuery({
     queryKey: ['hostelRooms'],
     queryFn: async () => (await client.get('/logistics/rooms')).data,
+    enabled: canAccess(PERMISSIONS.HOSTEL),
     ...queryOptions
   });
 
+  // 7. HEALTH (Nurse, Counselor only)
   const { data: medicalLogs = [] } = useQuery({
     queryKey: ['medicalLogs'],
     queryFn: async () => (await client.get('/health/logs')).data,
+    enabled: canAccess(PERMISSIONS.HEALTH),
     ...queryOptions
   });
 
+  // 8. ACADEMICS (Teachers, Students, HOD, etc.)
   const { data: homeworks = [] } = useQuery({
     queryKey: ['homeworks'],
     queryFn: async () => (await client.get('/academics/homework')).data,
-    ...queryOptions
-  });
-
-  const { data: inquiries = [] } = useQuery({
-    queryKey: ['inquiries'],
-    queryFn: async () => (await client.get('/operations/inquiries')).data,
-    ...queryOptions
-  });
-
-  const { data: visitors = [] } = useQuery({
-    queryKey: ['visitors'],
-    queryFn: async () => (await client.get('/operations/visitors')).data,
-    ...queryOptions
-  });
-
-  const { data: tickets = [] } = useQuery({
-    queryKey: ['tickets'],
-    queryFn: async () => (await client.get('/operations/tickets')).data,
+    enabled: canAccess(PERMISSIONS.ACADEMICS),
     ...queryOptions
   });
 
   const { data: exams = [] } = useQuery({
     queryKey: ['exams'],
     queryFn: async () => (await client.get('/academics/exams')).data,
+    enabled: canAccess(PERMISSIONS.ACADEMICS),
     ...queryOptions
   });
 
   const { data: syllabus = [] } = useQuery({
     queryKey: ['syllabus'],
     queryFn: async () => (await client.get('/academics/syllabus')).data,
+    enabled: canAccess([UserRole.HOD, UserRole.PRINCIPAL, UserRole.TEACHER, UserRole.VICE_PRINCIPAL]),
     ...queryOptions
   });
-
-  const { data: gateLogs = [] } = useQuery({
-    queryKey: ['gateLogs'],
-    queryFn: async () => (await client.get('/operations/gate-logs')).data,
-    ...queryOptions
-  });
-
-  const { data: settings } = useQuery({
-    queryKey: ['settings'],
-    queryFn: async () => (await client.get('/operations/settings')).data,
-    initialData: { lockdown_mode: false },
-    enabled: isAuthenticated === true,
-    retry: false,
-    refetchOnWindowFocus: false
-  });
-  const lockdownMode = settings?.lockdown_mode || false;
 
   const { data: leaves = [] } = useQuery({
     queryKey: ['leaves'],
     queryFn: async () => (await client.get('/academics/leaves')).data,
+    enabled: canAccess([UserRole.TEACHER, UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.HOD]),
     ...queryOptions
   });
 
@@ -288,11 +302,52 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode; isAuthen
     queryKey: ['liveClasses'],
     queryFn: async () => (await client.get('/academics/live-classes')).data,
     initialData: [] as any[],
-    enabled: isAuthenticated === true,
+    enabled: canAccess(PERMISSIONS.ACADEMICS),
     retry: false,
     refetchOnWindowFocus: false
   });
 
+  // 9. OPERATIONS (Reception, Security, Estate)
+  const { data: inquiries = [] } = useQuery({
+    queryKey: ['inquiries'],
+    queryFn: async () => (await client.get('/operations/inquiries')).data,
+    enabled: canAccess(PERMISSIONS.ADMISSIONS),
+    ...queryOptions
+  });
+
+  const { data: visitors = [] } = useQuery({
+    queryKey: ['visitors'],
+    queryFn: async () => (await client.get('/operations/visitors')).data,
+    enabled: canAccess([UserRole.RECEPTIONIST, UserRole.SECURITY_HEAD, UserRole.SCHOOL_ADMIN]),
+    ...queryOptions
+  });
+
+  const { data: tickets = [] } = useQuery({
+    queryKey: ['tickets'],
+    queryFn: async () => (await client.get('/operations/tickets')).data,
+    enabled: canAccess([UserRole.ESTATE_MANAGER, UserRole.SCHOOL_ADMIN]),
+    ...queryOptions
+  });
+
+  const { data: gateLogs = [] } = useQuery({
+    queryKey: ['gateLogs'],
+    queryFn: async () => (await client.get('/operations/gate-logs')).data,
+    enabled: canAccess([UserRole.SECURITY_HEAD, UserRole.SCHOOL_ADMIN]),
+    ...queryOptions
+  });
+
+  // 10. GLOBAL SETTINGS (All authenticated users need lockdown status)
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => (await client.get('/operations/settings')).data,
+    initialData: { lockdown_mode: false },
+    enabled: isAuthenticated,
+    retry: false,
+    refetchOnWindowFocus: false
+  });
+  const lockdownMode = settings?.lockdown_mode || false;
+
+  // Process live classes into a map
   const liveClasses = useMemo(() => {
     const map: Record<string, boolean> = {};
     liveClassesList.forEach((c: any) => {
@@ -301,7 +356,10 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode; isAuthen
     return map;
   }, [liveClassesList]);
 
-  // --- MUTATIONS ---
+  // =========================================================================
+  // MUTATIONS (These don't auto-fire, so they are safe as-is)
+  // =========================================================================
+
   const toggleLockdownMutation = useMutation({
     mutationFn: (enabled: boolean) => client.post('/operations/settings/toggle-lockdown', { enabled }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings'] })
@@ -392,7 +450,7 @@ export const InteractionProvider: React.FC<{ children: React.ReactNode; isAuthen
   });
   const addInvoice = (inv: Omit<Invoice, 'id' | 'status'>) => addInvoiceMutation.mutate(inv);
 
-  // Stubs
+  // Stubs (to be implemented later)
   const submitHomework = (id: string) => { };
   const resolveTicket = (id: string) => { };
   const logGateEntry = (entry: Omit<GateLog, 'id' | 'time' | 'date'>) => { };

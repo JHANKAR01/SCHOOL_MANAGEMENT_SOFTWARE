@@ -189,7 +189,7 @@ const App: React.FC = () => {
   // 2. Wrap everything in Providers at the Root Level
   return (
     <ThemeProvider primaryColor={currentSchool?.primary_color || '#000000'}>
-      <InteractionProvider isAuthenticated={!!currentUser}>
+      <InteractionProvider isAuthenticated={!!currentUser} role={currentUser?.role}>
         <LanguageProvider>
           {(!currentUser || !currentSchool) ? (
             <LoginScreen onLoginSuccess={handleLoginSuccess} />
