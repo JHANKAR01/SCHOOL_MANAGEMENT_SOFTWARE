@@ -1,12 +1,167 @@
-import React, { useState, useEffect } from 'react';
-import { SchoolConfig, User, UserRole, AuthResponse } from '@/types';
-import { SovereignButton, SovereignInput } from '@/packages/app/components/SovereignComponents';
+import React, { useState, useEffect, useRef } from 'react';
+import { AuthResponse } from '@/types';
 import client from '@/packages/app/api/client';
-import { ShieldCheck, Lock, User as UserIcon, Loader2, Fingerprint } from 'lucide-react';
-import { Platform, View, Text, ScrollView, SafeAreaView, TouchableOpacity, ImageBackground } from 'react-native';
+import {
+  ShieldCheck,
+  Lock,
+  User as UserIcon,
+  Loader2,
+  Fingerprint,
+  AlertTriangle,
+} from 'lucide-react';
+import {
+  Platform,
+  View,
+  Text,
+  SafeAreaView,
+  TouchableOpacity,
+  TextInput,
+  KeyboardAvoidingView,
+  useWindowDimensions,
+  Animated,
+  StyleSheet,
+} from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// DESIGN TOKENS: NEBULA THEME
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const NEBULA = {
+  primary: '#4F46E5',
+  primaryEnd: '#7C3AED',
+  accent: '#2DD4BF',
+  bgDeep: '#020617',
+  bgCard: 'rgba(30, 41, 59, 0.95)',
+  borderGlass: 'rgba(255, 255, 255, 0.15)',
+  textPrimary: '#F8FAFC',
+  textSecondary: '#94A3B8',
+  textMuted: '#64748B',
+  errorBg: 'rgba(239, 68, 68, 0.15)',
+  errorBorder: 'rgba(239, 68, 68, 0.3)',
+  errorText: '#FCA5A5',
+  orbPrimary: 'rgba(79, 70, 229, 0.25)',
+  orbViolet: 'rgba(124, 58, 237, 0.2)',
+};
+
+const isWeb = Platform.OS === 'web';
+const isIOS = Platform.OS === 'ios';
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// COMPONENT: NEBULA INPUT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+interface NebulaInputProps {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  secureTextEntry?: boolean;
+  icon: React.ReactNode;
+  accessibilityLabel: string;
+}
+
+const NebulaInput: React.FC<NebulaInputProps> = ({
+  label,
+  placeholder,
+  value,
+  onChangeText,
+  secureTextEntry = false,
+  icon,
+  accessibilityLabel,
+}) => {
+  const [isFocused, setIsFocused] = useState(false);
+
+  return (
+    <View style={styles.inputContainer}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <View style={[styles.inputWrapper, isFocused && styles.inputWrapperFocused]}>
+        <View style={styles.inputIcon}>{icon}</View>
+        <TextInput
+          style={styles.input}
+          placeholder={placeholder}
+          placeholderTextColor={NEBULA.textMuted}
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={secureTextEntry}
+          autoCapitalize="none"
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          accessibilityLabel={accessibilityLabel}
+        />
+      </View>
+    </View>
+  );
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// COMPONENT: NEBULA BUTTON
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+interface NebulaButtonProps {
+  onPress: () => void;
+  isLoading?: boolean;
+  children: React.ReactNode;
+}
+
+const NebulaButton: React.FC<NebulaButtonProps> = ({ onPress, isLoading = false, children }) => {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={isLoading}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
+    >
+      {isLoading ? (
+        <Loader2 size={20} color="#fff" className="animate-spin" />
+      ) : (
+        <Text style={styles.primaryButtonText}>{children}</Text>
+      )}
+    </TouchableOpacity>
+  );
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// COMPONENT: BRANDING PANEL (Web Desktop)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const BrandingPanel: React.FC = () => {
+  if (!isWeb) return null;
+
+  return (
+    <View style={styles.brandingPanel}>
+      {/* Background Orbs */}
+      <View style={styles.orbContainer}>
+        <View style={[styles.orb, styles.orbPrimary]} />
+        <View style={[styles.orb, styles.orbViolet]} />
+      </View>
+
+      {/* Content */}
+      <View style={styles.brandingContent}>
+        <View style={styles.brandingIcon}>
+          <ShieldCheck size={48} color={NEBULA.accent} />
+        </View>
+        <Text style={styles.brandingTitle}>
+          PROJECT <Text style={{ color: NEBULA.accent }}>SOVEREIGN</Text>
+        </Text>
+        <Text style={styles.brandingTagline}>
+          Enterprise-grade institutional management.{'\n'}
+          Secure. Reliable. Offline-first.
+        </Text>
+        <View style={styles.trustBadgeContainer}>
+          <View style={styles.trustBadge}>
+            <Text style={styles.trustBadgeText}>256-bit Encryption</Text>
+          </View>
+          <View style={styles.trustBadge}>
+            <Text style={styles.trustBadgeText}>SOC 2 Compliant</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MAIN COMPONENT: LOGIN SCREEN
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 interface Props {
   onLoginSuccess: (data: AuthResponse) => void;
 }
@@ -19,56 +174,74 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
   const [savedSession, setSavedSession] = useState<string | null>(null);
 
-  // Check Biometrics Support
-  useEffect(() => {
-    if (Platform.OS !== 'web') {
-      (async () => {
-        const compatible = await LocalAuthentication.hasHardwareAsync();
-        const enrolled = await LocalAuthentication.isEnrolledAsync();
-        setIsBiometricAvailable(compatible && enrolled);
+  const { width } = useWindowDimensions();
+  const isDesktop = isWeb && width >= 1024;
 
-        const session = await SecureStore.getItemAsync('sovereign_user_session');
-        if (session) setSavedSession(session);
+  // Animation (fade-in-up)
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 280, useNativeDriver: true }),
+      Animated.timing(translateAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  // Biometrics (Mobile only)
+  useEffect(() => {
+    if (!isWeb) {
+      (async () => {
+        try {
+          const compatible = await LocalAuthentication.hasHardwareAsync();
+          const enrolled = await LocalAuthentication.isEnrolledAsync();
+          setIsBiometricAvailable(compatible && enrolled);
+          const session = await SecureStore.getItemAsync('sovereign_user_session');
+          if (session) setSavedSession(session);
+        } catch (e) {
+          console.log('Biometric check failed:', e);
+        }
       })();
     }
   }, []);
 
-  // Biometric Auth Handler
   const handleBiometricLogin = async () => {
     if (!savedSession) return;
-
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Authenticate to access Sovereign ERP',
-      fallbackLabel: 'Use Passcode'
-    });
-
-    if (result.success) {
-      setLoading(true);
-      setTimeout(() => {
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Authenticate to access Sovereign ERP',
+        fallbackLabel: 'Use Passcode',
+      });
+      if (result.success) {
+        setLoading(true);
         const sessionData = JSON.parse(savedSession);
-        // Refresh token logic would go here
         onLoginSuccess(sessionData);
         setLoading(false);
-      }, 500);
+      }
+    } catch (e) {
+      console.log('Biometric auth failed:', e);
     }
   };
 
-  const performLogin = async (emailStr: string, passStr: string) => {
+  const performLogin = async () => {
+    if (!username.trim() || !password.trim()) {
+      setError('All fields are required.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
       const response = await client.post('/auth/login', {
-        email: emailStr,
-        password: passStr,
+        email: username,
+        password: password,
       });
 
       const { token, user, school } = response.data;
-
       const authData = { user, school, token };
 
-      // Save token and session for BOTH Web and Mobile
-      if (Platform.OS === 'web') {
+      if (isWeb) {
         localStorage.setItem('sovereign_token', token);
         localStorage.setItem('sovereign_user_session', JSON.stringify(authData));
       } else {
@@ -77,90 +250,409 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
       }
 
       onLoginSuccess(authData);
-
     } catch (err: any) {
       console.error('Login Error:', err);
-      const message = err.response?.data?.error || err.message || 'Login failed. Check your credentials.';
-      setError(message);
+      setError(err.response?.data?.error || 'Authentication failed.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
-      <View className="flex-1 h-full w-full flex-row">
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView behavior={isIOS ? 'padding' : 'height'} style={styles.keyboardAvoid}>
+        <View style={styles.container}>
+          {/* Left: Branding (Desktop Web only) */}
+          {isDesktop && <BrandingPanel />}
 
-        {/* LEFT PANEL: BRANDING (Web Only) */}
-        {Platform.OS === 'web' && (
-          <View className="hidden lg:flex w-1/2 bg-slate-900 relative items-center justify-center overflow-hidden">
-            <View className="relative z-20 items-center px-12 max-w-lg">
-              <View className="mb-8 justify-center">
-                <View className="w-24 h-24 bg-white/5 rounded-2xl items-center justify-center border border-white/10 shadow-2xl">
-                  <ShieldCheck className="w-12 h-12 text-emerald-400" />
-                </View>
+          {/* Right: Login Form */}
+          <View style={[styles.formPanel, isDesktop && styles.formPanelDesktop]}>
+            {/* Mobile Background Orbs */}
+            {!isDesktop && (
+              <View style={styles.mobileOrbContainer}>
+                <View style={[styles.mobileOrb, styles.mobileOrbPrimary]} />
+                <View style={[styles.mobileOrb, styles.mobileOrbViolet]} />
               </View>
-              <Text className="text-5xl font-black text-white tracking-tight mb-6">
-                PROJECT <Text className="text-emerald-400">SOVEREIGN</Text>
-              </Text>
-              <Text className="text-slate-300 text-lg leading-relaxed font-light text-center">
-                The offline-first, zero-fee ERP designed for the next generation of Indian education.
-              </Text>
-            </View>
-          </View>
-        )}
+            )}
 
-        {/* RIGHT PANEL: ACTION ZONE */}
-        <View className="w-full lg:w-1/2 flex-1 justify-center items-center p-6 lg:p-12 bg-gray-50">
-          <View className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
-            <View className="items-center mb-8">
-              {Platform.OS !== 'web' && <ShieldCheck className="w-10 h-10 text-emerald-600 mb-4" />}
-              <Text className="text-2xl font-extrabold text-gray-900 tracking-tight">Welcome Back</Text>
-              <Text className="text-sm text-gray-500 mt-1 font-medium">Sign in to your sovereign dashboard</Text>
-            </View>
+            {/* Glass Card */}
+            <Animated.View
+              style={[
+                styles.glassCard,
+                { opacity: fadeAnim, transform: [{ translateY: translateAnim }] },
+              ]}
+            >
+              {/* Header */}
+              <View style={styles.cardHeader}>
+                {!isDesktop && (
+                  <View style={styles.mobileShieldIcon}>
+                    <ShieldCheck size={28} color={NEBULA.accent} />
+                  </View>
+                )}
+                <Text style={styles.cardTitle}>SECURE ACCESS</Text>
+                <Text style={styles.cardSubtitle}>Authorized users only</Text>
+              </View>
 
-            <View className="space-y-6">
-              <SovereignInput
-                label="User ID"
-                placeholder="e.g. demo.principal"
-                icon={<UserIcon className="w-4 h-4 text-gray-500" />}
+              {/* Inputs */}
+              <NebulaInput
+                label="USER IDENTIFIER"
+                placeholder="e.g. principal.demo"
                 value={username}
                 onChangeText={setUsername}
-              />
-              <SovereignInput
-                label="Password"
-                placeholder="••••••••"
-                secureTextEntry
-                icon={<Lock className="w-4 h-4 text-gray-500" />}
-                value={password}
-                onChangeText={setPassword}
+                icon={<UserIcon size={18} color={NEBULA.textSecondary} />}
+                accessibilityLabel="User ID input"
               />
 
+              <NebulaInput
+                label="PASSWORD"
+                placeholder="Enter secure password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                icon={<Lock size={18} color={NEBULA.textSecondary} />}
+                accessibilityLabel="Password input"
+              />
+
+              {/* Error */}
               {error ? (
-                <View className="bg-red-50 p-3 rounded-lg border border-red-200">
-                  <Text className="text-red-700 text-xs font-bold">⚠️ {error}</Text>
+                <View style={styles.errorContainer}>
+                  <AlertTriangle size={16} color={NEBULA.errorText} />
+                  <Text style={styles.errorText}>{error}</Text>
                 </View>
               ) : null}
 
-              <SovereignButton onPress={() => performLogin(username, password)} isLoading={loading} className="w-full py-3 shadow-lg shadow-indigo-500/20">
-                Secure Login
-              </SovereignButton>
+              {/* CTA */}
+              <View style={styles.ctaContainer}>
+                <NebulaButton onPress={performLogin} isLoading={loading}>
+                  AUTHENTICATE
+                </NebulaButton>
+              </View>
 
+              {/* Biometric (Mobile) */}
               {isBiometricAvailable && savedSession && (
-                <View className="mt-4 pt-4 border-t border-gray-100 items-center">
+                <View style={styles.biometricSection}>
                   <TouchableOpacity
                     onPress={handleBiometricLogin}
-                    className="flex-row items-center justify-center gap-2 w-full py-3 bg-indigo-50 rounded-lg"
+                    activeOpacity={0.7}
+                    style={styles.biometricButton}
                   >
-                    <Fingerprint className="w-5 h-5 text-indigo-700" />
-                    <Text className="text-indigo-700 font-bold">Quick Biometric Login</Text>
+                    <Fingerprint size={22} color={NEBULA.accent} />
+                    <Text style={styles.biometricText}>Biometric Authentication</Text>
                   </TouchableOpacity>
                 </View>
               )}
+            </Animated.View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Protected by enterprise-grade security</Text>
             </View>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STYLES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: NEBULA.bgDeep,
+  },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+
+  // Branding Panel
+  brandingPanel: {
+    width: '50%',
+    backgroundColor: NEBULA.bgDeep,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  orbContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  orb: {
+    position: 'absolute',
+    borderRadius: 9999,
+  },
+  orbPrimary: {
+    width: 400,
+    height: 400,
+    top: '5%',
+    left: '10%',
+    backgroundColor: NEBULA.orbPrimary,
+  },
+  orbViolet: {
+    width: 320,
+    height: 320,
+    bottom: '15%',
+    right: '5%',
+    backgroundColor: NEBULA.orbViolet,
+  },
+  brandingContent: {
+    alignItems: 'center',
+    paddingHorizontal: 48,
+    maxWidth: 520,
+    zIndex: 20,
+  },
+  brandingIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: NEBULA.borderGlass,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 40,
+  },
+  brandingTitle: {
+    fontSize: 42,
+    fontWeight: '900',
+    color: NEBULA.textPrimary,
+    letterSpacing: 1,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  brandingTagline: {
+    fontSize: 17,
+    color: NEBULA.textSecondary,
+    textAlign: 'center',
+    lineHeight: 26,
+  },
+  trustBadgeContainer: {
+    flexDirection: 'row',
+    marginTop: 40,
+    gap: 12,
+  },
+  trustBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: NEBULA.borderGlass,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+  },
+  trustBadgeText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: NEBULA.textMuted,
+  },
+
+  // Form Panel
+  formPanel: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: NEBULA.bgDeep,
+    position: 'relative',
+  },
+  formPanelDesktop: {
+    width: '50%',
+    flex: 0,
+  },
+
+  // Mobile Orbs
+  mobileOrbContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: 'hidden',
+  },
+  mobileOrb: {
+    position: 'absolute',
+    borderRadius: 9999,
+  },
+  mobileOrbPrimary: {
+    width: 280,
+    height: 280,
+    top: -50,
+    right: -80,
+    backgroundColor: NEBULA.orbPrimary,
+  },
+  mobileOrbViolet: {
+    width: 260,
+    height: 260,
+    bottom: '8%',
+    left: -60,
+    backgroundColor: NEBULA.orbViolet,
+  },
+
+  // Glass Card
+  glassCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: NEBULA.borderGlass,
+    backgroundColor: NEBULA.bgCard,
+    padding: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 16,
+  },
+
+  // Card Header
+  cardHeader: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  mobileShieldIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: NEBULA.borderGlass,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  cardTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: NEBULA.textPrimary,
+    letterSpacing: 4,
+    textAlign: 'center',
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: NEBULA.textMuted,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+
+  // Inputs
+  inputContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: NEBULA.textSecondary,
+    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    minHeight: 52,
+  },
+  inputWrapperFocused: {
+    borderColor: NEBULA.primary,
+  },
+  inputIcon: {
+    marginRight: 12,
+    opacity: 0.6,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    color: NEBULA.textPrimary,
+    paddingVertical: 12,
+  },
+
+  // Error
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    backgroundColor: NEBULA.errorBg,
+    borderWidth: 1,
+    borderColor: NEBULA.errorBorder,
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    color: NEBULA.errorText,
+  },
+
+  // Button
+  ctaContainer: {
+    marginTop: 8,
+  },
+  primaryButton: {
+    minHeight: 52,
+    borderRadius: 12,
+    backgroundColor: NEBULA.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  primaryButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 2,
+  },
+
+  // Biometric
+  biometricSection: {
+    marginTop: 24,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: NEBULA.borderGlass,
+  },
+  biometricButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(45, 212, 191, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(45, 212, 191, 0.2)',
+    minHeight: 48,
+    gap: 10,
+  },
+  biometricText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: NEBULA.accent,
+  },
+
+  // Footer
+  footer: {
+    marginTop: 32,
+  },
+  footerText: {
+    fontSize: 12,
+    color: NEBULA.textMuted,
+    textAlign: 'center',
+  },
+});
