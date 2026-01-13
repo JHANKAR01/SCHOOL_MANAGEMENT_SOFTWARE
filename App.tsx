@@ -11,6 +11,7 @@ import { ThemeProvider } from './packages/app/provider/ThemeProvider';
 import { useLowDataMode } from './packages/app/hooks/useLowDataMode';
 import { View, Text, TouchableOpacity, SafeAreaView, Platform, ScrollView, StatusBar } from 'react-native';
 import { Menu, LogOut, Zap, Shield } from 'lucide-react';
+import * as SecureStore from 'expo-secure-store';
 
 const MainLayout: React.FC<{
   user: User;
@@ -150,16 +151,63 @@ const MainLayout: React.FC<{
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentSchool, setCurrentSchool] = useState<SchoolConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Restore session on app launch
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        let sessionString: string | null = null;
+
+        if (Platform.OS === 'web') {
+          sessionString = localStorage.getItem('sovereign_user_session');
+        } else {
+          sessionString = await SecureStore.getItemAsync('sovereign_user_session');
+        }
+
+        if (sessionString) {
+          const { user, school } = JSON.parse(sessionString);
+          if (user && school) {
+            setCurrentUser(user);
+            setCurrentSchool(school);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to restore session:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    restoreSession();
+  }, []);
 
   const handleLoginSuccess = (data: AuthResponse) => {
     setCurrentUser(data.user);
     setCurrentSchool(data.school);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setCurrentUser(null);
     setCurrentSchool(null);
+
+    if (Platform.OS === 'web') {
+      localStorage.removeItem('sovereign_token');
+      localStorage.removeItem('sovereign_user_session');
+    } else {
+      await SecureStore.deleteItemAsync('sovereign_token');
+      await SecureStore.deleteItemAsync('sovereign_user_session');
+    }
   };
+
+  // Show loading indicator while checking session
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6' }}>
+        <Text style={{ color: '#6B7280', fontSize: 16 }}>Loading Sovereign...</Text>
+      </View>
+    );
+  }
 
   // 1. Super Admin View (Web Only)
   if (currentUser?.role === UserRole.SUPER_ADMIN) {

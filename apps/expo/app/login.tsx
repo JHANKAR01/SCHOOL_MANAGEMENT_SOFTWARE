@@ -65,17 +65,14 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
 
       const { token, user, school } = response.data;
 
-      // Save the JWT Token
-      if (Platform.OS === 'web') {
-        localStorage.setItem('sovereign_token', token);
-      } else {
-        await SecureStore.setItemAsync('sovereign_token', token);
-      }
-
       const authData = { user, school, token };
 
-      // Save the session for biometrics
-      if (Platform.OS !== 'web') {
+      // Save token and session for BOTH Web and Mobile
+      if (Platform.OS === 'web') {
+        localStorage.setItem('sovereign_token', token);
+        localStorage.setItem('sovereign_user_session', JSON.stringify(authData));
+      } else {
+        await SecureStore.setItemAsync('sovereign_token', token);
         await SecureStore.setItemAsync('sovereign_user_session', JSON.stringify(authData));
       }
 
