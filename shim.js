@@ -50,24 +50,35 @@ export const impactAsync = async () => { };
 export const notificationAsync = async () => { };
 export const selectionAsync = async () => { };
 
-// 6. Re-export everything from react-native-web
-export * from 'react-native-web';
-export default ReactNative;
+// NOTE: react-native-web exports are now handled by vite.config.ts alias
+// This shim is only used for: expo-sqlite, expo-secure-store, expo-local-authentication, 
+// expo-haptics, react-native-reanimated, react-native-worklets
 
-// 7. Dummy Reanimated / Worklets exports
-// jhankar01/school-management-system---1/School-Management-System---1-LOCAL/shim.js
-
-// 7. Dummy Reanimated / Worklets exports to satisfy NativeWind v4 Babel preset
+// 6. Dummy Reanimated / Worklets exports (for react-native-reanimated alias only)
 export const useSharedValue = (val) => ({ value: val });
 export const useAnimatedStyle = (cb) => ({});
 export const withTiming = (val) => val;
 export const withSpring = (val) => val;
 export const createAnimatedComponent = (comp) => comp;
+// Note: This Animated object is for react-native-reanimated's usage, not standard RN Animated
+// The real Animated comes from react-native-web via vite alias
 export const Animated = {
-    View: ReactNative.View,
-    Text: ReactNative.Text,
-    Image: ReactNative.Image,
-    ScrollView: ReactNative.ScrollView,
+    View: ({ children, style, ...props }) => {
+        const React = require('react');
+        return React.createElement('div', { style, ...props }, children);
+    },
+    Text: ({ children, style, ...props }) => {
+        const React = require('react');
+        return React.createElement('span', { style, ...props }, children);
+    },
+    Image: ({ style, ...props }) => {
+        const React = require('react');
+        return React.createElement('img', { style, ...props });
+    },
+    ScrollView: ({ children, style, ...props }) => {
+        const React = require('react');
+        return React.createElement('div', { style: { overflow: 'auto', ...style }, ...props }, children);
+    },
 };
 export const runOnJS = (fn) => fn;
 export const runOnUI = (fn) => fn;

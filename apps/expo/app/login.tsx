@@ -19,7 +19,9 @@ import {
   KeyboardAvoidingView,
   useWindowDimensions,
   Animated,
-  StyleSheet,
+  ViewStyle,
+  TextStyle,
+  ScrollView,
 } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
@@ -29,7 +31,6 @@ import * as SecureStore from 'expo-secure-store';
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const NEBULA = {
   primary: '#4F46E5',
-  primaryEnd: '#7C3AED',
   accent: '#2DD4BF',
   bgDeep: '#020617',
   bgCard: 'rgba(30, 41, 59, 0.95)',
@@ -40,12 +41,31 @@ const NEBULA = {
   errorBg: 'rgba(239, 68, 68, 0.15)',
   errorBorder: 'rgba(239, 68, 68, 0.3)',
   errorText: '#FCA5A5',
-  orbPrimary: 'rgba(79, 70, 229, 0.25)',
-  orbViolet: 'rgba(124, 58, 237, 0.2)',
+  orbPrimary: 'rgba(79, 70, 229, 0.3)',
+  orbViolet: 'rgba(124, 58, 237, 0.25)',
 };
 
 const isWeb = Platform.OS === 'web';
 const isIOS = Platform.OS === 'ios';
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// HELPER: Cross-platform shadow
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const getShadowStyle = (): ViewStyle => {
+  if (isWeb) {
+    return {
+      // @ts-ignore
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+    };
+  }
+  return {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 16,
+  };
+};
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // COMPONENT: NEBULA INPUT
@@ -57,7 +77,6 @@ interface NebulaInputProps {
   onChangeText: (text: string) => void;
   secureTextEntry?: boolean;
   icon: React.ReactNode;
-  accessibilityLabel: string;
 }
 
 const NebulaInput: React.FC<NebulaInputProps> = ({
@@ -67,7 +86,6 @@ const NebulaInput: React.FC<NebulaInputProps> = ({
   onChangeText,
   secureTextEntry = false,
   icon,
-  accessibilityLabel,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -77,7 +95,7 @@ const NebulaInput: React.FC<NebulaInputProps> = ({
       <View style={[styles.inputWrapper, isFocused && styles.inputWrapperFocused]}>
         <View style={styles.inputIcon}>{icon}</View>
         <TextInput
-          style={styles.input}
+          style={styles.input as any}
           placeholder={placeholder}
           placeholderTextColor={NEBULA.textMuted}
           value={value}
@@ -86,7 +104,6 @@ const NebulaInput: React.FC<NebulaInputProps> = ({
           autoCapitalize="none"
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          accessibilityLabel={accessibilityLabel}
         />
       </View>
     </View>
@@ -96,68 +113,59 @@ const NebulaInput: React.FC<NebulaInputProps> = ({
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // COMPONENT: NEBULA BUTTON
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-interface NebulaButtonProps {
-  onPress: () => void;
-  isLoading?: boolean;
-  children: React.ReactNode;
-}
-
-const NebulaButton: React.FC<NebulaButtonProps> = ({ onPress, isLoading = false, children }) => {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={isLoading}
-      activeOpacity={0.8}
-      accessibilityRole="button"
-      style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
-    >
-      {isLoading ? (
-        <Loader2 size={20} color="#fff" className="animate-spin" />
-      ) : (
-        <Text style={styles.primaryButtonText}>{children}</Text>
-      )}
-    </TouchableOpacity>
-  );
-};
+const NebulaButton: React.FC<{ onPress: () => void; isLoading?: boolean; children: React.ReactNode }> = ({
+  onPress,
+  isLoading = false,
+  children,
+}) => (
+  <TouchableOpacity
+    onPress={onPress}
+    disabled={isLoading}
+    activeOpacity={0.8}
+    style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
+  >
+    {isLoading ? (
+      <Loader2 size={20} color="#fff" className="animate-spin" />
+    ) : (
+      <Text style={styles.primaryButtonText}>{children}</Text>
+    )}
+  </TouchableOpacity>
+);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // COMPONENT: BRANDING PANEL (Web Desktop)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const BrandingPanel: React.FC = () => {
-  if (!isWeb) return null;
+const BrandingPanel: React.FC = () => (
+  <View style={styles.brandingPanel}>
+    {/* Background Orbs */}
+    <View style={styles.orbContainer}>
+      <View style={[styles.orb, styles.orbPrimary]} />
+      <View style={[styles.orb, styles.orbViolet]} />
+    </View>
 
-  return (
-    <View style={styles.brandingPanel}>
-      {/* Background Orbs */}
-      <View style={styles.orbContainer}>
-        <View style={[styles.orb, styles.orbPrimary]} />
-        <View style={[styles.orb, styles.orbViolet]} />
+    {/* Content */}
+    <View style={styles.brandingContent}>
+      <View style={styles.brandingIcon}>
+        <ShieldCheck size={48} color={NEBULA.accent} />
       </View>
-
-      {/* Content */}
-      <View style={styles.brandingContent}>
-        <View style={styles.brandingIcon}>
-          <ShieldCheck size={48} color={NEBULA.accent} />
+      <Text style={styles.brandingTitle}>
+        PROJECT <Text style={{ color: NEBULA.accent }}>SOVEREIGN</Text>
+      </Text>
+      <Text style={styles.brandingTagline}>
+        Enterprise-grade institutional management.{'\n'}
+        Secure. Reliable. Offline-first.
+      </Text>
+      <View style={styles.trustBadgeRow}>
+        <View style={styles.trustBadge}>
+          <Text style={styles.trustBadgeText}>256-bit Encryption</Text>
         </View>
-        <Text style={styles.brandingTitle}>
-          PROJECT <Text style={{ color: NEBULA.accent }}>SOVEREIGN</Text>
-        </Text>
-        <Text style={styles.brandingTagline}>
-          Enterprise-grade institutional management.{'\n'}
-          Secure. Reliable. Offline-first.
-        </Text>
-        <View style={styles.trustBadgeContainer}>
-          <View style={styles.trustBadge}>
-            <Text style={styles.trustBadgeText}>256-bit Encryption</Text>
-          </View>
-          <View style={styles.trustBadge}>
-            <Text style={styles.trustBadgeText}>SOC 2 Compliant</Text>
-          </View>
+        <View style={styles.trustBadge}>
+          <Text style={styles.trustBadgeText}>SOC 2 Compliant</Text>
         </View>
       </View>
     </View>
-  );
-};
+  </View>
+);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // MAIN COMPONENT: LOGIN SCREEN
@@ -177,7 +185,7 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
   const { width } = useWindowDimensions();
   const isDesktop = isWeb && width >= 1024;
 
-  // Animation (fade-in-up)
+  // Animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateAnim = useRef(new Animated.Value(20)).current;
 
@@ -258,11 +266,17 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
     }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView behavior={isIOS ? 'padding' : 'height'} style={styles.keyboardAvoid}>
-        <View style={styles.container}>
-          {/* Left: Branding (Desktop Web only) */}
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.container, isDesktop && styles.containerDesktop]}>
+          {/* Left: Branding (Desktop only) */}
           {isDesktop && <BrandingPanel />}
 
           {/* Right: Login Form */}
@@ -279,6 +293,7 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
             <Animated.View
               style={[
                 styles.glassCard,
+                getShadowStyle(),
                 { opacity: fadeAnim, transform: [{ translateY: translateAnim }] },
               ]}
             >
@@ -295,22 +310,20 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
 
               {/* Inputs */}
               <NebulaInput
-                label="USER IDENTIFIER"
+                label="User Identifier"
                 placeholder="e.g. principal.demo"
                 value={username}
                 onChangeText={setUsername}
                 icon={<UserIcon size={18} color={NEBULA.textSecondary} />}
-                accessibilityLabel="User ID input"
               />
 
               <NebulaInput
-                label="PASSWORD"
+                label="Password"
                 placeholder="Enter secure password"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
                 icon={<Lock size={18} color={NEBULA.textSecondary} />}
-                accessibilityLabel="Password input"
               />
 
               {/* Error */}
@@ -328,7 +341,7 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
                 </NebulaButton>
               </View>
 
-              {/* Biometric (Mobile) */}
+              {/* Biometric */}
               {isBiometricAvailable && savedSession && (
                 <View style={styles.biometricSection}>
                   <TouchableOpacity
@@ -349,35 +362,43 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
             </View>
           </View>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </ScrollView>
+    </View>
   );
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // STYLES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const styles = StyleSheet.create({
-  safeArea: {
+const styles: Record<string, ViewStyle | TextStyle | any> = {
+  // Root - ensures full viewport coverage
+  root: {
     flex: 1,
     backgroundColor: NEBULA.bgDeep,
+    ...(isWeb && { minHeight: '100vh' }),
   },
-  keyboardAvoid: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
   },
   container: {
     flex: 1,
+    flexDirection: 'column',
+    minHeight: isWeb ? '100vh' : undefined,
+  },
+  containerDesktop: {
     flexDirection: 'row',
   },
 
-  // Branding Panel
+  // Branding Panel (Left side on desktop)
   brandingPanel: {
-    width: '50%',
+    flex: 1,
     backgroundColor: NEBULA.bgDeep,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 40,
     position: 'relative',
     overflow: 'hidden',
+    ...(isWeb && { minHeight: '100vh' }),
   },
   orbContainer: {
     position: 'absolute',
@@ -391,54 +412,53 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   orbPrimary: {
-    width: 400,
-    height: 400,
-    top: '5%',
-    left: '10%',
+    width: 350,
+    height: 350,
+    top: '10%',
+    left: '5%',
     backgroundColor: NEBULA.orbPrimary,
   },
   orbViolet: {
-    width: 320,
-    height: 320,
+    width: 280,
+    height: 280,
     bottom: '15%',
-    right: '5%',
+    right: '10%',
     backgroundColor: NEBULA.orbViolet,
   },
   brandingContent: {
     alignItems: 'center',
-    paddingHorizontal: 48,
-    maxWidth: 520,
-    zIndex: 20,
+    maxWidth: 480,
+    zIndex: 10,
   },
   brandingIcon: {
-    width: 100,
-    height: 100,
+    width: 88,
+    height: 88,
     borderRadius: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
     borderColor: NEBULA.borderGlass,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
   },
   brandingTitle: {
-    fontSize: 42,
-    fontWeight: '900',
+    fontSize: 36,
+    fontWeight: '800',
     color: NEBULA.textPrimary,
-    letterSpacing: 1,
-    marginBottom: 16,
     textAlign: 'center',
+    marginBottom: 12,
   },
   brandingTagline: {
-    fontSize: 17,
+    fontSize: 16,
     color: NEBULA.textSecondary,
     textAlign: 'center',
-    lineHeight: 26,
+    lineHeight: 24,
   },
-  trustBadgeContainer: {
+  trustBadgeRow: {
     flexDirection: 'row',
-    marginTop: 40,
-    gap: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: 32,
   },
   trustBadge: {
     paddingHorizontal: 14,
@@ -447,6 +467,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: NEBULA.borderGlass,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    marginHorizontal: 6,
+    marginVertical: 4,
   },
   trustBadgeText: {
     fontSize: 11,
@@ -454,7 +476,7 @@ const styles = StyleSheet.create({
     color: NEBULA.textMuted,
   },
 
-  // Form Panel
+  // Form Panel (Right side on desktop, full on mobile)
   formPanel: {
     flex: 1,
     alignItems: 'center',
@@ -462,10 +484,11 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: NEBULA.bgDeep,
     position: 'relative',
+    ...(isWeb && { minHeight: '100vh' }),
   },
   formPanelDesktop: {
-    width: '50%',
-    flex: 0,
+    flex: 1,
+    maxWidth: 560,
   },
 
   // Mobile Orbs
@@ -482,45 +505,41 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   mobileOrbPrimary: {
-    width: 280,
-    height: 280,
-    top: -50,
-    right: -80,
+    width: 250,
+    height: 250,
+    top: -40,
+    right: -60,
     backgroundColor: NEBULA.orbPrimary,
   },
   mobileOrbViolet: {
-    width: 260,
-    height: 260,
-    bottom: '8%',
-    left: -60,
+    width: 220,
+    height: 220,
+    bottom: 80,
+    left: -50,
     backgroundColor: NEBULA.orbViolet,
   },
 
   // Glass Card
   glassCard: {
     width: '100%',
-    maxWidth: 420,
-    borderRadius: 24,
+    maxWidth: 400,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: NEBULA.borderGlass,
     backgroundColor: NEBULA.bgCard,
-    padding: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 16,
+    padding: 28,
+    zIndex: 10,
   },
 
   // Card Header
   cardHeader: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 28,
   },
   mobileShieldIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
+    width: 52,
+    height: 52,
+    borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
     borderColor: NEBULA.borderGlass,
@@ -529,54 +548,53 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     color: NEBULA.textPrimary,
-    letterSpacing: 4,
+    letterSpacing: 3,
     textAlign: 'center',
   },
   cardSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: NEBULA.textMuted,
-    marginTop: 8,
+    marginTop: 6,
     textAlign: 'center',
   },
 
   // Inputs
   inputContainer: {
     width: '100%',
-    marginBottom: 20,
+    marginBottom: 18,
   },
   inputLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: NEBULA.textSecondary,
-    letterSpacing: 2,
     marginBottom: 8,
+    textTransform: 'uppercase',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderRadius: 10,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    minHeight: 52,
+    height: 48,
   },
   inputWrapperFocused: {
     borderColor: NEBULA.primary,
   },
   inputIcon: {
-    marginRight: 12,
-    opacity: 0.6,
+    marginRight: 10,
+    opacity: 0.7,
   },
   input: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 14,
     color: NEBULA.textPrimary,
-    paddingVertical: 12,
+    ...(isWeb && { outlineStyle: 'none' }),
   },
 
   // Error
@@ -584,32 +602,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    borderRadius: 12,
-    marginBottom: 16,
+    borderRadius: 10,
+    marginBottom: 14,
     backgroundColor: NEBULA.errorBg,
     borderWidth: 1,
     borderColor: NEBULA.errorBorder,
-    gap: 8,
   },
   errorText: {
     flex: 1,
     fontSize: 13,
     fontWeight: '500',
     color: NEBULA.errorText,
+    marginLeft: 8,
   },
 
   // Button
   ctaContainer: {
-    marginTop: 8,
+    marginTop: 6,
   },
   primaryButton: {
-    minHeight: 52,
-    borderRadius: 12,
+    height: 48,
+    borderRadius: 10,
     backgroundColor: NEBULA.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -618,13 +634,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: 2,
+    letterSpacing: 1.5,
   },
 
   // Biometric
   biometricSection: {
-    marginTop: 24,
-    paddingTop: 24,
+    marginTop: 20,
+    paddingTop: 20,
     borderTopWidth: 1,
     borderTopColor: NEBULA.borderGlass,
   },
@@ -632,27 +648,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
+    height: 44,
+    borderRadius: 10,
     backgroundColor: 'rgba(45, 212, 191, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(45, 212, 191, 0.2)',
-    minHeight: 48,
-    gap: 10,
   },
   biometricText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: NEBULA.accent,
+    marginLeft: 8,
   },
 
   // Footer
   footer: {
-    marginTop: 32,
+    marginTop: 24,
+    zIndex: 10,
   },
   footerText: {
     fontSize: 12,
     color: NEBULA.textMuted,
     textAlign: 'center',
   },
-});
+};

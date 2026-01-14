@@ -36,7 +36,9 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
-        'react-native': path.resolve(__dirname, 'shim.js'),
+        // Point directly to react-native-web for real RN components (View, Text, Animated, etc.)
+        'react-native': 'react-native-web',
+        // Keep these pointing to shim.js for expo-specific modules
         'expo-sqlite': path.resolve(__dirname, 'shim.js'),
         'expo-secure-store': path.resolve(__dirname, 'shim.js'),
         'expo-local-authentication': path.resolve(__dirname, 'shim.js'),
