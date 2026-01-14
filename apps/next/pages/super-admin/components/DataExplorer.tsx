@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     Database, Search, Filter, Users, GraduationCap, Phone, Lock,
     AlertTriangle, ToggleLeft, Shield, ShieldAlert, DollarSign, Truck,
@@ -66,7 +66,10 @@ const FilterSelect: React.FC<{
 
 interface DataExplorerProps { isDarkMode: boolean; }
 
+import { SkeletonDataExplorer } from './Skeleton';
+
 export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
+    const [isLoading, setIsLoading] = useState(true);
     const [selectedSchool, setSelectedSchool] = useState('');
     const [selectedModule, setSelectedModule] = useState('');
     const [selectedClass, setSelectedClass] = useState('');
@@ -76,6 +79,14 @@ export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
     const [editedData, setEditedData] = useState<Record<string, string>>({});
     const [showConfirm, setShowConfirm] = useState(false);
     const [overrideReason, setOverrideReason] = useState('');
+
+    // Simulate API fetch delay (replace with real API call later)
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 1000);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (isLoading) return <SkeletonDataExplorer />;
 
     // Theme classes
     const cardBg = isDarkMode ? 'bg-slate-800/60 border-slate-700' : 'bg-white border-slate-200';

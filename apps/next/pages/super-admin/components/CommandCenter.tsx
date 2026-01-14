@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     DollarSign, Building2, Server, AlertTriangle, Rocket, Radio, Lock,
     TrendingUp, TrendingDown, Activity, Clock,
@@ -100,7 +100,19 @@ interface CommandCenterProps {
     isDarkMode: boolean;
 }
 
+import { SkeletonCommandCenter } from './Skeleton';
+
 export const CommandCenter: React.FC<CommandCenterProps> = ({ isDarkMode }) => {
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Simulate API fetch delay (replace with real API call later)
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 1500);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (isLoading) return <SkeletonCommandCenter />;
+
     const cardBg = isDarkMode ? 'bg-slate-800/60 border-slate-700/50' : 'bg-white border-slate-200';
     const headingColor = isDarkMode ? 'text-slate-400' : 'text-slate-600';
     const textPrimary = isDarkMode ? 'text-slate-200' : 'text-slate-800';

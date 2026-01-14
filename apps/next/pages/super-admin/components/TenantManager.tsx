@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Building2, Search, Settings, Key, Eye, EyeOff,
     AlertTriangle, Clock, Users, GraduationCap,
@@ -191,9 +191,20 @@ const SchoolDetails: React.FC<{ school: School; isDarkMode: boolean }> = ({ scho
 
 interface TenantManagerProps { isDarkMode: boolean; }
 
+import { SkeletonTenantManager } from './Skeleton';
+
 export const TenantManager: React.FC<TenantManagerProps> = ({ isDarkMode }) => {
+    const [isLoading, setIsLoading] = useState(true);
     const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Simulate API fetch delay (replace with real API call later)
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 1200);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (isLoading) return <SkeletonTenantManager />;
 
     const cardBg = isDarkMode ? 'bg-slate-800/60 border-slate-700' : 'bg-white border-slate-200';
     const textPrimary = isDarkMode ? 'text-white' : 'text-slate-900';
