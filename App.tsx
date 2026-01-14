@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import LoginScreen from './apps/expo/app/login';
-import SuperAdminOnboarding from './apps/next/pages/super-admin/onboarding';
+import SuperAdminDashboard from './apps/next/pages/super-admin/dashboard';
 import { SchoolConfig, UserRole, User, AuthResponse } from './types';
 import { RoleBasedRouter } from './packages/app/features/dashboard/RoleBasedRouter';
 import { Sidebar } from './components/Sidebar';
@@ -220,7 +220,7 @@ const App: React.FC = () => {
           >
             Exit Super Admin
           </button>
-          <SuperAdminOnboarding />
+          <SuperAdminDashboard />
         </div>
       );
     }
