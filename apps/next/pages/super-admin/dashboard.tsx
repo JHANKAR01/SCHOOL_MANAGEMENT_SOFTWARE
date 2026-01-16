@@ -8,7 +8,8 @@ import DataExplorer from './components/DataExplorer';
 import { FinanceOverview } from './components/FinanceOverview';
 import { SystemHealth } from './components/SystemHealth';
 import { FeatureFlagManager } from './components/FeatureFlagManager';
-import { GhostModeModule, GhostModeBanner } from './components/GhostMode';
+import { GhostModeModule, GhostModeBanner } from './components/GhostModePanel';
+import { SystemSettings } from './components/SystemSettings';
 import { UserCog, ExternalLink, AlertTriangle, Shield, LayoutDashboard, Building2, Database, Zap, CreditCard, Activity, Settings } from 'lucide-react';
 
 
@@ -66,6 +67,7 @@ export default function SuperAdminDashboard() {
                             {activeModule === 'finance' && <FinanceOverview isDarkMode={isDarkMode} />}
                             {activeModule === 'health' && <SystemHealth isDarkMode={isDarkMode} />}
                             {activeModule === 'flags' && <FeatureFlagManager isDarkMode={isDarkMode} />}
+                            {activeModule === 'settings' && <SystemSettings />}
                             {activeModule === 'explorer' && (
                                 <NebulaErrorBoundary>
                                     <DataExplorer isDarkMode={isDarkMode} />

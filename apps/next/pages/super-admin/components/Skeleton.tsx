@@ -244,6 +244,45 @@ export const SkeletonDataExplorer: React.FC = () => (
     </div>
 );
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// NEW SKELETONS (FINANCE, HEALTH, FLAGS, SETTINGS)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export const SkeletonFinanceOverview = () => (
+    <div className="space-y-6 animate-pulse">
+        <div className="grid grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-slate-800/50 rounded-xl" />)}
+        </div>
+        <div className="h-96 bg-slate-800/50 rounded-xl" />
+    </div>
+);
+
+export const SkeletonSystemHealth = () => (
+    <div className="grid grid-cols-2 gap-6 animate-pulse">
+        <div className="h-64 bg-slate-800/50 rounded-xl" />
+        <div className="h-64 bg-slate-800/50 rounded-xl" />
+        <div className="col-span-2 h-48 bg-slate-800/50 rounded-xl" />
+    </div>
+);
+
+export const SkeletonFeatureFlagManager = () => (
+    <div className="space-y-4 animate-pulse">
+        {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-20 bg-slate-800/50 rounded-xl w-full" />
+        ))}
+    </div>
+);
+
+export const SkeletonSettings = () => (
+    <div className="space-y-8 animate-pulse">
+        <div className="h-12 w-1/3 bg-slate-800/50 rounded-lg" />
+        <div className="space-y-4">
+            <div className="h-16 bg-slate-800/50 rounded-xl" />
+            <div className="h-16 bg-slate-800/50 rounded-xl" />
+        </div>
+    </div>
+);
+
 export default {
     SkeletonBox,
     SkeletonText,
@@ -255,4 +294,8 @@ export default {
     SkeletonCommandCenter,
     SkeletonTenantManager,
     SkeletonDataExplorer,
+    SkeletonFinanceOverview,
+    SkeletonSystemHealth,
+    SkeletonFeatureFlagManager,
+    SkeletonSettings,
 };

@@ -21,14 +21,9 @@ interface FinanceOverviewProps {
     isDarkMode: boolean;
 }
 
-const SkeletonFinance = () => (
-    <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => <div key={i} className="h-32 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />)}
-        </div>
-        <div className="h-96 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
-    </div>
-);
+import { SkeletonFinanceOverview } from './Skeleton';
+
+// ... existing code ...
 
 const CustomTooltip = ({ active, payload, label, isDarkMode }: any) => {
     if (active && payload && payload.length) {
@@ -45,6 +40,7 @@ const CustomTooltip = ({ active, payload, label, isDarkMode }: any) => {
 };
 
 export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) => {
+    const [isMounted, setIsMounted] = useState(false);
     const [summary, setSummary] = useState<FinanceSummary | null>(null);
     const [history, setHistory] = useState<any[]>([]);
     const [failures, setFailures] = useState<Transaction[]>([]);
@@ -55,6 +51,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) 
     const textSecondary = isDarkMode ? 'text-slate-400' : 'text-slate-500';
 
     useEffect(() => {
+        setIsMounted(true);
         const loadData = async () => {
             try {
                 const [resSummary, resHistory, resFailures] = await Promise.all([
@@ -74,7 +71,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) 
         loadData();
     }, []);
 
-    if (isLoading || !summary) return <SkeletonFinance />;
+    if (!isMounted || isLoading || !summary) return <SkeletonFinanceOverview />;
 
     return (
         <div className="p-6 space-y-6">

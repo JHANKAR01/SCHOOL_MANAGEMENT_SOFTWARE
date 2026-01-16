@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, Cell } from 'recharts';
+import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar, Cell, CartesianGrid } from 'recharts';
 import { Server, Database, HardDrive, Activity } from 'lucide-react';
 
 interface SystemHealthData {
@@ -22,14 +22,12 @@ interface SystemHealthProps {
     isDarkMode: boolean;
 }
 
-const SkeletonSystem = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
-        {[1, 2, 3, 4].map(i => <div key={i} className="h-32 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />)}
-        <div className="col-span-full h-80 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
-    </div>
-);
+import { SkeletonSystemHealth } from './Skeleton';
+
+// ... existing code ...
 
 export const SystemHealth: React.FC<SystemHealthProps> = ({ isDarkMode }) => {
+    const [isMounted, setIsMounted] = useState(false);
     const [health, setHealth] = useState<SystemHealthData | null>(null);
     const [latencyHistory, setLatencyHistory] = useState<any[]>([]);
     const [logs, setLogs] = useState<Log[]>([]);
@@ -40,6 +38,7 @@ export const SystemHealth: React.FC<SystemHealthProps> = ({ isDarkMode }) => {
     const textSecondary = isDarkMode ? 'text-slate-400' : 'text-slate-500';
 
     useEffect(() => {
+        setIsMounted(true);
         const load = async () => {
             try {
                 const [h, l, lg] = await Promise.all([
@@ -57,7 +56,7 @@ export const SystemHealth: React.FC<SystemHealthProps> = ({ isDarkMode }) => {
         load();
     }, []);
 
-    if (isLoading || !health) return <SkeletonSystem />;
+    if (!isMounted || isLoading || !health) return <SkeletonSystemHealth />;
 
     const getLoadColor = (val: number) => {
         if (val > 80) return '#ef4444'; // red
