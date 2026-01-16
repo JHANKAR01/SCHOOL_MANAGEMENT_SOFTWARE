@@ -1,41 +1,26 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
     Database, Search, Filter, Users, GraduationCap, Phone, Lock,
-    AlertTriangle, ToggleLeft, Shield, ShieldAlert, DollarSign, Truck,
+    AlertTriangle, ToggleLeft, Shield, ShieldAlert, DollarSign, Truck, Loader2
 } from 'lucide-react';
+import { getSuperAdminData } from '../../../../../packages/app/api/client';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// MOCK DATA
+// TYPES & CONSTANTS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-const SCHOOLS = [
-    { id: 'sch_001', name: 'Greenwood High' },
-    { id: 'sch_002', name: 'St. Xavier\'s Academy' },
-    { id: 'sch_003', name: 'Delhi Public School' },
-];
 
 const MODULES = [
     { id: 'students', name: 'Students', icon: GraduationCap },
     { id: 'staff', name: 'Staff', icon: Users },
-    { id: 'finance', name: 'Finance', icon: DollarSign },
-    { id: 'fleet', name: 'Fleet', icon: Truck },
+    // Finance and Fleet coming soon
 ];
 
-const CLASSES = ['9-A', '9-B', '10-A', '10-B', '11-Sci', '12-Sci'];
-const DEPARTMENTS = ['Mathematics', 'Science', 'English', 'Administration'];
-
-const MOCK_STUDENTS = [
-    { id: 'stu_001', name: 'Aryan Sharma', class: '10-A', phone: '9876543210', aadhaar: '123456789012', feeStatus: 'Paid', email: 'aryan@email.com' },
-    { id: 'stu_002', name: 'Priya Patel', class: '10-B', phone: '9876543211', aadhaar: '234567890123', feeStatus: 'Pending', email: 'priya@email.com' },
-    { id: 'stu_003', name: 'Rahul Singh', class: '9-A', phone: '9876543212', aadhaar: '345678901234', feeStatus: 'Paid', email: 'rahul@email.com' },
-    { id: 'stu_004', name: 'Ananya Gupta', class: '11-Sci', phone: '9876543213', aadhaar: '456789012345', feeStatus: 'Overdue', email: 'ananya@email.com' },
-];
-
-const maskPhone = (phone: string): string => `******${phone.slice(-4)}`;
-const maskAadhaar = (aadhaar: string): string => `XXXX-XXXX-${aadhaar.slice(-4)}`;
+// Helper to mask sensitive data
+const maskPhone = (phone: string): string => phone && phone.length > 4 ? `******${phone.slice(-4)}` : '******';
+const maskAadhaar = (aadhaar: string): string => aadhaar && aadhaar.length > 4 ? `XXXX-XXXX-${aadhaar.slice(-4)}` : 'XXXX-XXXX-XXXX';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// FILTER SELECT
+// FILTER SELECT COMPONENT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const FilterSelect: React.FC<{
@@ -61,32 +46,73 @@ const FilterSelect: React.FC<{
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// DATA EXPLORER
+// DATA EXPLORER COMPONENT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 interface DataExplorerProps { isDarkMode: boolean; }
-
 import { SkeletonDataExplorer } from './Skeleton';
 
 export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
-    const [isLoading, setIsLoading] = useState(true);
+    // State
+    const [isLoadingInit, setIsLoadingInit] = useState(true);
+    const [isFetching, setIsFetching] = useState(false);
+
+    // Data State
+    const [schools, setSchools] = useState<{ id: string, name: string }[]>([]);
+    const [records, setRecords] = useState<any[]>([]);
+
+    // Filter State
     const [selectedSchool, setSelectedSchool] = useState('');
     const [selectedModule, setSelectedModule] = useState('');
-    const [selectedClass, setSelectedClass] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+
+    // View/Edit State
     const [modifyMode, setModifyMode] = useState(false);
-    const [selectedRecord, setSelectedRecord] = useState<typeof MOCK_STUDENTS[0] | null>(null);
+    const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
     const [editedData, setEditedData] = useState<Record<string, string>>({});
     const [showConfirm, setShowConfirm] = useState(false);
     const [overrideReason, setOverrideReason] = useState('');
 
-    // Simulate API fetch delay (replace with real API call later)
+    // 1. Initial Load: Fetch Schools
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 1000);
-        return () => clearTimeout(timer);
+        const fetchSchools = async () => {
+            try {
+                const data = await getSuperAdminData('/tenants');
+                setSchools(Array.isArray(data) ? data : []);
+            } catch (err) {
+                console.error("Failed to fetch schools", err);
+            } finally {
+                setIsLoadingInit(false);
+            }
+        };
+        fetchSchools();
     }, []);
 
-    // Theme classes (Just variables, safe to calculate every time or memoize if expensive, but simple string concats are cheap)
+    // 2. Fetch Records when filters change
+    useEffect(() => {
+        if (!selectedSchool || !selectedModule) {
+            setRecords([]);
+            return;
+        }
+
+        const fetchRecords = async () => {
+            setIsFetching(true);
+            try {
+                const data = await getSuperAdminData(`/explorer/search?schoolId=${selectedSchool}&module=${selectedModule}&query=${searchQuery}`);
+                setRecords(Array.isArray(data) ? data : []);
+            } catch (err) {
+                console.error("Failed to fetch explorer records", err);
+            } finally {
+                setIsFetching(false);
+            }
+        };
+
+        // Debounce search
+        const timeout = setTimeout(fetchRecords, 500);
+        return () => clearTimeout(timeout);
+    }, [selectedSchool, selectedModule, searchQuery]);
+
+    // Theme Helpers
     const cardBg = isDarkMode ? 'bg-slate-800/60 border-slate-700' : 'bg-white border-slate-200';
     const cardBgModify = isDarkMode ? 'bg-amber-900/20 border-amber-500/40' : 'bg-amber-50 border-amber-300';
     const textPrimary = isDarkMode ? 'text-white' : 'text-slate-900';
@@ -97,19 +123,6 @@ export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
     const inputDisabled = isDarkMode ? 'bg-slate-900/30 border-slate-700 text-slate-500 cursor-not-allowed' : 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed';
     const itemBg = isDarkMode ? 'hover:bg-white/5 border-transparent' : 'hover:bg-slate-50 border-transparent';
     const itemActive = isDarkMode ? 'bg-indigo-500/20 border-indigo-500/30' : 'bg-indigo-50 border-indigo-200';
-
-    const tertiaryFilter = useMemo(() => {
-        if (selectedModule === 'students') return { label: 'Class', options: CLASSES.map(c => ({ id: c, name: c })) };
-        if (selectedModule === 'staff') return { label: 'Department', options: DEPARTMENTS.map(d => ({ id: d, name: d })) };
-        return null;
-    }, [selectedModule]);
-
-    const filteredRecords = useMemo(() => {
-        let records = MOCK_STUDENTS;
-        if (selectedClass) records = records.filter(r => r.class === selectedClass);
-        if (searchQuery) records = records.filter(r => r.name.toLowerCase().includes(searchQuery.toLowerCase()));
-        return records;
-    }, [selectedClass, searchQuery]);
 
     const handleEdit = (field: string, value: string) => setEditedData(prev => ({ ...prev, [field]: value }));
 
@@ -124,11 +137,10 @@ export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
         setEditedData({});
         setOverrideReason('');
         setModifyMode(false);
+        alert("Changes logged to Audit Trail. (Write API not connected in this demo)");
     };
 
-    // FIX: Render Skeleton ONLY if loading, otherwise render content. 
-    // This return comes AFTER all hooks are called.
-    if (isLoading) return <SkeletonDataExplorer />;
+    if (isLoadingInit) return <SkeletonDataExplorer />;
 
     return (
         <div className="p-6 space-y-4">
@@ -139,14 +151,14 @@ export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
                     <span className={`text-sm font-medium ${textPrimary}`}>Data Filters</span>
                 </div>
                 <div className="flex flex-wrap gap-4">
-                    <FilterSelect isDarkMode={isDarkMode} label="School" value={selectedSchool} onChange={(v) => { setSelectedSchool(v); setSelectedModule(''); setSelectedClass(''); }} options={SCHOOLS} placeholder="Select School..." />
-                    <FilterSelect isDarkMode={isDarkMode} label="Module" value={selectedModule} onChange={(v) => { setSelectedModule(v); setSelectedClass(''); }} options={MODULES} placeholder="Select Module..." disabled={!selectedSchool} />
-                    {tertiaryFilter && <FilterSelect isDarkMode={isDarkMode} label={tertiaryFilter.label} value={selectedClass} onChange={setSelectedClass} options={tertiaryFilter.options} placeholder={`All ${tertiaryFilter.label}s`} disabled={!selectedModule} />}
+                    <FilterSelect isDarkMode={isDarkMode} label="School" value={selectedSchool} onChange={(v) => { setSelectedSchool(v); setSelectedModule(''); setSearchQuery(''); }} options={schools} placeholder="Select School..." />
+                    <FilterSelect isDarkMode={isDarkMode} label="Module" value={selectedModule} onChange={(v) => { setSelectedModule(v); setSearchQuery(''); }} options={MODULES} placeholder="Select Module..." disabled={!selectedSchool} />
+
                     <div className="flex-1 min-w-[200px]">
                         <label className={`block text-xs font-medium uppercase tracking-wider mb-1.5 ${textSecondary}`}>Search</label>
                         <div className="relative">
                             <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 z-10 pointer-events-none ${searchIconColor}`} />
-                            <input type="text" placeholder="Search records..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`w-full pl-9 pr-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputBg}`} />
+                            <input type="text" placeholder="Search by name..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} disabled={!selectedModule} className={`w-full pl-9 pr-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputBg} disabled:opacity-50`} />
                         </div>
                     </div>
                 </div>
@@ -161,7 +173,7 @@ export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
                         <p className={`text-xs ${textSecondary}`}>{modifyMode ? 'Changes require confirmation + reason' : 'Read-only with masked PII'}</p>
                     </div>
                 </div>
-                <button onClick={() => setModifyMode(!modifyMode)} disabled={!selectedSchool || !selectedModule}
+                <button onClick={() => setModifyMode(!modifyMode)} disabled={!selectedRecord}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 ${modifyMode ? 'bg-amber-500 text-white' : isDarkMode ? 'bg-white/10 border border-white/20 text-slate-300 hover:bg-white/15' : 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200'}`}>
                     <ToggleLeft className="w-4 h-4" /> {modifyMode ? 'Disable' : 'Enable Overrides'}
                 </button>
@@ -171,11 +183,15 @@ export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
             {selectedSchool && selectedModule ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <div className={`rounded-2xl border overflow-hidden ${modifyMode ? cardBgModify : cardBg}`}>
-                        <div className={`p-3 border-b ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
-                            <p className={`text-xs uppercase tracking-wider ${textSecondary}`}>{filteredRecords.length} Records</p>
+                        <div className={`flex justify-between items-center p-3 border-b ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+                            <p className={`text-xs uppercase tracking-wider ${textSecondary}`}>{records.length} Records</p>
+                            {isFetching && <Loader2 className="w-3 h-3 animate-spin text-indigo-500" />}
                         </div>
                         <div className="max-h-[400px] overflow-auto">
-                            {filteredRecords.map(record => (
+                            {records.length === 0 && !isFetching && (
+                                <div className={`p-4 text-center text-sm ${textSecondary}`}>No records found.</div>
+                            )}
+                            {records.map(record => (
                                 <button key={record.id} onClick={() => { setSelectedRecord(record); setEditedData({}); }}
                                     className={`w-full text-left p-3 border-b transition-colors ${isDarkMode ? 'border-slate-700' : 'border-slate-100'} ${selectedRecord?.id === record.id ? itemActive : itemBg}`}>
                                     <p className={`text-sm font-medium ${textPrimary}`}>{record.name}</p>

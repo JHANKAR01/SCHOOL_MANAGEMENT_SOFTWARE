@@ -15,6 +15,7 @@ import { healthRouter } from './routes/health.ts';
 import { admissionsRouter } from './routes/admissions.ts';
 import { jitsiRouter } from './routes/jitsi.ts';
 import { operationsRouter } from './routes/operations.ts';
+import { attendanceRouter } from './routes/attendance.ts';
 import { superAdminRouter } from './routes/super-admin.ts';
 
 const app = new Hono();
