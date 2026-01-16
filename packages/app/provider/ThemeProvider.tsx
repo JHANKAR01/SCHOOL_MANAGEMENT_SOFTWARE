@@ -65,7 +65,8 @@ export const ThemeProvider: React.FC<{
 
   /* SIMPLIFIED TOGGLE: Light <-> Dark (System mode removed for clearer UX) */
   const toggleTheme = () => {
-    setThemeMode(prev => (prev === 'dark' ? 'light' : 'dark'));
+    const nextMode = themeMode === 'dark' ? 'light' : 'dark';
+    setThemeMode(nextMode);
   };
 
   const isDarkMode = useMemo(() => {

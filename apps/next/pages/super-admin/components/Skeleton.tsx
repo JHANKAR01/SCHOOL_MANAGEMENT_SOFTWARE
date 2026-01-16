@@ -4,7 +4,7 @@ import React from 'react';
 // SKELETON PRIMITIVES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const shimmerClass = 'animate-pulse bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 bg-[length:200%_100%]';
+const shimmerClass = 'animate-pulse bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 dark:from-slate-800 dark:via-slate-700 dark:to-slate-800 bg-[length:200%_100%]';
 
 export const SkeletonBox: React.FC<{ className?: string }> = ({ className = '' }) => (
     <div className={`rounded-lg ${shimmerClass} ${className}`} />
@@ -26,7 +26,7 @@ export const SkeletonCircle: React.FC<{ size?: string }> = ({ size = 'w-10 h-10'
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export const SkeletonStatCard: React.FC = () => (
-    <div className="p-5 rounded-2xl border border-slate-200 bg-white">
+    <div className="p-5 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 transition-colors">
         <div className="flex items-start justify-between mb-3">
             <SkeletonText width="w-20" height="h-3" />
             <SkeletonBox className="w-9 h-9" />
@@ -44,7 +44,7 @@ export const SkeletonStatCard: React.FC = () => (
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export const SkeletonRow: React.FC = () => (
-    <div className="p-3 border-b border-slate-100 flex items-center gap-3">
+    <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
         <SkeletonCircle size="w-8 h-8" />
         <div className="flex-1 space-y-2">
             <SkeletonText width="w-32" height="h-4" />
@@ -59,7 +59,7 @@ export const SkeletonRow: React.FC = () => (
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export const SkeletonSchoolCard: React.FC = () => (
-    <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
+    <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/50 dark:border-slate-700 transition-colors">
         <div className="flex items-center gap-2 mb-2">
             <SkeletonBox className="w-2 h-2 rounded-full" />
             <SkeletonText width="w-16" height="h-3" />
@@ -83,7 +83,7 @@ export const SkeletonDetailPanel: React.FC = () => (
             </div>
         </div>
         {/* Tabs */}
-        <div className="flex gap-2 p-2 rounded-xl bg-slate-100">
+        <div className="flex gap-2 p-2 rounded-xl bg-slate-100 dark:bg-slate-800 transition-colors">
             <SkeletonBox className="flex-1 h-10 rounded-lg" />
             <SkeletonBox className="flex-1 h-10 rounded-lg" />
             <SkeletonBox className="flex-1 h-10 rounded-lg" />
@@ -112,7 +112,7 @@ export const SkeletonCommandCenter: React.FC = () => (
         </div>
         {/* Health Matrix + Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 p-5 rounded-2xl border border-slate-200 bg-white">
+            <div className="lg:col-span-2 p-5 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 transition-colors">
                 <SkeletonText width="w-40" height="h-4" />
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
                     <SkeletonSchoolCard />
@@ -123,7 +123,7 @@ export const SkeletonCommandCenter: React.FC = () => (
                     <SkeletonSchoolCard />
                 </div>
             </div>
-            <div className="p-5 rounded-2xl border border-slate-200 bg-white">
+            <div className="p-5 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 transition-colors">
                 <SkeletonText width="w-32" height="h-4" />
                 <div className="mt-4 space-y-3">
                     <SkeletonRow />
@@ -133,7 +133,7 @@ export const SkeletonCommandCenter: React.FC = () => (
             </div>
         </div>
         {/* Quick Actions */}
-        <div className="p-5 rounded-2xl border border-slate-200 bg-white">
+        <div className="p-5 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 transition-colors">
             <SkeletonText width="w-28" height="h-4" />
             <div className="flex gap-3 mt-4">
                 <SkeletonBox className="w-40 h-10 rounded-xl" />
@@ -151,8 +151,8 @@ export const SkeletonCommandCenter: React.FC = () => (
 export const SkeletonTenantManager: React.FC = () => (
     <div className="flex h-[calc(100vh-180px)] gap-4 p-4">
         {/* Left List */}
-        <div className="w-80 flex-shrink-0 rounded-2xl border border-slate-200 bg-white overflow-hidden">
-            <div className="p-3 border-b border-slate-200">
+        <div className="w-80 flex-shrink-0 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 overflow-hidden transition-colors">
+            <div className="p-3 border-b border-slate-200 dark:border-slate-800">
                 <SkeletonBox className="w-full h-10 rounded-lg" />
             </div>
             <div className="p-2 space-y-1">
@@ -166,7 +166,7 @@ export const SkeletonTenantManager: React.FC = () => (
             </div>
         </div>
         {/* Right Panel */}
-        <div className="flex-1 rounded-2xl border border-slate-200 bg-white">
+        <div className="flex-1 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 transition-colors">
             <SkeletonDetailPanel />
         </div>
     </div>
@@ -179,7 +179,7 @@ export const SkeletonTenantManager: React.FC = () => (
 export const SkeletonDataExplorer: React.FC = () => (
     <div className="p-6 space-y-4">
         {/* Filter Bar */}
-        <div className="p-4 rounded-2xl border border-slate-200 bg-white">
+        <div className="p-4 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 transition-colors">
             <div className="flex items-center gap-4 mb-4">
                 <SkeletonCircle size="w-5 h-5" />
                 <SkeletonText width="w-24" height="h-4" />
@@ -200,7 +200,7 @@ export const SkeletonDataExplorer: React.FC = () => (
             </div>
         </div>
         {/* Toggle */}
-        <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 bg-white">
+        <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 transition-colors">
             <div className="flex items-center gap-3">
                 <SkeletonCircle size="w-5 h-5" />
                 <div className="space-y-1">
@@ -212,18 +212,18 @@ export const SkeletonDataExplorer: React.FC = () => (
         </div>
         {/* Data Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-                <div className="p-3 border-b border-slate-200">
+            <div className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 overflow-hidden transition-colors">
+                <div className="p-3 border-b border-slate-200 dark:border-slate-800">
                     <SkeletonText width="w-20" height="h-3" />
                 </div>
                 {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="p-3 border-b border-slate-100 space-y-2">
+                    <div key={i} className="p-3 border-b border-slate-100 dark:border-slate-800 space-y-2">
                         <SkeletonText width="w-28" height="h-4" />
                         <SkeletonText width="w-20" height="h-3" />
                     </div>
                 ))}
             </div>
-            <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-6">
+            <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 p-6 transition-colors">
                 <div className="flex items-center gap-3 mb-6">
                     <SkeletonBox className="w-12 h-12 rounded-xl" />
                     <div className="space-y-2">
