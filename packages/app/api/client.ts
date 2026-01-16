@@ -57,4 +57,30 @@ client.interceptors.response.use(
     }
 );
 
+// 3. Super Admin API Helper
+export const getSuperAdminData = async (endpoint: string) => {
+    try {
+        const response = await client.get(`/super-admin${endpoint}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching super admin data from ${endpoint}:`, error);
+        throw error;
+    }
+};
+
+export const superAdminApi = {
+    toggleFeature: async (schoolId: string, feature: string, enabled: boolean) => {
+        try {
+            const response = await client.post(`/super-admin/tenants/${schoolId}/toggle-feature`, {
+                feature,
+                enabled
+            });
+            return response.data;
+        } catch (error) {
+            console.error(`Error toggling feature ${feature} for school ${schoolId}:`, error);
+            throw error;
+        }
+    }
+};
+
 export default client;

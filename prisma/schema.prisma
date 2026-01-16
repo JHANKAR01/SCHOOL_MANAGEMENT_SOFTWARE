@@ -15,13 +15,16 @@ datasource db {
 model School {
   id            String   @id @default(cuid())
   name          String
-  settings_json Json?
-  created_at    DateTime @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime @updatedAt
+  settings_json Json?    @default("{}")
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Existing relations
   books            Book[]
   buses            Bus[]
+
+
   Exam             Exam[]
   Expense          Expense[]
   GateLog          GateLog[]

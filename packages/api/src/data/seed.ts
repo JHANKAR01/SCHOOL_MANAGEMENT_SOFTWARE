@@ -169,6 +169,9 @@ async function main() {
   console.log('   └─ Clearing StaffProfile...');
   await prisma.staffProfile.deleteMany();
 
+  console.log('   └─ Clearing Substitution...');
+  await prisma.substitution.deleteMany();
+
   console.log('   └─ Clearing Timetable...');
   await prisma.timetable.deleteMany();
 
@@ -184,8 +187,7 @@ async function main() {
   console.log('   └─ Clearing Syllabus...');
   await prisma.syllabus.deleteMany();
 
-  console.log('   └─ Clearing Substitution...');
-  await prisma.substitution.deleteMany();
+
 
   console.log('   └─ Clearing ClassSubject...');
   await prisma.classSubject.deleteMany();
@@ -238,11 +240,14 @@ async function main() {
           attendance: true,
           library: true,
           hostel: true
-        }
-      }
+        },
+        billing_cycle: 'custom'
+      },
+      status: 'ACTIVE'
     }
   });
   console.log('   ✅ School created: Sovereign High School (ID: ' + SCHOOL_ID + ')');
+
 
   // =========================================================================
   // STEP 3: SEED SYSTEM SETTINGS
