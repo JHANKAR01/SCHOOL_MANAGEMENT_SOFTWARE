@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DashboardShell, Module } from '../../../../packages/app/components/DashboardShell';
+import { useTheme } from '../../../../packages/app/provider/ThemeProvider';
 import { TenantManager } from './components/TenantManager';
 import { CommandCenter } from './components/CommandCenter';
 import { DataExplorer } from './components/DataExplorer';
@@ -127,7 +128,19 @@ export default function SuperAdminDashboard() {
         schoolId: null,
         schoolName: null
     });
-    const isDarkMode = false; // Locked to light mode for now
+    // const { isDarkMode } = useTheme(); // Consider using this if sub-modules need it, or refactor them to use the hook directly.
+    // For now, let's keep passing it but driven by the hook if possible, or just remove the prop reliance if they are updated.
+    // Actually, simply removing the const and using the hook is the right way.
+
+    // We need to import useTheme first.
+    // Since I can't easily add the import in this same block efficiently without reading the top, I'll do a multi-replace or two steps.
+    // Let's assume sub-components expect the prop.
+
+    // WAIT: I need to import { useTheme } from the provider.
+    // Let's do a multi-replace to add the import and change the line.
+
+    const { isDarkMode } = useTheme();
+
 
     // Ghost Mode Handlers
     const handleActivateGhost = (schoolId: string, schoolName: string) => {

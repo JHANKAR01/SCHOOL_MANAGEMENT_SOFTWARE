@@ -201,65 +201,69 @@ const App: React.FC = () => {
     }
   };
 
-  // Show loading indicator while checking session
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6' }}>
-        <Text style={{ color: '#6B7280', fontSize: 16 }}>Loading Sovereign...</Text>
-      </View>
-    );
-  }
-
-  // 1. Super Admin View (Web Only)
-  if (currentUser?.role === UserRole.SUPER_ADMIN) {
-    if (Platform.OS === 'web') {
-      return (
-        <div className="relative">
-          <button
-            onClick={handleLogout}
-            className="fixed top-4 right-4 z-50 bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700"
-          >
-            Exit Super Admin
-          </button>
-          <SuperAdminDashboard />
-        </div>
-      );
-    }
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Text>Super Admin not supported on mobile.</Text>
-        <TouchableOpacity onPress={handleLogout} style={{ marginTop: 20, padding: 10, backgroundColor: 'red' }}>
-          <Text style={{ color: 'white' }}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  // 1.5 School Admin View (Web Only - Refactored Shell)
-  if (currentUser?.role === UserRole.SCHOOL_ADMIN) {
-    if (Platform.OS === 'web') {
-      return (
-        <div className="relative">
-          <SchoolAdminDashboard />
-        </div>
-      );
-    }
-  }
-
-  // 2. Wrap everything in Providers at the Root Level
+  // 2. Wrap everything in Providers at the Root Level, then conditionally render children
   return (
     <ThemeProvider primaryColor={currentSchool?.primary_color || '#000000'}>
       <InteractionProvider isAuthenticated={!!currentUser} role={currentUser?.role}>
         <LanguageProvider>
-          {(!currentUser || !currentSchool) ? (
-            <LoginScreen onLoginSuccess={handleLoginSuccess} />
-          ) : (
-            <MainLayout
-              user={currentUser}
-              school={currentSchool}
-              onLogout={handleLogout}
-            />
-          )}
+          {/* Logic moved inside Providers: */}
+          {(() => {
+            // 0. Loading State
+            if (isLoading) {
+              return (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6' }}>
+                  <Text style={{ color: '#6B7280', fontSize: 16 }}>Loading Sovereign...</Text>
+                </View>
+              );
+            }
+
+            // 1. Super Admin View (Web Only)
+            if (currentUser?.role === UserRole.SUPER_ADMIN) {
+              if (Platform.OS === 'web') {
+                return (
+                  <div className="relative">
+                    <button
+                      onClick={handleLogout}
+                      className="fixed top-4 right-4 z-[100] bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 font-bold text-xs"
+                    >
+                      EXIT SUPER ADMIN
+                    </button>
+                    <SuperAdminDashboard />
+                  </div>
+                );
+              }
+              return (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text>Super Admin not supported on mobile.</Text>
+                  <TouchableOpacity onPress={handleLogout} style={{ marginTop: 20, padding: 10, backgroundColor: 'red' }}>
+                    <Text style={{ color: 'white' }}>Logout</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            }
+
+            // 1.5 School Admin View (Web Only - Refactored Shell)
+            if (currentUser?.role === UserRole.SCHOOL_ADMIN) {
+              if (Platform.OS === 'web') {
+                return (
+                  <div className="relative">
+                    <SchoolAdminDashboard />
+                  </div>
+                );
+              }
+            }
+
+            // 3. Default Main Layout (Login or Role Dashboard)
+            return (!currentUser || !currentSchool) ? (
+              <LoginScreen onLoginSuccess={handleLoginSuccess} />
+            ) : (
+              <MainLayout
+                user={currentUser}
+                school={currentSchool}
+                onLogout={handleLogout}
+              />
+            );
+          })()}
         </LanguageProvider>
       </InteractionProvider>
     </ThemeProvider>
