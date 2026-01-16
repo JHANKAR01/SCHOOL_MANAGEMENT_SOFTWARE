@@ -1,6 +1,6 @@
 
 import { Hono } from 'hono';
-import { prisma } from '../db';
+import prisma from '../db';
 import { authMiddleware } from '../middleware/auth';
 
 export const superAdminRouter = new Hono();
@@ -21,24 +21,25 @@ superAdminRouter.get('/stats', async (c) => {
         const totalStudents = await prisma.student.count();
 
         const revenueResult = await prisma.invoice.aggregate({
-            _sum: { amount: true },
+            _sum: { base_amount: true },
             where: { status: 'PAID' }
         });
 
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+        // Count overdue invoices (Pending and older than 30 days) as a proxy for failed/problematic payments
         const failedPayments = await prisma.invoice.count({
             where: {
-                status: { in: ['OVERDUE', 'FAILED'] },
-                created_at: { gte: thirtyDaysAgo }
+                status: 'PENDING',
+                created_at: { lt: thirtyDaysAgo }
             }
         });
 
         return c.json({
             schools: activeSchools,
             students: totalStudents,
-            revenue: revenueResult._sum.amount || 0,
+            revenue: revenueResult._sum.base_amount || 0,
             failedPayments
         });
     } catch (error) {
@@ -91,21 +92,7 @@ superAdminRouter.get('/finance', async (c) => {
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-        const invoices = await prisma.invoice.groupBy({
-            by: ['created_at'],
-            _sum: { amount: true },
-            where: {
-                status: 'PAID',
-                created_at: { gte: sixMonthsAgo }
-            },
-            orderBy: { created_at: 'asc' }
-        });
-
-        // Process in memory to aggregate by month
-        // Prisma's groupBy is by exact DateTime, so we need to map to months manually
-        // Ideally we would use database date_trunc, but raw query or client-side agg is easier here for 3NF
-
-        // Let's fetch raw data to be safe and aggregate
+        // Helper for grouping if needed, but findMany is safer for known schema
         const paidInvoices = await prisma.invoice.findMany({
             where: {
                 status: 'PAID',
@@ -113,7 +100,7 @@ superAdminRouter.get('/finance', async (c) => {
             },
             select: {
                 created_at: true,
-                amount: true
+                base_amount: true
             }
         });
 
@@ -123,14 +110,12 @@ superAdminRouter.get('/finance', async (c) => {
         paidInvoices.forEach(inv => {
             const date = new Date(inv.created_at);
             const monthName = months[date.getMonth()]; // Simple month name
-            // For production, handle years too, but for last 6 months this is okayish
-            // Better: "Jan 25"
             const key = monthName;
 
             if (!monthlyRevenue[key]) {
                 monthlyRevenue[key] = 0;
             }
-            monthlyRevenue[key] += Number(inv.amount);
+            monthlyRevenue[key] += Number(inv.base_amount);
         });
 
         const chartData = Object.entries(monthlyRevenue).map(([name, value]) => ({
@@ -138,7 +123,6 @@ superAdminRouter.get('/finance', async (c) => {
             value
         }));
 
-        // If no data, return empty array suitable for Recharts, or dummy if requested
         return c.json(chartData);
     } catch (error) {
         console.error('Error fetching finance data:', error);

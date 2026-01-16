@@ -13,7 +13,7 @@ datasource db {
 // ============================================================================
 
 model School {
-  id            String   @id @default(cuid())
+  id            String   @id @default(cuid()) // Unique ID
   name          String
   settings_json Json?    @default("{}")
   status        String   @default("ACTIVE")
