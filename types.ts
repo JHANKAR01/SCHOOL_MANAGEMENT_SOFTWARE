@@ -49,6 +49,7 @@ export interface User {
 export interface AuthResponse {
   user: User;
   school: SchoolConfig;
+  token: string;
 }
 
 export interface SchoolConfig {

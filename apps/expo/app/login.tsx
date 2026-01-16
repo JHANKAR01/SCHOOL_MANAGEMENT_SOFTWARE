@@ -341,6 +341,47 @@ export default function LoginScreen({ onLoginSuccess }: Props) {
                 </NebulaButton>
               </View>
 
+              {/* Demo Login Button */}
+              <View style={{ marginTop: 12 }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    // Mock success for demo
+                    onLoginSuccess({
+                      token: 'demo_token',
+                      user: {
+                        id: 'demo_user',
+                        name: 'Demo Admin',
+                        email: 'demo@sovereign.edu',
+                        role: 'SCHOOL_ADMIN',
+                        school_id: 'sch_001'
+                      } as any,
+                      school: {
+                        id: 'sch_001',
+                        name: 'Sovereign Demo School',
+                        logo: '',
+                        address: '123 Demo Lane',
+                        website: 'demo.sovereign.edu',
+                        primary_color: '#4F46E5',
+                        is_active: true,
+                        plan: 'ENTERPRISE',
+                        settings: {}
+                      } as any
+                    });
+                  }}
+                  style={{
+                    height: 48,
+                    borderRadius: 10,
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '600', letterSpacing: 1 }}>DEMO ACCESS</Text>
+                </TouchableOpacity>
+              </View>
+
               {/* Biometric */}
               {isBiometricAvailable && savedSession && (
                 <View style={styles.biometricSection}>
