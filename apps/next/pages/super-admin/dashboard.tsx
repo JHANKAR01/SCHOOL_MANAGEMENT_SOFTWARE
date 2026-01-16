@@ -64,10 +64,26 @@ export default function SuperAdminDashboard() {
                         <div className="max-w-7xl mx-auto">
                             {activeModule === 'command' && <CommandCenter isDarkMode={isDarkMode} />}
                             {activeModule === 'tenants' && <TenantManager isDarkMode={isDarkMode} />}
-                            {activeModule === 'finance' && <FinanceOverview isDarkMode={isDarkMode} />}
-                            {activeModule === 'health' && <SystemHealth isDarkMode={isDarkMode} />}
-                            {activeModule === 'flags' && <FeatureFlagManager isDarkMode={isDarkMode} />}
-                            {activeModule === 'settings' && <SystemSettings />}
+                            {activeModule === 'finance' && (
+                                <NebulaErrorBoundary>
+                                    <FinanceOverview isDarkMode={isDarkMode} />
+                                </NebulaErrorBoundary>
+                            )}
+                            {activeModule === 'health' && (
+                                <NebulaErrorBoundary>
+                                    <SystemHealth isDarkMode={isDarkMode} />
+                                </NebulaErrorBoundary>
+                            )}
+                            {activeModule === 'flags' && (
+                                <NebulaErrorBoundary>
+                                    <FeatureFlagManager isDarkMode={isDarkMode} />
+                                </NebulaErrorBoundary>
+                            )}
+                            {activeModule === 'settings' && (
+                                <NebulaErrorBoundary>
+                                    <SystemSettings />
+                                </NebulaErrorBoundary>
+                            )}
                             {activeModule === 'explorer' && (
                                 <NebulaErrorBoundary>
                                     <DataExplorer isDarkMode={isDarkMode} />

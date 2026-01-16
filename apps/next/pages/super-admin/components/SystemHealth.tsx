@@ -46,9 +46,22 @@ export const SystemHealth: React.FC<SystemHealthProps> = ({ isDarkMode }) => {
                     fetch('/api/super-admin/system/latency'),
                     fetch('/api/super-admin/system/logs')
                 ]);
-                setHealth(await h.json());
-                setLatencyHistory(await l.json());
-                setLogs(await lg.json());
+
+                if (h.ok) {
+                    setHealth(await h.json());
+                }
+
+                if (l.ok) {
+                    const latencyData = await l.json();
+                    setLatencyHistory(Array.isArray(latencyData) ? latencyData : []);
+                }
+
+                if (lg.ok) {
+                    const logsData = await lg.json();
+                    setLogs(Array.isArray(logsData) ? logsData : []);
+                }
+            } catch (e) {
+                console.error("System health fetch failed", e);
             } finally {
                 setIsLoading(false);
             }

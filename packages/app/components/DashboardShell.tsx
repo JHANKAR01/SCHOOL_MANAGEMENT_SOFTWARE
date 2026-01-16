@@ -321,13 +321,15 @@ const Sidebar: React.FC<{
         <aside className={`hidden lg:flex flex-col w-64 border-r ${bgClass} ${borderClass} h-[calc(100vh-65px)] sticky top-[65px]`}>
             {sidebarContent}
             <div className="p-4 border-t border-slate-200/10">
-                <div className={`p-4 rounded-xl mb-2 ${isDarkMode ? 'bg-gradient-to-br from-indigo-900/40 to-violet-900/40 border border-white/5' : 'bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100'}`}>
-                    <h4 className={`text-sm font-bold mb-1 ${isDarkMode ? 'text-white' : 'text-indigo-900'}`}>Pro Feature</h4>
-                    <p className={`text-xs mb-3 ${isDarkMode ? 'text-slate-400' : 'text-indigo-600/80'}`}>Unlock advanced analytics with Pro plan.</p>
-                    <button className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors">
-                        Upgrade Now
-                    </button>
-                </div>
+                {role !== 'SUPER_ADMIN' && (
+                    <div className={`p-4 rounded-xl mb-2 ${isDarkMode ? 'bg-gradient-to-br from-indigo-900/40 to-violet-900/40 border border-white/5' : 'bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100'}`}>
+                        <h4 className={`text-sm font-bold mb-1 ${isDarkMode ? 'text-white' : 'text-indigo-900'}`}>Pro Feature</h4>
+                        <p className={`text-xs mb-3 ${isDarkMode ? 'text-slate-400' : 'text-indigo-600/80'}`}>Unlock advanced analytics with Pro plan.</p>
+                        <button className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors">
+                            Upgrade Now
+                        </button>
+                    </div>
+                )}
                 <button onClick={onLogout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-500 hover:bg-red-500/10 transition-colors rounded-lg">
                     <LogOut className="w-4 h-4" /> Logout
                 </button>

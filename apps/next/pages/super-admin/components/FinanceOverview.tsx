@@ -59,9 +59,20 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) 
                     fetch('/api/super-admin/finance/history'),
                     fetch('/api/super-admin/finance/failed-transactions')
                 ]);
-                setSummary(await resSummary.json());
-                setHistory(await resHistory.json());
-                setFailures(await resFailures.json());
+
+                if (resSummary.ok) {
+                    setSummary(await resSummary.json());
+                }
+
+                if (resHistory.ok) {
+                    const historyData = await resHistory.json();
+                    setHistory(Array.isArray(historyData) ? historyData : []);
+                }
+
+                if (resFailures.ok) {
+                    const failuresData = await resFailures.json();
+                    setFailures(Array.isArray(failuresData) ? failuresData : []);
+                }
             } catch (e) {
                 console.error(e);
             } finally {

@@ -13,17 +13,12 @@ interface FeatureFlagManagerProps {
     isDarkMode: boolean;
 }
 
-const SkeletonFlagRow = () => (
-    <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-800 animate-pulse">
-        <div className="space-y-2">
-            <div className="h-4 w-48 bg-slate-200 dark:bg-slate-700 rounded" />
-            <div className="h-3 w-64 bg-slate-200 dark:bg-slate-800 rounded" />
-        </div>
-        <div className="h-6 w-12 bg-slate-200 dark:bg-slate-700 rounded-full" />
-    </div>
-);
+import { SkeletonFeatureFlagManager } from './Skeleton';
+
+// ... existing code ...
 
 export const FeatureFlagManager: React.FC<FeatureFlagManagerProps> = ({ isDarkMode }) => {
+    const [isMounted, setIsMounted] = useState(false);
     const [flags, setFlags] = useState<FeatureFlag[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [pendingFlag, setPendingFlag] = useState<FeatureFlag | null>(null);
@@ -32,19 +27,22 @@ export const FeatureFlagManager: React.FC<FeatureFlagManagerProps> = ({ isDarkMo
     const textPrimary = isDarkMode ? 'text-white' : 'text-slate-900';
     const textSecondary = isDarkMode ? 'text-slate-400' : 'text-slate-500';
 
-    const fetchFlags = async () => {
-        try {
-            const res = await fetch('/api/super-admin/flags');
-            const data = await res.json();
-            setFlags(data);
-        } catch (error) {
-            console.error('Failed to fetch flags:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     useEffect(() => {
+        setIsMounted(true);
+        const fetchFlags = async () => {
+            try {
+                const res = await fetch('/api/super-admin/flags');
+                if (res.ok) {
+                    const data = await res.json();
+                    setFlags(Array.isArray(data) ? data : []);
+                }
+            } catch (error) {
+                console.error('Failed to fetch flags:', error);
+                setFlags([]);
+            } finally {
+                setIsLoading(false);
+            }
+        };
         fetchFlags();
     }, []);
 
@@ -59,14 +57,14 @@ export const FeatureFlagManager: React.FC<FeatureFlagManagerProps> = ({ isDarkMo
     };
 
     const confirmToggle = (flag: FeatureFlag) => {
-        if (flag.isCritical && !flag.enabled) { // Only confirm when Enabling critical stuff, or maybe changing it at all? 
-            // Let's confirm for critical flags regardless of direction
+        if (flag.isCritical) {
             setPendingFlag(flag);
         } else {
             handleToggle(flag);
         }
     };
 
+    if (!isMounted || isLoading) return <SkeletonFeatureFlagManager />;
     return (
         <div className="p-6 max-w-5xl mx-auto">
             <div className="mb-8">
@@ -78,39 +76,31 @@ export const FeatureFlagManager: React.FC<FeatureFlagManagerProps> = ({ isDarkMo
             </div>
 
             <div className="space-y-4">
-                {isLoading ? (
-                    <>
-                        <SkeletonFlagRow />
-                        <SkeletonFlagRow />
-                        <SkeletonFlagRow />
-                    </>
-                ) : (
-                    flags.map(flag => (
-                        <div key={flag.key} className={`flex items-center justify-between p-5 rounded-2xl border transition-all hover:shadow-md ${cardBg}`}>
-                            <div className="flex-1 pr-8">
-                                <div className="flex items-center gap-3 mb-1">
-                                    <h3 className={`font-medium ${textPrimary}`}>{flag.label}</h3>
-                                    {flag.isCritical && (
-                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-500 border border-red-500/20">
-                                            Critical
-                                        </span>
-                                    )}
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${flag.enabled ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
-                                        {flag.enabled ? 'Active' : 'Disabled'}
+                {flags.map(flag => (
+                    <div key={flag.key} className={`flex items-center justify-between p-5 rounded-2xl border transition-all hover:shadow-md ${cardBg}`}>
+                        <div className="flex-1 pr-8">
+                            <div className="flex items-center gap-3 mb-1">
+                                <h3 className={`font-medium ${textPrimary}`}>{flag.label}</h3>
+                                {flag.isCritical && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-500 border border-red-500/20">
+                                        Critical
                                     </span>
-                                </div>
-                                <p className={`text-sm ${textSecondary}`}>{flag.description}</p>
+                                )}
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${flag.enabled ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
+                                    {flag.enabled ? 'Active' : 'Disabled'}
+                                </span>
                             </div>
-
-                            <button
-                                onClick={() => confirmToggle(flag)}
-                                className={`relative inline-flex items-center h-7 rounded-full w-12 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${flag.enabled ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'}`}
-                            >
-                                <span className={`${flag.enabled ? 'translate-x-6' : 'translate-x-1'} inline-block w-5 h-5 transform bg-white rounded-full transition-transform shadow`} />
-                            </button>
+                            <p className={`text-sm ${textSecondary}`}>{flag.description}</p>
                         </div>
-                    ))
-                )}
+
+                        <button
+                            onClick={() => confirmToggle(flag)}
+                            className={`relative inline-flex items-center h-7 rounded-full w-12 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${flag.enabled ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'}`}
+                        >
+                            <span className={`${flag.enabled ? 'translate-x-6' : 'translate-x-1'} inline-block w-5 h-5 transform bg-white rounded-full transition-transform shadow`} />
+                        </button>
+                    </div>
+                ))}
             </div>
 
             {/* Confirmation Modal */}
