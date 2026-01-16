@@ -2,16 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
     LayoutDashboard, Building2, Database, UserCog, Sun, Moon,
     Menu, X, LogOut, Activity, ChevronDown, User, Settings,
-    Bell, Shield, ExternalLink, AlertTriangle, Search, ChevronRight,
-    Command
+    Bell, Search, ChevronRight, Command
 } from 'lucide-react';
-import { UserRole } from '../../types';
+import { UserRole } from '../../../types';
 import { useTheme } from '../provider/ThemeProvider';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TYPES & CONFIG
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings';
+export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings' | 'health' | 'flags';
 
 interface NavigationItem {
     id: Module;
@@ -28,6 +27,8 @@ interface DashboardShellProps {
     children: React.ReactNode;
     activeModule?: Module;
     onModuleChange?: (module: Module) => void;
+    navItems?: { id: string; label: string; icon: any; badge?: string }[];
+    user?: { name: string; email: string; avatar?: string };
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -70,7 +71,8 @@ const Header: React.FC<{
     onMenuClick: () => void;
     isMobile: boolean;
     actions?: React.ReactNode;
-}> = ({ title, role, onLogout, onMenuClick, isMobile, actions }) => {
+    user?: { name: string; email: string; avatar?: string };
+}> = ({ title, role, onLogout, onMenuClick, isMobile, actions, user }) => {
     const { isDarkMode, toggleTheme } = useTheme();
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
@@ -104,7 +106,7 @@ const Header: React.FC<{
                     </div>
                 </div>
 
-                {/* Global Search (Command Bar Placeholder) */}
+                {/* Global Search */}
                 <div className="hidden lg:flex items-center max-w-md w-full ml-8">
                     <div className={`relative w-full flex items-center px-3 py-2 rounded-lg border transition-all ${searchBg} focus-within:ring-2 focus-within:ring-indigo-500/50`}>
                         <Search className="w-4 h-4 mr-2 opacity-50" />
@@ -141,10 +143,10 @@ const Header: React.FC<{
                         className={`flex items-center gap-3 pl-1 pr-3 py-1 rounded-full border transition-all ${isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-50'}`}
                     >
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center p-0.5">
-                            <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="User" className="w-full h-full rounded-full bg-slate-900 border-2 border-transparent" />
+                            <img src={user?.avatar || "https://i.pravatar.cc/150?u=a042581f4e29026704d"} alt="User" className="w-full h-full rounded-full bg-slate-900 border-2 border-transparent" />
                         </div>
                         <div className="hidden sm:flex flex-col items-start pr-1">
-                            <span className={`text-xs font-bold leading-none ${textClass}`}>{role}</span>
+                            <span className={`text-xs font-bold leading-none ${textClass}`}>{user?.name || role}</span>
                             <span className="text-[10px] text-slate-500 leading-none mt-1">Super User</span>
                         </div>
                         <ChevronDown className={`w-3 h-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
@@ -155,7 +157,7 @@ const Header: React.FC<{
                             <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
                             <div className={`absolute right-0 mt-2 w-56 rounded-xl border shadow-2xl z-50 overflow-hidden ${isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
                                 <div className={`px-4 py-3 border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
-                                    <p className={`text-sm font-medium ${textClass}`}>user@sovereign.edu</p>
+                                    <p className={`text-sm font-medium ${textClass}`}>{user?.email || 'user@sovereign.edu'}</p>
                                     <div className="flex items-center gap-2 mt-1">
                                         <div className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-green-400' : 'bg-green-500'}`} />
                                         <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Online</p>
@@ -191,10 +193,14 @@ const Sidebar: React.FC<{
     onClose: () => void;
     isMobile: boolean;
     onLogout: () => void;
-}> = ({ role, activeModule, onModuleChange, isOpen, onClose, isMobile, onLogout }) => {
+    customNavItems?: { id: string; label: string; icon: any; badge?: string }[];
+}> = ({ role, activeModule, onModuleChange, isOpen, onClose, isMobile, onLogout, customNavItems }) => {
     const { isDarkMode } = useTheme();
 
     const getNavItems = (): NavigationItem[] => {
+        if (customNavItems) {
+            return customNavItems as NavigationItem[];
+        }
         if (role === 'SUPER_ADMIN') {
             return [
                 { id: 'command', label: 'Command Center', icon: LayoutDashboard },
@@ -219,7 +225,6 @@ const Sidebar: React.FC<{
 
     const bgClass = isDarkMode ? 'bg-slate-950' : 'bg-white';
     const borderClass = isDarkMode ? 'border-slate-800' : 'border-slate-200';
-    const textClass = isDarkMode ? 'text-white' : 'text-slate-900';
     const labelClass = isDarkMode ? 'text-slate-500' : 'text-slate-400';
 
     const getItemClass = (isActive: boolean) => {
@@ -289,7 +294,7 @@ const Sidebar: React.FC<{
                             <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center">
                                 <Command className="w-5 h-5 text-white" />
                             </div>
-                            <span className={`font-bold ${textClass}`}>Navigator</span>
+                            <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Navigator</span>
                         </div>
                         <button onClick={onClose} className={`p-1.5 rounded-lg ${isDarkMode ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
                             <X className="w-5 h-5" />
@@ -336,7 +341,9 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
     actions,
     children,
     activeModule,
-    onModuleChange
+    onModuleChange,
+    navItems,
+    user
 }) => {
     const { isDarkMode } = useTheme();
     const [internalActiveModule, setInternalActiveModule] = useState<Module>(activeModule || (role === 'SUPER_ADMIN' ? 'command' : 'overview'));
@@ -393,6 +400,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                     onMenuClick={() => setSidebarOpen(true)}
                     isMobile={isMobile}
                     actions={actions}
+                    user={user}
                 />
 
                 <div className="flex flex-1 pt-0 items-start">
@@ -404,6 +412,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                         onClose={() => setSidebarOpen(false)}
                         isMobile={isMobile}
                         onLogout={handleLogout}
+                        customNavItems={navItems}
                     />
 
                     <main className="flex-1 p-4 lg:p-6 overflow-y-auto h-[calc(100vh-65px)]">

@@ -1,4 +1,7 @@
 import { http, HttpResponse } from 'msw';
+import { financeHandlers } from './handlers/finance';
+import { systemHandlers } from './handlers/system';
+import { flagHandlers } from './handlers/flags';
 
 export const handlers = [
     http.get('/api/user', () => {
@@ -8,4 +11,7 @@ export const handlers = [
             lastName: 'Maverick',
         })
     }),
+    ...financeHandlers,
+    ...systemHandlers,
+    ...flagHandlers,
 ];

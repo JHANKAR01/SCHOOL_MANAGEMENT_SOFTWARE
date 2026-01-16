@@ -122,10 +122,20 @@ const SchoolDetails: React.FC<{ school: School; isDarkMode: boolean }> = ({ scho
                     </div>
                     <div>
                         <h2 className={`text-xl font-bold ${textPrimary}`}>{school.name}</h2>
-                        <p className={`text-sm font-mono ${textSecondary}`}>{school.slug}.sovereign.edu</p>
+                        <div className="flex items-center gap-2">
+                            <p className={`text-sm font-mono ${textSecondary}`}>{school.slug}.sovereign.edu</p>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${statusConfig[school.status].bg} ${statusConfig[school.status].text}`}>{school.status}</span>
+                        </div>
                     </div>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusConfig[school.status].bg} ${statusConfig[school.status].text}`}>{school.status}</span>
+                <div className="flex gap-2">
+                    <button className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${isDarkMode ? 'border-amber-500/30 text-amber-500 hover:bg-amber-500/10' : 'border-amber-600 text-amber-700 hover:bg-amber-50'}`} onClick={() => console.log('Impersonate', school.id)}>
+                        Impersonate
+                    </button>
+                    <button className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${isDarkMode ? 'border-red-500/30 text-red-500 hover:bg-red-500/10' : 'border-red-600 text-red-700 hover:bg-red-50'}`} onClick={() => console.log('Suspend', school.id)}>
+                        Suspend
+                    </button>
+                </div>
             </div>
 
             <div className={`flex gap-1 p-2 mx-4 mt-4 rounded-xl ${tabBg}`}>

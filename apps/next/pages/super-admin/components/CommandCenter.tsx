@@ -103,15 +103,25 @@ interface CommandCenterProps {
 import { SkeletonCommandCenter } from './Skeleton';
 
 export const CommandCenter: React.FC<CommandCenterProps> = ({ isDarkMode }) => {
+    const [metrics, setMetrics] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Simulate API fetch delay (replace with real API call later)
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 1500);
-        return () => clearTimeout(timer);
+        const loadMetrics = async () => {
+            try {
+                const res = await fetch('/api/super-admin/finance/summary');
+                const data = await res.json();
+                setMetrics(data);
+            } catch (error) {
+                console.error('Failed to load command center metrics', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadMetrics();
     }, []);
 
-    if (isLoading) return <SkeletonCommandCenter />;
+    if (isLoading || !metrics) return <SkeletonCommandCenter />;
 
     const cardBg = isDarkMode ? 'bg-slate-800/60 border-slate-700/50' : 'bg-white border-slate-200';
     const headingColor = isDarkMode ? 'text-slate-400' : 'text-slate-600';
@@ -123,10 +133,10 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ isDarkMode }) => {
         <div className="p-6 space-y-6">
             {/* Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard isDarkMode={isDarkMode} label="Total Revenue" value={formatCurrency(METRICS.totalRevenue)} icon={<DollarSign className="w-5 h-5 text-teal-500" />} trend={{ value: METRICS.revenueChange, isUp: true }} subtext={`Top: ${METRICS.topSchool.name}`} status="success" />
-                <StatCard isDarkMode={isDarkMode} label="Active Tenants" value={METRICS.activeTenants} icon={<Building2 className="w-5 h-5 text-indigo-500" />} trend={{ value: METRICS.tenantsChange, isUp: true }} subtext="Schools connected" />
-                <StatCard isDarkMode={isDarkMode} label="Database Load" value={`${METRICS.dbLoad}%`} icon={<Server className="w-5 h-5 text-slate-400" />} subtext="Avg response: 45ms" status={METRICS.dbLoad > 80 ? 'critical' : METRICS.dbLoad > 60 ? 'warning' : 'default'} />
-                <StatCard isDarkMode={isDarkMode} label="Critical Alerts" value={METRICS.criticalAlerts} icon={<AlertTriangle className="w-5 h-5 text-red-500" />} subtext="Requires attention" status={METRICS.criticalAlerts > 0 ? 'critical' : 'success'} />
+                <StatCard isDarkMode={isDarkMode} label="Total Revenue" value={formatCurrency(metrics.mrr)} icon={<DollarSign className="w-5 h-5 text-teal-500" />} trend={{ value: metrics.growth, isUp: true }} subtext={`ARR: ₹${(metrics.arr / 10000000).toFixed(2)}Cr`} status="success" />
+                <StatCard isDarkMode={isDarkMode} label="Active Tenants" value={metrics.activeSubscriptions} icon={<Building2 className="w-5 h-5 text-indigo-500" />} trend={{ value: 5, isUp: true }} subtext="Schools connected" />
+                <StatCard isDarkMode={isDarkMode} label="Avg. Rev/User" value={formatCurrency(metrics.avgRevenuePerUser)} icon={<Server className="w-5 h-5 text-slate-400" />} subtext="Performance metric" status="default" />
+                <StatCard isDarkMode={isDarkMode} label="System Health" value="98.5%" icon={<AlertTriangle className="w-5 h-5 text-emerald-500" />} subtext="Operational" status="success" />
             </div>
 
             {/* Health Matrix + Recent Events */}
