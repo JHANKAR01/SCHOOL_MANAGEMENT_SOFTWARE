@@ -21,7 +21,7 @@ superAdminRouter.get('/stats', async (c) => {
         const totalStudents = await prisma.student.count();
 
         const revenueResult = await prisma.invoice.aggregate({
-            _sum: { base_amount: true },
+            _sum: { amount_paid: true },
             where: { status: 'PAID' }
         });
 
@@ -39,7 +39,7 @@ superAdminRouter.get('/stats', async (c) => {
         return c.json({
             schools: activeSchools,
             students: totalStudents,
-            revenue: revenueResult._sum.base_amount || 0,
+            revenue: revenueResult._sum.amount_paid || 0,
             failedPayments
         });
     } catch (error) {
@@ -100,7 +100,7 @@ superAdminRouter.get('/finance', async (c) => {
             },
             select: {
                 created_at: true,
-                base_amount: true
+                amount_paid: true
             }
         });
 
@@ -115,7 +115,7 @@ superAdminRouter.get('/finance', async (c) => {
             if (!monthlyRevenue[key]) {
                 monthlyRevenue[key] = 0;
             }
-            monthlyRevenue[key] += Number(inv.base_amount);
+            monthlyRevenue[key] += Number(inv.amount_paid);
         });
 
         const chartData = Object.entries(monthlyRevenue).map(([name, value]) => ({

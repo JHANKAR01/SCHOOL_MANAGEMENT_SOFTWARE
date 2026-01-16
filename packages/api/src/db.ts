@@ -11,18 +11,43 @@ if (!connectionString) {
   throw new Error('DATABASE_URL is not defined in environment variables');
 }
 
+// 1. Create the Pool with better timeouts and limits
 const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false },
-  connectionTimeoutMillis: 10000, // Wait 10s before failing
+  ssl: { rejectUnauthorized: false }, // Required for Supabase
+  connectionTimeoutMillis: 10000,     // Wait 10s before failing
+  idleTimeoutMillis: 20000,           // Close idle clients after 20s
+  max: 10,                            // Limit pool size
   options: '-c search_path=schoolmanagementsystem'
 });
 
-// Initialize Adapter and Client
+// 2. Add Error Listeners (Prevents crash on idle client error)
+pool.on('error', (err) => {
+  console.error('[DB] 🔴 Unexpected error on idle client', err);
+  process.exit(-1);
+});
+
+// 3. Initialize Adapter
 const adapter = new PrismaPg(pool, {
   schema: 'schoolmanagementsystem'
 });
+
 const globalPrisma = new PrismaClient({ adapter });
+
+// 4. Test Connection Immediately on Startup
+(async () => {
+  try {
+    const client = await pool.connect();
+    console.log('✅ [DB] Database Connection Established Successfully');
+    const res = await client.query('SELECT NOW()');
+    console.log(`   -> Server Time: ${res.rows[0].now}`);
+    client.release();
+  } catch (err: any) {
+    console.error('❌ [DB] Connection Failed:', err.message);
+    console.error('   -> Check if Supabase project is PAUSED.');
+    console.error('   -> Check your Internet Connection.');
+  }
+})();
 
 export default globalPrisma;
 

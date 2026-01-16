@@ -59,6 +59,10 @@ model School {
   staffSubjects      StaffSubject[]
   staffClasses       StaffClass[]
 
+  // FINANCE RELATIONS (V2)
+  financeFeeStructures FeeStructure[]
+  paymentTransactions  PaymentTransaction[]
+
   @@schema("schoolmanagementsystem")
 }
 
@@ -81,6 +85,10 @@ model AcademicYear {
   school      School              @relation(fields: [school_id], references: [id], onDelete: Cascade)
   classes     Class[]
   enrollments StudentEnrollment[]
+  
+  // FINANCE RELATIONS (V2)
+  financeFeeStructures FeeStructure[]
+  invoices             Invoice[]
 
   @@unique([school_id, name])
   @@index([school_id])
@@ -111,6 +119,9 @@ model Class {
   syllabi       Syllabus[]
   classSubjects ClassSubject[]
   staffClasses  StaffClass[]
+  
+  // FINANCE RELATIONS (V2)
+  financeFeeStructures FeeStructure[]
 
   @@unique([school_id, academic_year_id, grade, section])
   @@index([school_id])
@@ -809,25 +820,101 @@ model BookLoan {
 // FINANCE
 // ============================================================================
 
+model FeeStructure {
+  id               String       @id @default(cuid())
+  school_id        String
+  academic_year_id String
+  class_id         String?      // If null, applies globally (e.g. Admission Fee)
+  
+  name             String       // "Grade 10 Tuition - Q1"
+  amount           Float
+  category         FeeCategory
+  frequency        FeeFrequency @default(ONE_TIME)
+  due_day          Int?         // e.g., 5th of the month
+  
+  // Relations
+  school           School       @relation(fields: [school_id], references: [id])
+  academicYear     AcademicYear @relation(fields: [academic_year_id], references: [id])
+  class            Class?       @relation(fields: [class_id], references: [id])
+  invoiceItems     InvoiceItem[]
+
+  created_at       DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime     @updatedAt
+
+  @@index([school_id])
+  @@index([class_id])
+  @@schema("schoolmanagementsystem")
+}
+
 model Invoice {
-  id              String        @id @default(cuid())
-  student_id      String
-  base_amount     Float
-  discount_amount Float
-  description     String
-  due_date        DateTime      @db.Timestamptz(6)
-  status          InvoiceStatus @default(PENDING)
-  utr             String?
-  school_id       String
-  created_at      DateTime      @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime      @updatedAt
-  school          School        @relation(fields: [school_id], references: [id])
-  student         Student       @relation(fields: [student_id], references: [id])
+  id               String        @id @default(cuid())
+  school_id        String
+  student_id       String
+  academic_year_id String        // Crucial for "Yearly Collection" reports
+  
+  // LEDGER FIELDS
+  total_amount     Float         // The Demand (Snapshot)
+  amount_paid      Float         @default(0) // The Collection (Sum of transactions)
+  balance_amount   Float         // The Due (Total - Paid). Stored for performance.
+  discount_amount  Float         @default(0)
+  
+  status           InvoiceStatus @default(DRAFT)
+  due_date         DateTime      @db.Date
+  description      String?
+
+  // Relations
+  school           School        @relation(fields: [school_id], references: [id])
+  student          Student       @relation(fields: [student_id], references: [id])
+  academicYear     AcademicYear  @relation(fields: [academic_year_id], references: [id])
+  
+  items            InvoiceItem[]
+  transactions     PaymentTransaction[]
+
+  created_at       DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime      @updatedAt
 
   @@index([school_id])
   @@index([student_id])
-  @@index([status])      // Dashboard: pending/paid filter
-  @@index([due_date])    // Reports: overdue invoices
+  @@index([status])        // Fast lookup for "Defaulters"
+  @@index([balance_amount]) // Query: where balance_amount > 0
+  @@schema("schoolmanagementsystem")
+}
+
+model InvoiceItem {
+  id               String        @id @default(cuid())
+  invoice_id       String
+  fee_structure_id String?       // Link to master data (optional)
+  
+  title            String        // Snapshot of Fee Name
+  amount           Float         // Snapshot of Fee Amount
+  
+  invoice          Invoice       @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+  feeStructure     FeeStructure? @relation(fields: [fee_structure_id], references: [id])
+
+  @@index([invoice_id])
+  @@schema("schoolmanagementsystem")
+}
+
+model PaymentTransaction {
+  id               String        @id @default(cuid())
+  invoice_id       String
+  school_id        String
+  student_id       String?       // Denormalized for speed
+  
+  amount           Float
+  mode             PaymentMode
+  date             DateTime      @default(now()) @db.Timestamptz(6)
+  reference_no     String?       // UTR / Cheque No
+  remarks          String?
+  
+  invoice          Invoice       @relation(fields: [invoice_id], references: [id])
+  school           School        @relation(fields: [school_id], references: [id])
+
+  created_at       DateTime      @default(now()) @db.Timestamptz(6)
+
+  @@index([invoice_id])
+  @@index([school_id])
+  @@index([date])                // For "Daily Collection Report"
   @@schema("schoolmanagementsystem")
 }
 
@@ -1114,9 +1201,43 @@ enum AttendanceStatus {
 }
 
 enum InvoiceStatus {
+  DRAFT
   PENDING
-  VERIFIED
+  PARTIAL
   PAID
+  OVERDUE
+  VOID
+
+  @@schema("schoolmanagementsystem")
+}
+
+enum PaymentMode {
+  CASH
+  UPI
+  BANK_TRANSFER
+  CHEQUE
+  DEMAND_DRAFT
+
+  @@schema("schoolmanagementsystem")
+}
+
+enum FeeFrequency {
+  ONE_TIME
+  MONTHLY
+  QUARTERLY
+  YEARLY
+
+  @@schema("schoolmanagementsystem")
+}
+
+enum FeeCategory {
+  TUITION
+  TRANSPORT
+  HOSTEL
+  LIBRARY
+  EXAM
+  ADMISSION
+  MISC
 
   @@schema("schoolmanagementsystem")
 }

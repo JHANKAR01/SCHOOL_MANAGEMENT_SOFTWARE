@@ -19,6 +19,7 @@ import bcrypt from 'bcryptjs';
 // Import data from dummy-data.ts
 import {
   SCHOOL_ID,
+  ACADEMIC_YEAR_2025_ID,
   DUMMY_ACADEMIC_YEARS,
   DUMMY_SUBJECTS,
   DUMMY_CLASSES,
@@ -814,16 +815,28 @@ async function main() {
   // =========================================================================
   console.log('\n💵 STEP 25: Seeding Invoices...');
 
-  const invoiceData = DUMMY_INVOICES.map(inv => ({
-    student_id: inv.student_id,
-    base_amount: inv.base_amount,
-    discount_amount: inv.discount_amount,
-    description: inv.description,
-    due_date: inv.due_date,
-    status: inv.status,
-    utr: inv.utr,
-    school_id: inv.school_id
-  }));
+  const invoiceData = DUMMY_INVOICES.map(inv => {
+    const isPaid = inv.status === InvoiceStatus.PAID;
+    const isPartial = inv.status === 'PARTIAL'; // Assuming we might add partial logic later
+    const amountPaid = isPaid ? inv.base_amount : 0;
+    const balanceAmount = isPaid ? 0 : inv.base_amount;
+
+    return {
+      student_id: inv.student_id,
+      // LEDGER FIELDS
+      total_amount: inv.base_amount,
+      discount_amount: inv.discount_amount,
+      amount_paid: amountPaid,
+      balance_amount: balanceAmount,
+      academic_year_id: ACADEMIC_YEAR_2025_ID,
+
+      description: inv.description,
+      due_date: inv.due_date,
+      status: inv.status,
+      // utr removed, belongs to PaymentTransaction now
+      school_id: inv.school_id
+    };
+  });
 
   const invoicesResult = await prisma.invoice.createMany({
     data: invoiceData,
