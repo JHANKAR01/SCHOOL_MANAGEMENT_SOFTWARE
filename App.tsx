@@ -222,12 +222,6 @@ const App: React.FC = () => {
               if (Platform.OS === 'web') {
                 return (
                   <div className="relative">
-                    <button
-                      onClick={handleLogout}
-                      className="fixed top-4 right-4 z-[100] bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 font-bold text-xs"
-                    >
-                      EXIT SUPER ADMIN
-                    </button>
                     <SuperAdminDashboard />
                   </div>
                 );

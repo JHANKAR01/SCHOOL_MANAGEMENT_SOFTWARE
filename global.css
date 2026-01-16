@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   GLASSMORPHISM SCROLLBARS (NEBULA THEME)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+   
+/* WebKit / Chrome / Edge / Safari */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: transparent; /* Track is transparent */
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.5); /* slate-700 with 50% opacity */
+  border-radius: 9999px; /* full rounded */
+  backdrop-filter: blur(4px);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(71, 85, 105, 0.8); /* slate-600 with 80% opacity */
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(51, 65, 85, 0.5) transparent;
+}
+
 /* Fix for React Native Web full-screen height when using ReactDOM directly */
 html,
 body,

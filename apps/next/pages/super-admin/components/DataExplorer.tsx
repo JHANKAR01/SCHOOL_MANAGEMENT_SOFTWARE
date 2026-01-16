@@ -86,9 +86,7 @@ export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
         return () => clearTimeout(timer);
     }, []);
 
-    if (isLoading) return <SkeletonDataExplorer />;
-
-    // Theme classes
+    // Theme classes (Just variables, safe to calculate every time or memoize if expensive, but simple string concats are cheap)
     const cardBg = isDarkMode ? 'bg-slate-800/60 border-slate-700' : 'bg-white border-slate-200';
     const cardBgModify = isDarkMode ? 'bg-amber-900/20 border-amber-500/40' : 'bg-amber-50 border-amber-300';
     const textPrimary = isDarkMode ? 'text-white' : 'text-slate-900';
@@ -120,7 +118,17 @@ export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
         return Object.entries(editedData).filter(([k, v]) => (selectedRecord as any)[k] !== v).map(([k, v]) => ({ field: k, oldValue: (selectedRecord as any)[k], newValue: v }));
     };
 
-    const handleSave = () => { console.log('[AUDIT] Override:', { record: selectedRecord?.id, changes: getChanges(), reason: overrideReason }); setShowConfirm(false); setEditedData({}); setOverrideReason(''); setModifyMode(false); };
+    const handleSave = () => {
+        console.log('[AUDIT] Override:', { record: selectedRecord?.id, changes: getChanges(), reason: overrideReason });
+        setShowConfirm(false);
+        setEditedData({});
+        setOverrideReason('');
+        setModifyMode(false);
+    };
+
+    // FIX: Render Skeleton ONLY if loading, otherwise render content. 
+    // This return comes AFTER all hooks are called.
+    if (isLoading) return <SkeletonDataExplorer />;
 
     return (
         <div className="p-6 space-y-4">

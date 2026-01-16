@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DashboardShell, Module } from '../../../../packages/app/components/DashboardShell';
+import { NebulaErrorBoundary } from '../../../../packages/app/components/NebulaErrorBoundary';
 import { useTheme } from '../../../../packages/app/provider/ThemeProvider';
 import { TenantManager } from './components/TenantManager';
 import { CommandCenter } from './components/CommandCenter';
@@ -164,7 +165,11 @@ export default function SuperAdminDashboard() {
                 >
                     {activeModule === 'command' && <CommandCenter isDarkMode={isDarkMode} />}
                     {activeModule === 'tenants' && <TenantManager isDarkMode={isDarkMode} />}
-                    {activeModule === 'explorer' && <DataExplorer isDarkMode={isDarkMode} />}
+                    {activeModule === 'explorer' && (
+                        <NebulaErrorBoundary>
+                            <DataExplorer isDarkMode={isDarkMode} />
+                        </NebulaErrorBoundary>
+                    )}
                     {activeModule === 'ghost' && (
                         <GhostModeModule isDarkMode={isDarkMode} onActivate={handleActivateGhost} />
                     )}
