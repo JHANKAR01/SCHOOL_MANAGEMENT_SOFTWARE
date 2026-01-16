@@ -4,93 +4,35 @@ import {
     AlertTriangle, Clock, Users, GraduationCap,
     CreditCard, Mail, MessageSquare, Smartphone, RefreshCw,
 } from 'lucide-react';
+import { getSuperAdminData, superAdminApi } from '../../../../../packages/app/api/client';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// TYPES & MOCK DATA
+// TYPES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 interface School {
     id: string;
     name: string;
-    slug: string;
-    status: 'healthy' | 'warning' | 'critical';
-    students: number;
-    staff: number;
-    lastSync: string;
-    features: { transport: boolean; biometric: boolean; hostel: boolean; library: boolean };
-    secrets: { razorpay: string; sendgrid: string; smsGateway: string; firebase: string };
+    status: string; // "ACTIVE" | "INACTIVE" etc.
+    plan: string;
+    region: string;
+    studentCount: number;
+    // Features are now dynamic from settings_json but we need to fetch/store them.
+    // For now, the API listing /tenants doesn't return full feature list, 
+    // we might need to assume defaults or fetch details.
+    // However, the toggle API updates them. We'll manage locally for now.
+    features?: { [key: string]: boolean };
 }
 
-const MOCK_SCHOOLS: School[] = [
-    { id: 'sch_001', name: 'Greenwood High', slug: 'greenwood', status: 'healthy', students: 1245, staff: 87, lastSync: '2 min ago', features: { transport: true, biometric: true, hostel: false, library: true }, secrets: { razorpay: 'rzp_live_gw_abc123', sendgrid: 'SG.greenwood.xyz', smsGateway: 'sms_gw_001', firebase: 'AIza_gw_xxx' } },
-    { id: 'sch_002', name: 'St. Xavier\'s Academy', slug: 'xavier', status: 'healthy', students: 2100, staff: 124, lastSync: '5 min ago', features: { transport: true, biometric: false, hostel: true, library: true }, secrets: { razorpay: 'rzp_live_sx_def456', sendgrid: 'SG.xavier.abc', smsGateway: 'sms_sx_002', firebase: 'AIza_sx_yyy' } },
-    { id: 'sch_003', name: 'Delhi Public School', slug: 'dps-delhi', status: 'warning', students: 3200, staff: 210, lastSync: '15 min ago', features: { transport: true, biometric: true, hostel: true, library: true }, secrets: { razorpay: 'rzp_live_dps_ghi789', sendgrid: 'SG.dps.def', smsGateway: 'sms_dps_003', firebase: 'AIza_dps_zzz' } },
-    { id: 'sch_004', name: 'Ryan International', slug: 'ryan', status: 'critical', students: 890, staff: 56, lastSync: '45 min ago', features: { transport: false, biometric: false, hostel: false, library: true }, secrets: { razorpay: 'rzp_live_ryan_jkl012', sendgrid: 'SG.ryan.ghi', smsGateway: 'sms_ryan_004', firebase: 'AIza_ryan_aaa' } },
-];
-
-const maskApiKey = (key: string): string => `${key.slice(0, 10)}****${key.slice(-4)}`;
-
-const statusConfig = {
-    healthy: { color: 'bg-emerald-500', text: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    warning: { color: 'bg-amber-500', text: 'text-amber-500', bg: 'bg-amber-500/10' },
-    critical: { color: 'bg-red-500', text: 'text-red-500', bg: 'bg-red-500/10' },
+const statusConfig: Record<string, { color: string; text: string; bg: string }> = {
+    ACTIVE: { color: 'bg-emerald-500', text: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    INACTIVE: { color: 'bg-red-500', text: 'text-red-500', bg: 'bg-red-500/10' },
+    SUSPENDED: { color: 'bg-amber-500', text: 'text-amber-500', bg: 'bg-amber-500/10' },
+    // Fallback
+    default: { color: 'bg-slate-500', text: 'text-slate-500', bg: 'bg-slate-500/10' }
 };
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// SECRET ROW
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-const SecretRow: React.FC<{ name: string; value: string; icon: React.ReactNode; type: string; isDarkMode: boolean }> = ({ name, value, icon, type, isDarkMode }) => {
-    const [revealed, setRevealed] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
-
-    const cardBg = isDarkMode ? 'bg-slate-700/50 border-slate-600' : 'bg-slate-50 border-slate-200';
-    const textPrimary = isDarkMode ? 'text-slate-200' : 'text-slate-800';
-    const textSecondary = isDarkMode ? 'text-slate-400' : 'text-slate-500';
-    const codeBg = isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-300';
-
-    const handleReveal = () => revealed ? setRevealed(false) : setShowConfirm(true);
-    const confirmReveal = () => { setRevealed(true); setShowConfirm(false); setTimeout(() => setRevealed(false), 30000); };
-
-    return (
-        <>
-            <div className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${cardBg}`}>
-                <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-white/10' : 'bg-slate-200'}`}>{icon}</div>
-                    <div>
-                        <p className={`text-sm font-medium ${textPrimary}`}>{name}</p>
-                        <p className={`text-xs ${textSecondary}`}>{type}</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <code className={`px-3 py-1.5 rounded-lg border text-xs font-mono ${codeBg} ${textPrimary}`}>
-                        {revealed ? value : maskApiKey(value)}
-                    </code>
-                    <button onClick={handleReveal} className={`p-2 rounded-lg transition-colors ${revealed ? 'bg-amber-500/20 text-amber-500' : isDarkMode ? 'bg-white/10 text-slate-400 hover:text-white' : 'bg-slate-200 text-slate-500 hover:text-slate-700'}`}>
-                        {revealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                </div>
-            </div>
-
-            {showConfirm && (
-                <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowConfirm(false)} />
-                    <div className={`relative w-full max-w-sm rounded-2xl p-6 border ${isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 rounded-lg bg-amber-500/20"><AlertTriangle className="w-5 h-5 text-amber-500" /></div>
-                            <h3 className={`text-lg font-semibold ${textPrimary}`}>Reveal Secret?</h3>
-                        </div>
-                        <p className={`text-sm mb-6 ${textSecondary}`}>This action will be logged for security audit.</p>
-                        <div className="flex justify-end gap-3">
-                            <button onClick={() => setShowConfirm(false)} className={`px-4 py-2 text-sm ${textSecondary}`}>Cancel</button>
-                            <button onClick={confirmReveal} className="px-4 py-2 text-sm font-medium rounded-lg bg-amber-600 hover:bg-amber-500 text-white">Reveal Key</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </>
-    );
-};
+const getStatusStyle = (status: string) => statusConfig[status] || statusConfig.default;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SCHOOL DETAILS
@@ -98,7 +40,9 @@ const SecretRow: React.FC<{ name: string; value: string; icon: React.ReactNode; 
 
 const SchoolDetails: React.FC<{ school: School; isDarkMode: boolean }> = ({ school, isDarkMode }) => {
     const [activeTab, setActiveTab] = useState<'overview' | 'config' | 'secrets'>('overview');
-    const [features, setFeatures] = useState(school.features);
+    // Initialize features (mock defaults if not provided by list API yet)
+    // In a real app, we'd fetch specific school details on selection
+    const [features, setFeatures] = useState(school.features || { transport: true, biometric: false, hostel: false, library: true });
 
     const cardBg = isDarkMode ? 'bg-slate-700/50 border-slate-600' : 'bg-slate-50 border-slate-200';
     const textPrimary = isDarkMode ? 'text-white' : 'text-slate-900';
@@ -110,8 +54,25 @@ const SchoolDetails: React.FC<{ school: School; isDarkMode: boolean }> = ({ scho
     const tabs = [
         { id: 'overview', label: 'Overview', icon: Building2 },
         { id: 'config', label: 'Configuration', icon: Settings },
-        { id: 'secrets', label: 'Secrets Vault', icon: Key },
+        // { id: 'secrets', label: 'Secrets Vault', icon: Key }, // Hidden until API supports it
     ];
+
+    const handleToggle = async (key: string) => {
+        // Optimistic update
+        const newValue = !features[key];
+        setFeatures(prev => ({ ...prev, [key]: newValue }));
+
+        try {
+            await superAdminApi.toggleFeature(school.id, key, newValue);
+        } catch (error) {
+            console.error('Failed to toggle feature', error);
+            // Revert on failure
+            setFeatures(prev => ({ ...prev, [key]: !newValue }));
+            alert('Failed to update setting. Please try again.');
+        }
+    };
+
+    const style = getStatusStyle(school.status);
 
     return (
         <div className="h-full flex flex-col">
@@ -123,8 +84,8 @@ const SchoolDetails: React.FC<{ school: School; isDarkMode: boolean }> = ({ scho
                     <div>
                         <h2 className={`text-xl font-bold ${textPrimary}`}>{school.name}</h2>
                         <div className="flex items-center gap-2">
-                            <p className={`text-sm font-mono ${textSecondary}`}>{school.slug}.sovereign.edu</p>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${statusConfig[school.status].bg} ${statusConfig[school.status].text}`}>{school.status}</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${style.bg} ${style.text}`}>{school.status}</span>
+                            <span className={`text-xs ${textSecondary} px-2 py-0.5 rounded border border-current`}>{school.plan}</span>
                         </div>
                     </div>
                 </div>
@@ -151,15 +112,12 @@ const SchoolDetails: React.FC<{ school: School; isDarkMode: boolean }> = ({ scho
                     <div className="grid grid-cols-2 gap-4">
                         <div className={`p-4 rounded-xl border ${cardBg}`}>
                             <div className={`flex items-center gap-2 mb-2 ${textSecondary}`}><GraduationCap className="w-4 h-4" /><span className="text-xs uppercase tracking-wider">Students</span></div>
-                            <p className={`text-2xl font-bold font-mono ${textPrimary}`}>{school.students.toLocaleString()}</p>
+                            <p className={`text-2xl font-bold font-mono ${textPrimary}`}>{school.studentCount.toLocaleString()}</p>
                         </div>
+                        {/* Placeholder for Staff count (not in API yet) */}
                         <div className={`p-4 rounded-xl border ${cardBg}`}>
-                            <div className={`flex items-center gap-2 mb-2 ${textSecondary}`}><Users className="w-4 h-4" /><span className="text-xs uppercase tracking-wider">Staff</span></div>
-                            <p className={`text-2xl font-bold font-mono ${textPrimary}`}>{school.staff}</p>
-                        </div>
-                        <div className={`col-span-2 p-4 rounded-xl border ${cardBg}`}>
-                            <div className={`flex items-center gap-2 mb-2 ${textSecondary}`}><Clock className="w-4 h-4" /><span className="text-xs uppercase tracking-wider">Last Sync</span></div>
-                            <p className={`text-lg font-medium ${textPrimary}`}>{school.lastSync}</p>
+                            <div className={`flex items-center gap-2 mb-2 ${textSecondary}`}><Users className="w-4 h-4" /><span className="text-xs uppercase tracking-wider">Region</span></div>
+                            <p className={`text-2xl font-bold font-mono ${textPrimary}`}>{school.region}</p>
                         </div>
                     </div>
                 )}
@@ -170,24 +128,11 @@ const SchoolDetails: React.FC<{ school: School; isDarkMode: boolean }> = ({ scho
                         {Object.entries(features).map(([key, enabled]) => (
                             <div key={key} className={`flex items-center justify-between p-4 rounded-xl border ${cardBg}`}>
                                 <span className={`text-sm font-medium capitalize ${textPrimary}`}>{key}</span>
-                                <button onClick={() => setFeatures(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))} className={`relative w-11 h-6 rounded-full transition-colors ${enabled ? 'bg-indigo-600' : isDarkMode ? 'bg-slate-600' : 'bg-slate-300'}`}>
+                                <button onClick={() => handleToggle(key)} className={`relative w-11 h-6 rounded-full transition-colors ${enabled ? 'bg-indigo-600' : isDarkMode ? 'bg-slate-600' : 'bg-slate-300'}`}>
                                     <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
                                 </button>
                             </div>
                         ))}
-                    </div>
-                )}
-
-                {activeTab === 'secrets' && (
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between mb-4">
-                            <p className={`text-xs uppercase tracking-wider ${textSecondary}`}>API Keys for {school.name}</p>
-                            <button className="flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-400"><RefreshCw className="w-3.5 h-3.5" /> Rotate All</button>
-                        </div>
-                        <SecretRow isDarkMode={isDarkMode} name="Razorpay API Key" value={school.secrets.razorpay} icon={<CreditCard className="w-4 h-4 text-indigo-500" />} type="Payment Gateway" />
-                        <SecretRow isDarkMode={isDarkMode} name="SendGrid API Key" value={school.secrets.sendgrid} icon={<Mail className="w-4 h-4 text-teal-500" />} type="Email Service" />
-                        <SecretRow isDarkMode={isDarkMode} name="SMS Gateway Key" value={school.secrets.smsGateway} icon={<MessageSquare className="w-4 h-4 text-amber-500" />} type="SMS Provider" />
-                        <SecretRow isDarkMode={isDarkMode} name="Firebase Admin" value={school.secrets.firebase} icon={<Smartphone className="w-4 h-4 text-orange-500" />} type="Push Notifications" />
                     </div>
                 )}
             </div>
@@ -205,13 +150,22 @@ import { SkeletonTenantManager } from './Skeleton';
 
 export const TenantManager: React.FC<TenantManagerProps> = ({ isDarkMode }) => {
     const [isLoading, setIsLoading] = useState(true);
+    const [schools, setSchools] = useState<School[]>([]);
     const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Simulate API fetch delay (replace with real API call later)
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 1200);
-        return () => clearTimeout(timer);
+        const loadTenants = async () => {
+            try {
+                const data = await getSuperAdminData('/tenants');
+                setSchools(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error("Failed to fetch tenants", error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        loadTenants();
     }, []);
 
     if (isLoading) return <SkeletonTenantManager />;
@@ -224,7 +178,7 @@ export const TenantManager: React.FC<TenantManagerProps> = ({ isDarkMode }) => {
     const itemBg = isDarkMode ? 'hover:bg-white/10' : 'hover:bg-slate-50';
     const itemActive = isDarkMode ? 'bg-indigo-600/30 border-indigo-500/50' : 'bg-indigo-50 border-indigo-300';
 
-    const filteredSchools = MOCK_SCHOOLS.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.slug.toLowerCase().includes(searchQuery.toLowerCase()));
+    const filteredSchools = schools.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
         <div className="flex h-[calc(100vh-180px)] gap-4 p-4">
@@ -241,11 +195,10 @@ export const TenantManager: React.FC<TenantManagerProps> = ({ isDarkMode }) => {
                             <div className="flex items-start justify-between">
                                 <div>
                                     <p className={`text-sm font-medium ${textPrimary}`}>{school.name}</p>
-                                    <p className={`text-xs font-mono ${textSecondary}`}>{school.slug}</p>
                                 </div>
-                                <div className={`w-2 h-2 rounded-full mt-1.5 ${statusConfig[school.status].color}`} />
+                                <div className={`w-2 h-2 rounded-full mt-1.5 ${getStatusStyle(school.status).color}`} />
                             </div>
-                            <p className={`text-xs mt-1 ${textSecondary}`}>{school.students.toLocaleString()} students</p>
+                            <p className={`text-xs mt-1 ${textSecondary}`}>{school.studentCount.toLocaleString()} students</p>
                         </button>
                     ))}
                 </div>

@@ -3,29 +3,11 @@ import {
     DollarSign, Building2, Server, AlertTriangle, Rocket, Radio, Lock,
     TrendingUp, TrendingDown, Activity, Clock,
 } from 'lucide-react';
+import { getSuperAdminData } from '../../../../../packages/app/api/client';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// MOCK DATA
+// TYPES & MOCK DATA (Events are still mock as no API exists yet)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-const METRICS = {
-    totalRevenue: 4567890,
-    revenueChange: 12.5,
-    activeTenants: 12,
-    tenantsChange: 2,
-    dbLoad: 34,
-    criticalAlerts: 2,
-    topSchool: { name: 'DPS Delhi', revenue: 1250000 },
-};
-
-const SCHOOLS = [
-    { id: 'sch_001', name: 'Greenwood High', slug: 'greenwood', status: 'healthy' as const },
-    { id: 'sch_002', name: 'St. Xavier\'s', slug: 'xavier', status: 'healthy' as const },
-    { id: 'sch_003', name: 'Delhi Public School', slug: 'dps', status: 'warning' as const },
-    { id: 'sch_004', name: 'Ryan International', slug: 'ryan', status: 'critical' as const },
-    { id: 'sch_005', name: 'Kendriya Vidyalaya', slug: 'kv', status: 'healthy' as const },
-    { id: 'sch_006', name: 'Army Public', slug: 'aps', status: 'healthy' as const },
-];
 
 const RECENT_EVENTS = [
     { id: 1, type: 'error', message: 'Ryan International: Payment gateway timeout', time: '5 min ago' },
@@ -38,10 +20,12 @@ const formatCurrency = (amount: number): string => {
 };
 
 const statusColors = {
-    healthy: { dot: 'bg-emerald-400', glow: 'shadow-emerald-500/30' },
+    ACTIVE: { dot: 'bg-emerald-400', glow: 'shadow-emerald-500/30' },
+    INACTIVE: { dot: 'bg-red-400', glow: 'shadow-red-500/30' },
     warning: { dot: 'bg-amber-400', glow: 'shadow-amber-500/30' },
-    critical: { dot: 'bg-red-400 animate-pulse', glow: 'shadow-red-500/30' },
+    default: { dot: 'bg-slate-400', glow: 'shadow-slate-500/30' }
 };
+const getStatusColor = (status: string) => (statusColors as any)[status] || statusColors.default;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // STAT CARD (Theme-aware)
@@ -63,7 +47,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, icon, isDarkMode, tre
     const subtextColor = isDarkMode ? 'text-slate-500' : 'text-slate-400';
     const iconBg = isDarkMode ? 'bg-white/10 border-white/10' : 'bg-slate-100 border-slate-200';
 
-    const statusColors = {
+    const statusTextColors = {
         default: isDarkMode ? 'text-white' : 'text-slate-900',
         success: 'text-teal-500',
         warning: 'text-amber-500',
@@ -77,7 +61,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, icon, isDarkMode, tre
                     <span className={`text-xs font-medium uppercase tracking-wider ${labelColor}`}>{label}</span>
                     <div className={`p-2 rounded-xl border ${iconBg}`}>{icon}</div>
                 </div>
-                <div className={`text-3xl font-bold font-mono ${statusColors[status]}`}>{value}</div>
+                <div className={`text-3xl font-bold font-mono ${statusTextColors[status]}`}>{value}</div>
                 <div className="flex items-center justify-between mt-2">
                     {subtext && <span className={`text-xs ${subtextColor}`}>{subtext}</span>}
                     {trend && (
@@ -103,15 +87,21 @@ interface CommandCenterProps {
 import { SkeletonCommandCenter } from './Skeleton';
 
 export const CommandCenter: React.FC<CommandCenterProps> = ({ isDarkMode }) => {
-    const [metrics, setMetrics] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [stats, setStats] = useState<any>(null);
+    const [schools, setSchools] = useState<any[]>([]);
 
     useEffect(() => {
         const loadMetrics = async () => {
             try {
-                const res = await fetch('/api/super-admin/finance/summary');
-                const data = await res.json();
-                setMetrics(data);
+                // Fetch stats for KPIs and tenants for the Health Matrix
+                const [statsData, tenantsData] = await Promise.all([
+                    getSuperAdminData('/stats'),
+                    getSuperAdminData('/tenants')
+                ]);
+
+                setStats(statsData);
+                setSchools(Array.isArray(tenantsData) ? tenantsData.slice(0, 9) : []); // Show top 9 in matrix
             } catch (error) {
                 console.error('Failed to load command center metrics', error);
             } finally {
@@ -121,7 +111,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ isDarkMode }) => {
         loadMetrics();
     }, []);
 
-    if (isLoading || !metrics) return <SkeletonCommandCenter />;
+    if (isLoading || !stats) return <SkeletonCommandCenter />;
 
     const cardBg = isDarkMode ? 'bg-slate-800/60 border-slate-700/50' : 'bg-white border-slate-200';
     const headingColor = isDarkMode ? 'text-slate-400' : 'text-slate-600';
@@ -129,31 +119,37 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ isDarkMode }) => {
     const textSecondary = isDarkMode ? 'text-slate-400' : 'text-slate-500';
     const itemBg = isDarkMode ? 'bg-white/5 border-white/10 hover:border-white/20' : 'bg-slate-50 border-slate-200 hover:border-slate-300';
 
+    const annualRunRate = stats.revenue * 12;
+
     return (
         <div className="p-6 space-y-6">
             {/* Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard isDarkMode={isDarkMode} label="Total Revenue" value={formatCurrency(metrics.mrr)} icon={<DollarSign className="w-5 h-5 text-teal-500" />} trend={{ value: metrics.growth, isUp: true }} subtext={`ARR: ₹${(metrics.arr / 10000000).toFixed(2)}Cr`} status="success" />
-                <StatCard isDarkMode={isDarkMode} label="Active Tenants" value={metrics.activeSubscriptions} icon={<Building2 className="w-5 h-5 text-indigo-500" />} trend={{ value: 5, isUp: true }} subtext="Schools connected" />
-                <StatCard isDarkMode={isDarkMode} label="Avg. Rev/User" value={formatCurrency(metrics.avgRevenuePerUser)} icon={<Server className="w-5 h-5 text-slate-400" />} subtext="Performance metric" status="default" />
-                <StatCard isDarkMode={isDarkMode} label="System Health" value="98.5%" icon={<AlertTriangle className="w-5 h-5 text-emerald-500" />} subtext="Operational" status="success" />
+                <StatCard isDarkMode={isDarkMode} label="Total Revenue" value={formatCurrency(stats.revenue)} icon={<DollarSign className="w-5 h-5 text-teal-500" />} trend={{ value: 12.5, isUp: true }} subtext={`ARR: ₹${(annualRunRate / 10000000).toFixed(2)}Cr`} status="success" />
+                <StatCard isDarkMode={isDarkMode} label="Active Tenants" value={stats.schools} icon={<Building2 className="w-5 h-5 text-indigo-500" />} trend={{ value: 1, isUp: true }} subtext="Schools connected" />
+                <StatCard isDarkMode={isDarkMode} label="Total Students" value={stats.students.toLocaleString()} icon={<Server className="w-5 h-5 text-slate-400" />} subtext="Across all schools" status="default" />
+                <StatCard isDarkMode={isDarkMode} label="System Health" value="99.9%" icon={<AlertTriangle className="w-5 h-5 text-emerald-500" />} subtext="Operational" status="success" />
             </div>
 
             {/* Health Matrix + Recent Events */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className={`lg:col-span-2 p-5 rounded-2xl border ${cardBg}`}>
                     <h3 className={`text-sm font-medium uppercase tracking-wider mb-4 ${headingColor}`}>Tenant Health Matrix</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {SCHOOLS.map((school) => (
-                            <div key={school.id} className={`p-3 rounded-xl border cursor-pointer transition-all hover:shadow-md ${itemBg}`}>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <div className={`w-2 h-2 rounded-full ${statusColors[school.status].dot}`} />
-                                    <span className={`text-xs font-mono ${textSecondary}`}>{school.slug}</span>
+                    {schools.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {schools.map((school) => (
+                                <div key={school.id} className={`p-3 rounded-xl border cursor-pointer transition-all hover:shadow-md ${itemBg}`}>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className={`w-2 h-2 rounded-full ${getStatusColor(school.status).dot}`} />
+                                        <span className={`text-xs font-mono ${textSecondary} truncate`}>{school.region}</span>
+                                    </div>
+                                    <p className={`text-sm font-medium truncate ${textPrimary}`}>{school.name}</p>
                                 </div>
-                                <p className={`text-sm font-medium truncate ${textPrimary}`}>{school.name}</p>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className={`text-center py-10 ${textSecondary}`}>No active tenants found.</div>
+                    )}
                 </div>
 
                 <div className={`p-5 rounded-2xl border ${cardBg}`}>

@@ -1,20 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, CartesianGrid } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { DollarSign, TrendingUp, AlertCircle, CreditCard } from 'lucide-react';
+import { getSuperAdminData } from '../../../../../packages/app/api/client';
 
-interface FinanceSummary {
-    mrr: number;
-    arr: number;
-    growth: number;
-    totalVolume: number;
+interface Stats {
+    schools: number;
+    students: number;
+    revenue: number;
+    failedPayments: number;
 }
 
-interface Transaction {
-    id: string;
-    school: string;
-    amount: number;
-    date: string;
-    reason: string;
+interface ChartData {
+    name: string;
+    value: number;
 }
 
 interface FinanceOverviewProps {
@@ -22,8 +20,6 @@ interface FinanceOverviewProps {
 }
 
 import { SkeletonFinanceOverview } from './Skeleton';
-
-// ... existing code ...
 
 const CustomTooltip = ({ active, payload, label, isDarkMode }: any) => {
     if (active && payload && payload.length) {
@@ -41,9 +37,8 @@ const CustomTooltip = ({ active, payload, label, isDarkMode }: any) => {
 
 export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) => {
     const [isMounted, setIsMounted] = useState(false);
-    const [summary, setSummary] = useState<FinanceSummary | null>(null);
-    const [history, setHistory] = useState<any[]>([]);
-    const [failures, setFailures] = useState<Transaction[]>([]);
+    const [stats, setStats] = useState<Stats | null>(null);
+    const [history, setHistory] = useState<ChartData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const cardBg = isDarkMode ? 'bg-slate-800/60 border-slate-700/50' : 'bg-white border-slate-200';
@@ -54,27 +49,15 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) 
         setIsMounted(true);
         const loadData = async () => {
             try {
-                const [resSummary, resHistory, resFailures] = await Promise.all([
-                    fetch('/api/super-admin/finance/summary'),
-                    fetch('/api/super-admin/finance/history'),
-                    fetch('/api/super-admin/finance/failed-transactions')
+                const [statsData, chartData] = await Promise.all([
+                    getSuperAdminData('/stats'),
+                    getSuperAdminData('/finance')
                 ]);
 
-                if (resSummary.ok) {
-                    setSummary(await resSummary.json());
-                }
-
-                if (resHistory.ok) {
-                    const historyData = await resHistory.json();
-                    setHistory(Array.isArray(historyData) ? historyData : []);
-                }
-
-                if (resFailures.ok) {
-                    const failuresData = await resFailures.json();
-                    setFailures(Array.isArray(failuresData) ? failuresData : []);
-                }
+                setStats(statsData);
+                setHistory(Array.isArray(chartData) ? chartData : []);
             } catch (e) {
-                console.error(e);
+                console.error("Failed to load finance data", e);
             } finally {
                 setIsLoading(false);
             }
@@ -82,7 +65,12 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) 
         loadData();
     }, []);
 
-    if (!isMounted || isLoading || !summary) return <SkeletonFinanceOverview />;
+    if (!isMounted || isLoading || !stats) return <SkeletonFinanceOverview />;
+
+    // Derived metrics
+    const annualRunRate = stats.revenue * 12; // Simple projection
+    // Mock growth for now as we don't have historical comparison in /stats API yet
+    const growth = 12.5;
 
     return (
         <div className="p-6 space-y-6">
@@ -91,13 +79,13 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) 
                 <div className={`p-6 rounded-2xl border ${cardBg}`}>
                     <div className="flex justify-between items-start mb-4">
                         <div>
-                            <p className={`text-sm font-medium uppercase tracking-wider ${textSecondary}`}>Monthly Recurring</p>
-                            <h3 className={`text-3xl font-bold mt-1 ${textPrimary}`}>₹{(summary.mrr / 100000).toFixed(1)}L</h3>
+                            <p className={`text-sm font-medium uppercase tracking-wider ${textSecondary}`}>Monthly Revenue</p>
+                            <h3 className={`text-3xl font-bold mt-1 ${textPrimary}`}>₹{(stats.revenue / 100000).toFixed(1)}L</h3>
                         </div>
                         <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-500"><DollarSign className="w-6 h-6" /></div>
                     </div>
                     <div className="flex items-center gap-1 text-emerald-500 text-sm font-medium">
-                        <TrendingUp className="w-4 h-4" /> {summary.growth}% vs last month
+                        <TrendingUp className="w-4 h-4" /> {growth}% vs last month
                     </div>
                 </div>
 
@@ -105,7 +93,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) 
                     <div className="flex justify-between items-start mb-4">
                         <div>
                             <p className={`text-sm font-medium uppercase tracking-wider ${textSecondary}`}>Annual Run Rate</p>
-                            <h3 className={`text-3xl font-bold mt-1 ${textPrimary}`}>₹{(summary.arr / 10000000).toFixed(2)} Cr</h3>
+                            <h3 className={`text-3xl font-bold mt-1 ${textPrimary}`}>₹{(annualRunRate / 10000000).toFixed(2)} Cr</h3>
                         </div>
                         <div className="p-3 rounded-xl bg-teal-500/10 text-teal-500"><CreditCard className="w-6 h-6" /></div>
                     </div>
@@ -115,12 +103,12 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) 
                 <div className={`p-6 rounded-2xl border ${cardBg}`}>
                     <div className="flex justify-between items-start mb-4">
                         <div>
-                            <p className={`text-sm font-medium uppercase tracking-wider ${textSecondary}`}>Failed (24h)</p>
-                            <h3 className="text-3xl font-bold mt-1 text-red-500">{failures.length}</h3>
+                            <p className={`text-sm font-medium uppercase tracking-wider ${textSecondary}`}>Failed Payments</p>
+                            <h3 className="text-3xl font-bold mt-1 text-red-500">{stats.failedPayments}</h3>
                         </div>
                         <div className="p-3 rounded-xl bg-red-500/10 text-red-500"><AlertCircle className="w-6 h-6" /></div>
                     </div>
-                    <p className={`text-sm ${textSecondary}`}>Action required immediately</p>
+                    <p className={`text-sm ${textSecondary}`}>Pending {'>'} 30 days</p>
                 </div>
             </div>
 
@@ -138,34 +126,36 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) 
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#334155' : '#e2e8f0'} vertical={false} />
-                                <XAxis dataKey="month" stroke={isDarkMode ? '#94a3b8' : '#64748b'} fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke={isDarkMode ? '#94a3b8' : '#64748b'} fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value / 100000}L`} />
+                                <XAxis dataKey="name" stroke={isDarkMode ? '#94a3b8' : '#64748b'} fontSize={12} tickLine={false} axisLine={false} />
+                                <YAxis stroke={isDarkMode ? '#94a3b8' : '#64748b'} fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value / 1000}`} />
                                 <Tooltip content={<CustomTooltip isDarkMode={isDarkMode} />} />
-                                <Area type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                                <Area type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Failed Transactions List */}
+                {/* Failed Transactions List (Placeholder as specific list not yet in API) */}
                 <div className={`p-6 rounded-2xl border overflow-hidden flex flex-col ${cardBg}`}>
                     <h3 className={`text-lg font-bold mb-4 ${textPrimary} flex items-center gap-2`}>
                         <AlertCircle className="w-5 h-5 text-red-500" /> Payment Alerts
                     </h3>
-                    <div className="flex-1 overflow-auto -mx-2 px-2 space-y-3">
-                        {failures.map(tx => (
-                            <div key={tx.id} className={`p-3 rounded-xl border border-red-500/10 bg-red-500/5`}>
-                                <div className="flex justify-between items-start mb-1">
-                                    <span className={`text-sm font-medium ${textPrimary}`}>{tx.school}</span>
-                                    <span className="text-sm font-bold text-red-500">₹{tx.amount.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between text-xs text-red-400/80">
-                                    <span>{tx.reason}</span>
-                                    <span>{new Date(tx.date).toLocaleTimeString()}</span>
-                                </div>
+                    {stats.failedPayments > 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
+                            <AlertCircle className="w-12 h-12 text-red-500/50 mb-3" />
+                            <p className={`font-medium ${textPrimary}`}>{stats.failedPayments} invoices require attention.</p>
+                            <button className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600">
+                                View Invoices
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-4 opacity-50">
+                            <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center mb-3">
+                                <TrendingUp className="w-6 h-6 text-emerald-500" />
                             </div>
-                        ))}
-                    </div>
+                            <p className={textSecondary}>All payments settled.</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
