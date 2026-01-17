@@ -38,6 +38,11 @@ interface Props {
   activeModule: string;
 }
 
+// Import the new page component
+import SchoolAdminDashboardPage from '../../../../apps/next/pages/school-admin/dashboard';
+
+// ...
+
 export const RoleBasedRouter: React.FC<Props> = ({ role, school, activeModule }) => {
   // Helper to check if Finance module is active for multi-module roles
   const isFinanceActive = activeModule === 'FINANCE';
@@ -48,9 +53,7 @@ export const RoleBasedRouter: React.FC<Props> = ({ role, school, activeModule })
       return <StaffManagement />;
 
     case UserRole.SCHOOL_ADMIN:
-      // SCHOOL_ADMIN: Technical backup - can access Finance if module selected
-      if (isFinanceActive) return <FinanceDashboard school={school} activeModule={activeModule} />;
-      return <StaffManagement />;
+      return <SchoolAdminDashboardPage />;
 
     case UserRole.PRINCIPAL:
       // PRINCIPAL: Oversight/Audit - can access Finance if module selected
