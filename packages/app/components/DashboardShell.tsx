@@ -379,8 +379,12 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
     }, []);
 
     const handleLogout = () => {
+        // 1. Clear Critical Auth Tokens
+        localStorage.removeItem('sovereign_token');
+        localStorage.removeItem('sovereign_user_session');
+
+        // 2. Force Hard Redirect to Login
         window.location.href = '/login';
-        console.log('[SHELL] Logout');
     };
 
     const contentBg = isDarkMode

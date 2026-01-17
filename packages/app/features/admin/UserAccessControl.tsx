@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Plus, Key, Trash2, Search, Check, Users, Loader2 } from 'lucide-react';
+import { Shield, Plus, Key, Trash2, Search, Check, Users, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useDebounce } from '../../hooks/useDebounce';
 import { NebulaCard } from '../../components/nebula/NebulaCard';
 import { NebulaButton } from '../../components/nebula/NebulaButton';
 import { NebulaInput } from '../../components/nebula/NebulaInput';
@@ -22,9 +23,11 @@ export const UserAccessControl: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const debouncedSearch = useDebounce(searchQuery, 500);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [searchMode, setSearchMode] = useState(false);
     const [total, setTotal] = useState(0);
-    const [hasSearched, setHasSearched] = useState(false);
 
     // Grant Access Modal State
     const [showModal, setShowModal] = useState(false);
@@ -37,16 +40,23 @@ export const UserAccessControl: React.FC = () => {
         permissions: [] as string[]
     });
 
-    // Load recent users on mount
+    // Reset page when search changes
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch]);
+
+    // Fetch when dependencies change
     useEffect(() => {
         fetchUsers();
-    }, []);
+    }, [debouncedSearch, page]);
 
-    const fetchUsers = async (searchTerm: string = '') => {
+    const fetchUsers = async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
-            if (searchTerm) params.append('search', searchTerm);
+            if (debouncedSearch) params.append('search', debouncedSearch);
+            params.append('page', page.toString());
+            params.append('limit', '20');
 
             const res = await fetch(`/api/system-admin/users?${params.toString()}`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('sovereign_token')}` }
@@ -55,7 +65,8 @@ export const UserAccessControl: React.FC = () => {
             if (data.success) {
                 setUsers(data.users);
                 setTotal(data.total || data.users.length);
-                setSearchMode(data.searchMode || false);
+                setTotalPages(data.totalPages || Math.ceil((data.total || data.users.length) / 20));
+                setSearchMode(!!debouncedSearch);
             }
         } catch (error) {
             console.error('Failed to fetch users:', error);
@@ -64,16 +75,7 @@ export const UserAccessControl: React.FC = () => {
         }
     };
 
-    const handleSearch = () => {
-        setHasSearched(true);
-        fetchUsers(searchQuery);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            handleSearch();
-        }
-    };
+    // Manual handlers removed in favor of debounce
 
     const handleGrantAccess = async () => {
         try {
@@ -97,7 +99,7 @@ export const UserAccessControl: React.FC = () => {
             if (res.ok) {
                 alert('Access Granted Successfully');
                 setShowModal(false);
-                fetchUsers(searchQuery);
+                fetchUsers();
             } else {
                 alert(data.error || 'Failed to grant access');
             }
@@ -114,7 +116,7 @@ export const UserAccessControl: React.FC = () => {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${localStorage.getItem('sovereign_token')}` }
             });
-            fetchUsers(searchQuery);
+            fetchUsers();
         } catch (error) {
             console.error('Revoke Error:', error);
         }
@@ -154,14 +156,10 @@ export const UserAccessControl: React.FC = () => {
                             placeholder="Search by name or email..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            onKeyDown={handleKeyDown}
                             className={`w-full pl-10 pr-4 py-2.5 rounded-lg border outline-none focus:ring-2 focus:ring-indigo-500/50 ${isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
                                 }`}
                         />
                     </div>
-                    <NebulaButton onClick={handleSearch} variant="secondary" disabled={loading}>
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
-                    </NebulaButton>
                 </div>
 
                 {/* Loading State */}
@@ -178,10 +176,10 @@ export const UserAccessControl: React.FC = () => {
                             <Users className="w-10 h-10 text-slate-400" />
                         </div>
                         <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                            {hasSearched ? 'No users found' : 'Search for users'}
+                            {debouncedSearch ? 'No users found' : 'Search for users'}
                         </h3>
                         <p className="text-slate-500 text-center max-w-md">
-                            {hasSearched
+                            {debouncedSearch
                                 ? 'Try adjusting your search terms or grant access to a new user.'
                                 : 'Search for a staff member or student by name or email to manage their access.'}
                         </p>
@@ -260,6 +258,33 @@ export const UserAccessControl: React.FC = () => {
                     </>
                 )}
             </NebulaCard>
+
+            {/* Pagination Stats Footer */}
+            {users.length > 0 && (
+                <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50 dark:bg-slate-900 flex justify-between items-center bg-white dark:bg-slate-900 rounded-b-xl border-x border-b mx-0 mt-0">
+                    <div className="text-xs text-slate-500">
+                        Page <span className="font-bold text-slate-900 dark:text-white">{page}</span> of <span className="font-bold text-slate-900 dark:text-white">{totalPages}</span>
+                        <span className="mx-2 text-slate-300">|</span>
+                        Total Users: <span className="font-bold text-slate-900 dark:text-white">{total}</span>
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                            className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            disabled={page === totalPages}
+                            className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Grant Access Modal */}
             {showModal && (
