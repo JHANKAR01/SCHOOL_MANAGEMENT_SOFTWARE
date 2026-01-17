@@ -17,6 +17,7 @@ import { jitsiRouter } from './routes/jitsi.ts';
 import { operationsRouter } from './routes/operations.ts';
 import { attendanceRouter } from './routes/attendance.ts';
 import { superAdminRouter } from './routes/super-admin.ts';
+import { systemAdminRouter } from './routes/system-admin.ts';
 import announcementsRouter from './routes/announcements.ts';
 
 const app = new Hono();
@@ -53,6 +54,7 @@ app.route('/api/jitsi', jitsiRouter);
 app.route('/api/operations', operationsRouter);
 app.route('/api/attendance', attendanceRouter);
 app.route('/api/super-admin', superAdminRouter);
+app.route('/api/system-admin', systemAdminRouter);  // P6: System Admin for User Access Control
 app.route('/api/announcements', announcementsRouter);
 
 // --- REAL-TIME LAYER (Socket.io) ---

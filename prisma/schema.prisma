@@ -64,6 +64,13 @@ model School {
   financeFeeStructures FeeStructure[]
   paymentTransactions  PaymentTransaction[]
 
+  // TRANSPORT RELATIONS (P1.1)
+  transportRoutes TransportRoute[]
+  transportStops  TransportStop[]
+
+  // AUDIT RELATIONS (P1.4)
+  auditLogs AuditLog[]
+
   @@schema("schoolmanagementsystem")
 }
 
@@ -183,6 +190,7 @@ model User {
   role          UserRole
   department    String?
   school_id     String
+  permissions   String[] @default([])  // Granular: ["MANAGE_HR", "COLLECT_FEES"]
   created_at    DateTime @default(now()) @db.Timestamptz(6)
   updated_at    DateTime @updatedAt
 
@@ -206,6 +214,7 @@ model User {
   attendanceMarked Attendance[]   @relation("AttendanceMarkedBy")
   bookLoans        BookLoan[]
   createdAnnouncements Announcement[]
+  auditLogs        AuditLog[]
 
   @@index([school_id])
   @@schema("schoolmanagementsystem")
@@ -300,6 +309,7 @@ model Student {
   results      Result[]
   Visitor      Visitor[]
   bookLoans    BookLoan[]
+  sourceInquiry Inquiry?  // Link back to the Inquiry that created this student
 
   @@unique([school_id, admission_no])
   @@index([school_id])
@@ -989,11 +999,53 @@ model Bus {
   plateNumber     String   @unique
   driverName      String
   capacity        Int
-  routeId         String
+  route_id        String?  // FK to TransportRoute (nullable for unassigned)
   insuranceExpiry DateTime @db.Timestamptz(6)
   school_id       String
-  school          School   @relation(fields: [school_id], references: [id])
+  school          School         @relation(fields: [school_id], references: [id])
+  route           TransportRoute? @relation(fields: [route_id], references: [id])
 
+  @@index([school_id])
+  @@index([route_id])
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// TRANSPORT SYSTEM (P1.1)
+// ============================================================================
+
+model TransportRoute {
+  id          String   @id @default(cuid())
+  school_id   String
+  name        String   // "Route 1 - North Zone"
+  start_point String
+  end_point   String
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  school School          @relation(fields: [school_id], references: [id])
+  stops  TransportStop[]
+  buses  Bus[]
+
+  @@unique([school_id, name])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+model TransportStop {
+  id          String   @id @default(cuid())
+  route_id    String
+  school_id   String
+  name        String   // "Gandhi Chowk"
+  sequence    Int      // Order in route
+  pickup_time String?  // "07:30"
+  drop_time   String?  // "14:30"
+  fare        Float?   @default(0)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  route  TransportRoute @relation(fields: [route_id], references: [id], onDelete: Cascade)
+  school School         @relation(fields: [school_id], references: [id])
+
+  @@unique([route_id, sequence])
   @@index([school_id])
   @@schema("schoolmanagementsystem")
 }
@@ -1048,10 +1100,27 @@ model Inquiry {
   target_class String?
   status       InquiryStatus? @default(NEW)
   created_at   DateTime?      @default(now()) @db.Timestamptz(6)
-  School       School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Admission Form Fields (P1.2.2)
+  student_name     String?
+  student_email    String?
+  date_of_birth    DateTime? @db.Date
+  gender           String?
+  previous_school  String?
+  address          String?
+  remarks          String?
+  interview_date   DateTime? @db.Timestamptz(6)
+  interview_notes  String?
+  assigned_to      String?   // User ID of Admissions Officer
+  converted_at     DateTime? @db.Timestamptz(6)
+  student_id       String?   @unique // FK to Student after conversion
+
+  School  School   @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Student Student? @relation(fields: [student_id], references: [id])
 
   @@index([school_id])
-  @@index([status])      // Admissions: NEW/FOLLOW_UP filter
+  @@index([status])
+  @@index([assigned_to])
   @@schema("schoolmanagementsystem")
 }
 
@@ -1289,8 +1358,13 @@ enum HomeworkStatus {
 
 enum InquiryStatus {
   NEW
-  FOLLOW_UP
+  CONTACTED
+  INTERVIEW_SCHEDULED
+  INTERVIEW_DONE
+  SELECTED
   CONVERTED
+  REJECTED
+  FOLLOW_UP  // Kept for backward compat
 
   @@schema("schoolmanagementsystem")
 }
@@ -1373,5 +1447,30 @@ enum SyllabusStatus {
   IN_PROGRESS
   COMPLETED
 
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// AUDIT LOG (P1.4)
+// ============================================================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  school_id   String
+  user_id     String
+  action      String   // "DEMASK_AADHAAR", "APPROVE_PAYMENT", "GRANT_ACCESS"
+  target_type String?  // "Student", "Invoice", "User"
+  target_id   String?
+  metadata    Json?    @default("{}")
+  ip_address  String?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  school School @relation(fields: [school_id], references: [id])
+  user   User   @relation(fields: [user_id], references: [id])
+
+  @@index([school_id])
+  @@index([user_id])
+  @@index([created_at])
+  @@index([action])
   @@schema("schoolmanagementsystem")
 }

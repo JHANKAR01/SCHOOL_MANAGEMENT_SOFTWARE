@@ -19,7 +19,7 @@ authRouter.post('/login', async (c) => {
         // 1. Find User
         const user = await prisma.user.findUnique({
             where: { email },
-            select: { id: true, role: true, school_id: true, password_hash: true, name: true, school: { select: { name: true } } }
+            select: { id: true, role: true, school_id: true, password_hash: true, name: true, permissions: true, school: { select: { name: true } } }
         });
 
         // 2. Validate
@@ -39,11 +39,12 @@ authRouter.post('/login', async (c) => {
             where: { id: user.school_id }
         });
 
-        // 3. Generate Token with Tenant Context (RLS)
+        // 3. Generate Token with Tenant Context (RLS) + Permissions (P2.1.2)
         const payload = {
             sub: user.id,
             role: user.role,
             school_id: user.school_id,
+            permissions: user.permissions || [],  // Include granular permissions
             exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 // 24 Hours
         };
 

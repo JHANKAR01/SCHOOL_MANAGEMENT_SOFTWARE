@@ -1,14 +1,16 @@
 
 import { Hono } from 'hono';
 import prisma from '../db';
-import { authMiddleware, requireRole } from '../middleware/auth';
+import { authMiddleware, requireRole, requirePermission } from '../middleware/auth';
 import { UserRole } from '../../../../types';
+import { PERMISSIONS } from '../../../../types/permissions';
 
 type Variables = {
   user: {
     id: string;
     role: UserRole;
     school_id: string;
+    permissions?: string[];
   };
 };
 
@@ -272,5 +274,84 @@ financeRouter.post('/expenses', async (c) => {
 financeRouter.post('/reconcile', async (c) => {
   return c.json({ success: true, results: [] });
 });
+
+// ============================================================================
+// 🔒 COLLECTION COUNTER - Permission Gated (P5.1)
+// Only users with COLLECT_FEES permission can accept payments
+// ============================================================================
+financeRouter.post('/collect',
+  requirePermission(PERMISSIONS.COLLECT_FEES),
+  async (c) => {
+    const user = c.get('user');
+    const { invoice_id, amount, mode, reference_no, remarks } = await c.req.json();
+
+    // 1. Fetch Invoice with current details
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: invoice_id, school_id: user.school_id }
+    });
+
+    if (!invoice) {
+      return c.json({ error: 'Invoice not found' }, 404);
+    }
+
+    if (invoice.status === 'PAID' || invoice.status === 'VOID') {
+      return c.json({ error: `Invoice is already ${invoice.status}` }, 400);
+    }
+
+    // 2. Create Payment Transaction
+    const transaction = await prisma.paymentTransaction.create({
+      data: {
+        invoice_id,
+        school_id: user.school_id,
+        student_id: invoice.student_id,
+        amount: parseFloat(amount),
+        mode: mode, // CASH, UPI, BANK_TRANSFER, CHEQUE
+        reference_no: reference_no || `${mode}-${Date.now()}`,
+        remarks
+      }
+    });
+
+    // 3. Update Invoice Ledger
+    const newPaid = invoice.amount_paid + parseFloat(amount);
+    const newBalance = invoice.total_amount - newPaid;
+    const newStatus = newBalance <= 0 ? 'PAID' : newBalance < invoice.total_amount ? 'PARTIAL' : invoice.status;
+
+    await prisma.invoice.update({
+      where: { id: invoice_id },
+      data: {
+        amount_paid: newPaid,
+        balance_amount: Math.max(0, newBalance),
+        status: newStatus
+      }
+    });
+
+    // 4. Audit Log
+    await prisma.auditLog.create({
+      data: {
+        school_id: user.school_id,
+        user_id: user.id,
+        action: 'COLLECT_PAYMENT',
+        target_type: 'Invoice',
+        target_id: invoice_id,
+        metadata: {
+          amount,
+          mode,
+          reference_no,
+          transaction_id: transaction.id,
+          new_balance: newBalance
+        }
+      }
+    });
+
+    return c.json({
+      success: true,
+      transaction_id: transaction.id,
+      invoice_id,
+      amount_collected: parseFloat(amount),
+      new_balance: Math.max(0, newBalance),
+      new_status: newStatus
+    });
+  }
+);
 
 export { financeRouter };

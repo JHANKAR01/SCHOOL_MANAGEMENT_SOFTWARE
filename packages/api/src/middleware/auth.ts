@@ -2,6 +2,7 @@
 import { Context, Next } from 'hono';
 import { verify } from 'hono/jwt';
 import { UserRole } from '../../../../types';
+import { Permission } from '../../../../types/permissions';
 
 import prisma from '../db';
 
@@ -30,7 +31,8 @@ export const authMiddleware = async (c: Context, next: Next) => {
     const userContext = {
       id: payload.sub as string,
       role: payload.role as UserRole,
-      school_id: payload.school_id as string
+      school_id: payload.school_id as string,
+      permissions: (payload.permissions as string[]) || []  // P2.1.3: Extract permissions
     };
 
     // 🔒 LOCKDOWN CHECK START 🔒
@@ -77,6 +79,38 @@ export const requireRole = (allowedRoles: UserRole[]) => {
       // Security: Audit this failure
       console.warn(`[SECURITY] RBAC Denial for User ${user?.id} requesting ${c.req.path}`);
       return c.json({ error: 'Forbidden: Insufficient Permissions' }, 403);
+    }
+
+    await next();
+  };
+};
+
+/**
+ * Permission-Based Access Control Guard (P2.1.1)
+ * Checks if user has specific permission OR is SUPER_ADMIN.
+ */
+export const requirePermission = (requiredPermission: Permission) => {
+  return async (c: Context, next: Next) => {
+    const user = c.get('user') as {
+      id: string;
+      role: UserRole;
+      school_id: string;
+      permissions?: string[];
+    };
+
+    // Super Admin bypasses all permission checks
+    if (user.role === UserRole.SUPER_ADMIN) {
+      await next();
+      return;
+    }
+
+    // Check if user has the required permission
+    if (!user.permissions || !user.permissions.includes(requiredPermission)) {
+      console.warn(`[SECURITY] Permission Denial: User ${user.id} lacks ${requiredPermission}`);
+      return c.json({
+        error: 'Forbidden',
+        message: `You do not have the '${requiredPermission}' permission.`
+      }, 403);
     }
 
     await next();
