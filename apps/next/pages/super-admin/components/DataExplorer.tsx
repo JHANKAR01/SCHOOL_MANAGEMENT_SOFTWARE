@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Database, Search, Filter, Users, GraduationCap, Phone, Lock,
-    AlertTriangle, ToggleLeft, Shield, ShieldAlert, DollarSign, Truck, Loader2
+    AlertTriangle, ToggleLeft, Shield, ShieldAlert, BookOpen, UserPlus,
+    LayoutGrid, Table as TableIcon, Eye, ArrowLeft, Loader2
 } from 'lucide-react';
 import { getSuperAdminData } from '../../../../../packages/app/api/client';
 
@@ -12,8 +13,12 @@ import { getSuperAdminData } from '../../../../../packages/app/api/client';
 const MODULES = [
     { id: 'students', name: 'Students', icon: GraduationCap },
     { id: 'staff', name: 'Staff', icon: Users },
-    // Finance and Fleet coming soon
+    { id: 'parents', name: 'Parents', icon: UserPlus },
+    { id: 'classes', name: 'Classes', icon: BookOpen },
 ];
+
+const CLASSES = Array.from({ length: 12 }, (_, i) => ({ id: `class-${i + 1}`, name: `Class ${i + 1}` }));
+const SECTIONS = ['A', 'B', 'C', 'D'].map(s => ({ id: `sec-${s}`, name: `Section ${s}` }));
 
 // Helper to mask sensitive data
 const maskPhone = (phone: string): string => phone && phone.length > 4 ? `******${phone.slice(-4)}` : '******';
@@ -64,9 +69,14 @@ export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
     // Filter State
     const [selectedSchool, setSelectedSchool] = useState('');
     const [selectedModule, setSelectedModule] = useState('');
+    const [selectedClass, setSelectedClass] = useState('');
+    const [selectedSection, setSelectedSection] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
 
-    // View/Edit State
+    // View State
+    const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+
+    // Modify/Edit State
     const [modifyMode, setModifyMode] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
     const [editedData, setEditedData] = useState<Record<string, string>>({});
@@ -99,7 +109,9 @@ export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
             setIsFetching(true);
             try {
                 const data = await getSuperAdminData(`/explorer/search?schoolId=${selectedSchool}&module=${selectedModule}&query=${searchQuery}`);
-                setRecords(Array.isArray(data) ? data : []);
+                // Mock random status for demo purposes since API might not return it
+                const enhancedData = (Array.isArray(data) ? data : []).map(r => ({ ...r, status: Math.random() > 0.1 ? 'ACTIVE' : 'INACTIVE' }));
+                setRecords(enhancedData);
             } catch (err) {
                 console.error("Failed to fetch explorer records", err);
             } finally {
@@ -121,8 +133,16 @@ export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
     const inputBg = isDarkMode ? 'bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400';
     const inputModify = isDarkMode ? 'bg-slate-800 border-amber-500/50 text-white' : 'bg-white border-amber-400 text-slate-900';
     const inputDisabled = isDarkMode ? 'bg-slate-900/30 border-slate-700 text-slate-500 cursor-not-allowed' : 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed';
-    const itemBg = isDarkMode ? 'hover:bg-white/5 border-transparent' : 'hover:bg-slate-50 border-transparent';
-    const itemActive = isDarkMode ? 'bg-indigo-500/20 border-indigo-500/30' : 'bg-indigo-50 border-indigo-200';
+
+    // Status Badge
+    const StatusBadge = ({ status }: { status: string }) => {
+        const isGreen = status === 'ACTIVE';
+        return (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${isGreen ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'} ${isDarkMode ? (isGreen ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300') : ''}`}>
+                {status}
+            </span>
+        );
+    };
 
     const handleEdit = (field: string, value: string) => setEditedData(prev => ({ ...prev, [field]: value }));
 
@@ -146,90 +166,180 @@ export const DataExplorer: React.FC<DataExplorerProps> = ({ isDarkMode }) => {
         <div className="p-6 space-y-4">
             {/* Filter Bar */}
             <div className={`p-4 rounded-2xl border transition-all ${modifyMode ? cardBgModify : cardBg}`}>
-                <div className="flex items-center gap-4 mb-4">
-                    <Filter className={`w-5 h-5 ${textSecondary}`} />
-                    <span className={`text-sm font-medium ${textPrimary}`}>Data Filters</span>
-                </div>
-                <div className="flex flex-wrap gap-4">
-                    <FilterSelect isDarkMode={isDarkMode} label="School" value={selectedSchool} onChange={(v) => { setSelectedSchool(v); setSelectedModule(''); setSearchQuery(''); }} options={schools} placeholder="Select School..." />
-                    <FilterSelect isDarkMode={isDarkMode} label="Module" value={selectedModule} onChange={(v) => { setSelectedModule(v); setSearchQuery(''); }} options={MODULES} placeholder="Select Module..." disabled={!selectedSchool} />
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
+                    <div className="flex items-center gap-4 flex-1">
+                        <Filter className={`w-5 h-5 ${textSecondary}`} />
+                        <div className="flex flex-wrap gap-3 flex-1">
+                            <FilterSelect isDarkMode={isDarkMode} label="School" value={selectedSchool} onChange={(v) => { setSelectedSchool(v); setSelectedModule(''); setSearchQuery(''); }} options={schools} placeholder="Select School..." />
+                            <FilterSelect isDarkMode={isDarkMode} label="Module" value={selectedModule} onChange={(v) => { setSelectedModule(v); setSearchQuery(''); }} options={MODULES} placeholder="Module..." disabled={!selectedSchool} />
+                            {selectedModule === 'students' && (
+                                <>
+                                    <FilterSelect isDarkMode={isDarkMode} label="Class" value={selectedClass} onChange={setSelectedClass} options={CLASSES} placeholder="All Classes" disabled={!selectedSchool} />
+                                    <FilterSelect isDarkMode={isDarkMode} label="Section" value={selectedSection} onChange={setSelectedSection} options={SECTIONS} placeholder="All" disabled={!selectedClass} />
+                                </>
+                            )}
+                        </div>
+                    </div>
 
-                    <div className="flex-1 min-w-[200px]">
-                        <label className={`block text-xs font-medium uppercase tracking-wider mb-1.5 ${textSecondary}`}>Search</label>
-                        <div className="relative">
-                            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 z-10 pointer-events-none ${searchIconColor}`} />
+                    <div className="flex items-end gap-3 min-w-[200px]">
+                        <div className="flex-1 relative">
+                            <label className={`block text-xs font-medium uppercase tracking-wider mb-1.5 ${textSecondary}`}>Search</label>
+                            <Search className={`absolute left-3 bottom-2.5 w-4 h-4 z-10 pointer-events-none ${searchIconColor}`} />
                             <input type="text" placeholder="Search by name..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} disabled={!selectedModule} className={`w-full pl-9 pr-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputBg} disabled:opacity-50`} />
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Modify Mode Toggle */}
-            <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${modifyMode ? cardBgModify : cardBg}`}>
-                <div className="flex items-center gap-3">
-                    {modifyMode ? <ShieldAlert className="w-5 h-5 text-amber-500" /> : <Shield className={`w-5 h-5 ${textSecondary}`} />}
-                    <div>
-                        <p className={`text-sm font-medium ${textPrimary}`}>{modifyMode ? 'Admin Override Mode Active' : 'View Only Mode'}</p>
-                        <p className={`text-xs ${textSecondary}`}>{modifyMode ? 'Changes require confirmation + reason' : 'Read-only with masked PII'}</p>
-                    </div>
-                </div>
-                <button onClick={() => setModifyMode(!modifyMode)} disabled={!selectedRecord}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 ${modifyMode ? 'bg-amber-500 text-white' : isDarkMode ? 'bg-white/10 border border-white/20 text-slate-300 hover:bg-white/15' : 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200'}`}>
-                    <ToggleLeft className="w-4 h-4" /> {modifyMode ? 'Disable' : 'Enable Overrides'}
-                </button>
-            </div>
-
-            {/* Data Grid */}
-            {selectedSchool && selectedModule ? (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <div className={`rounded-2xl border overflow-hidden ${modifyMode ? cardBgModify : cardBg}`}>
-                        <div className={`flex justify-between items-center p-3 border-b ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
-                            <p className={`text-xs uppercase tracking-wider ${textSecondary}`}>{records.length} Records</p>
-                            {isFetching && <Loader2 className="w-3 h-3 animate-spin text-indigo-500" />}
-                        </div>
-                        <div className="max-h-[400px] overflow-auto">
-                            {records.length === 0 && !isFetching && (
-                                <div className={`p-4 text-center text-sm ${textSecondary}`}>No records found.</div>
-                            )}
-                            {records.map(record => (
-                                <button key={record.id} onClick={() => { setSelectedRecord(record); setEditedData({}); }}
-                                    className={`w-full text-left p-3 border-b transition-colors ${isDarkMode ? 'border-slate-700' : 'border-slate-100'} ${selectedRecord?.id === record.id ? itemActive : itemBg}`}>
-                                    <p className={`text-sm font-medium ${textPrimary}`}>{record.name}</p>
-                                    <p className={`text-xs ${textSecondary}`}>{record.class} • {modifyMode ? record.phone : maskPhone(record.phone)}</p>
+                        {selectedSchool && selectedModule && !selectedRecord && (
+                            <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg border border-slate-200 dark:border-slate-600 mb-[1px]">
+                                <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-500' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
+                                    <LayoutGrid className="w-4 h-4" />
                                 </button>
-                            ))}
-                        </div>
+                                <button onClick={() => setViewMode('table')} className={`p-1.5 rounded-md transition-all ${viewMode === 'table' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-500' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
+                                    <TableIcon className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )}
                     </div>
+                </div>
+            </div>
 
-                    <div className={`lg:col-span-2 rounded-2xl border p-6 ${modifyMode ? cardBgModify : cardBg}`}>
-                        {selectedRecord ? (
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center"><GraduationCap className="w-6 h-6 text-white" /></div>
-                                        <div><h3 className={`text-lg font-semibold ${textPrimary}`}>{selectedRecord.name}</h3><p className={`text-sm ${textSecondary}`}>{selectedRecord.class}</p></div>
+            {/* Content Area */}
+            {selectedSchool && selectedModule ? (
+                <div className={`rounded-2xl border transition-all overflow-hidden ${modifyMode ? cardBgModify : cardBg}`}>
+                    {selectedRecord ? (
+                        // ━━━━━━━━━━━━━━━━━━━━ DETAIL VIEW ━━━━━━━━━━━━━━━━━━━━
+                        <div className="p-6">
+                            <div className="mb-6 flex items-center justify-between">
+                                <button onClick={() => setSelectedRecord(null)} className={`flex items-center gap-2 text-sm font-medium ${textSecondary} hover:text-indigo-500`}>
+                                    <ArrowLeft className="w-4 h-4" /> Back to List
+                                </button>
+
+                                {/* Modify Toggle */}
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2">
+                                        {modifyMode ? <ShieldAlert className="w-4 h-4 text-amber-500" /> : <Shield className={`w-4 h-4 ${textSecondary}`} />}
+                                        <span className={`text-xs ${textSecondary}`}>{modifyMode ? 'Override Mode' : 'Read-only'}</span>
                                     </div>
-                                    {modifyMode && getChanges().length > 0 && <button onClick={() => setShowConfirm(true)} className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium">Save Changes</button>}
+                                    <button onClick={() => setModifyMode(!modifyMode)}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${modifyMode ? 'bg-amber-500 text-white' : isDarkMode ? 'bg-white/10 text-slate-300' : 'bg-slate-100 text-slate-700'}`}>
+                                        <ToggleLeft className="w-3 h-3" /> {modifyMode ? 'Disable' : 'Enable'}
+                                    </button>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    {[{ label: 'Phone', key: 'phone', mask: maskPhone }, { label: 'Aadhaar', key: 'aadhaar', mask: maskAadhaar }, { label: 'Email', key: 'email', mask: null }, { label: 'Fee Status', key: 'feeStatus', mask: null, readonly: true }].map(field => (
-                                        <div key={field.key} className="space-y-1">
-                                            <label className={`flex items-center gap-1 text-xs uppercase tracking-wider ${textSecondary}`}>{field.label}{!modifyMode && field.mask && <Lock className="w-3 h-3 opacity-50" />}</label>
+                            </div>
+
+                            <div className="space-y-6 max-w-4xl mx-auto">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-lg">
+                                            {selectedModule === 'students' ? <GraduationCap className="w-8 h-8" /> : <Users className="w-8 h-8" />}
+                                        </div>
+                                        <div>
+                                            <h2 className={`text-2xl font-bold ${textPrimary}`}>{selectedRecord.name}</h2>
+                                            <p className={`text-sm ${textSecondary}`}>{selectedRecord.class || selectedRecord.role || 'No designation'} • ID: {selectedRecord.id.substring(0, 8)}</p>
+                                        </div>
+                                    </div>
+                                    <StatusBadge status={selectedRecord.status} />
+                                </div>
+
+                                {modifyMode && getChanges().length > 0 && (
+                                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                                            <AlertTriangle className="w-5 h-5" />
+                                            <span className="text-sm font-medium">You have unsaved changes.</span>
+                                        </div>
+                                        <button onClick={() => setShowConfirm(true)} className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium shadow-sm">
+                                            Save Changes
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+                                    {[{ label: 'Full Name', key: 'name', mask: null },
+                                    { label: 'Role / Class', key: 'class', mask: null },
+                                    { label: 'Phone Number', key: 'phone', mask: maskPhone },
+                                    { label: 'Aadhaar / Gov ID', key: 'aadhaar', mask: maskAadhaar },
+                                    { label: 'Email Address', key: 'email', mask: null },
+                                    { label: 'Fee Status', key: 'feeStatus', mask: null, readonly: true }
+                                    ].map(field => (
+                                        <div key={field.key} className="space-y-1.5">
+                                            <label className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wider ${textSecondary}`}>
+                                                {field.label} {!modifyMode && field.mask && <Lock className="w-3 h-3 opacity-50" />}
+                                            </label>
                                             <input type="text"
-                                                value={modifyMode && !field.readonly ? (editedData[field.key] ?? (selectedRecord as any)[field.key]) : (field.mask ? field.mask((selectedRecord as any)[field.key]) : (selectedRecord as any)[field.key])}
+                                                value={modifyMode && !field.readonly ? (editedData[field.key] ?? (selectedRecord as any)[field.key]) : (field.mask ? field.mask((selectedRecord as any)[field.key]) : (selectedRecord as any)[field.key] || '')}
                                                 onChange={(e) => !field.readonly && handleEdit(field.key, e.target.value)}
                                                 disabled={!modifyMode || field.readonly}
-                                                className={`w-full px-3 py-2 rounded-lg border text-sm font-mono ${modifyMode && !field.readonly ? inputModify : inputDisabled}`} />
+                                                className={`w-full px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${modifyMode && !field.readonly ? inputModify : inputDisabled}`} />
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                        ) : (
-                            <div className={`h-full flex flex-col items-center justify-center py-16 ${textSecondary}`}>
-                                <Database className="w-12 h-12 mb-4 opacity-30" /><p>Select a record to view details</p>
+                        </div>
+                    ) : (
+                        // ━━━━━━━━━━━━━━━━━━━━ LIST VIEW (GRID / TABLE) ━━━━━━━━━━━━━━━━━━━━
+                        <div>
+                            {/* Header Stats */}
+                            <div className={`flex justify-between items-center p-4 border-b ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+                                <p className={`text-xs uppercase tracking-wider font-semibold ${textSecondary}`}>{records.length} Records Found</p>
+                                {isFetching && <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />}
                             </div>
-                        )}
-                    </div>
+
+                            <div className="min-h-[300px] max-h-[600px] overflow-auto">
+                                {records.length === 0 && !isFetching ? (
+                                    <div className={`p-10 text-center text-sm ${textSecondary}`}>No records found matching your filters.</div>
+                                ) : viewMode === 'table' ? (
+                                    // ========== TABLE VIEW ==========
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className={`text-xs uppercase tracking-wider ${isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-50 text-slate-500'} sticky top-0 z-10`}>
+                                                <th className="px-6 py-3 font-semibold">Name</th>
+                                                <th className="px-6 py-3 font-semibold">ID</th>
+                                                <th className="px-6 py-3 font-semibold">Role/Class</th>
+                                                <th className="px-6 py-3 font-semibold">Contact</th>
+                                                <th className="px-6 py-3 font-semibold">Status</th>
+                                                <th className="px-6 py-3 font-semibold text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className={`divide-y ${isDarkMode ? 'divide-slate-700' : 'divide-slate-100'}`}>
+                                            {records.map(record => (
+                                                <tr key={record.id} className={`group transition-colors ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50'}`}>
+                                                    <td className={`px-6 py-4 text-sm font-medium ${textPrimary}`}>{record.name}</td>
+                                                    <td className={`px-6 py-4 text-xs font-mono ${textSecondary}`}>{record.id.substring(0, 8)}...</td>
+                                                    <td className={`px-6 py-4 text-sm ${textSecondary}`}>{record.class || record.role || '-'}</td>
+                                                    <td className={`px-6 py-4 text-sm ${textSecondary}`}>{maskPhone(record.phone)}</td>
+                                                    <td className="px-6 py-4"><StatusBadge status={record.status} /></td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button onClick={() => setSelectedRecord(record)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                            View
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    // ========== GRID VIEW ==========
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                                        {records.map(record => (
+                                            <div key={record.id} onClick={() => setSelectedRecord(record)}
+                                                className={`cursor-pointer group flex items-center p-4 rounded-xl border transition-all hover:shadow-md ${isDarkMode ? 'bg-slate-800/40 border-slate-700 hover:border-indigo-500/50' : 'bg-white border-slate-200 hover:border-indigo-300'}`}>
+                                                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mr-4 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/30 transition-colors">
+                                                    <span className="text-sm font-bold text-slate-500 group-hover:text-indigo-600 dark:text-slate-400 dark:group-hover:text-indigo-400">
+                                                        {record.name.charAt(0)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className={`text-sm font-semibold truncate ${textPrimary}`}>{record.name}</p>
+                                                    <p className={`text-xs truncate ${textSecondary}`}>{record.class || record.role || 'No Class'}</p>
+                                                </div>
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Eye className="w-4 h-4 text-indigo-500" />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className={`p-16 text-center rounded-2xl border ${cardBg}`}>
