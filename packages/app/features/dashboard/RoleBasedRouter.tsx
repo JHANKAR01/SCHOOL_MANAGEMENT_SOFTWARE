@@ -30,6 +30,7 @@ import { HostelWarden } from '../hostel/HostelWarden';
 
 // Users
 import { ParentDashboard } from './ParentDashboard';
+import { StudentDashboard } from './StudentDashboard';
 
 interface Props {
   role: UserRole;
@@ -86,8 +87,10 @@ export const RoleBasedRouter: React.FC<Props> = ({ role, school, activeModule })
 
     // End Users
     case UserRole.PARENT:
-    case UserRole.STUDENT:
       return <ParentDashboard school={school} activeModule={activeModule} role={role} />;
+
+    case UserRole.STUDENT:
+      return <StudentDashboard school={school} activeModule={activeModule} role={role} />;
 
     // Fallback for unmapped roles
     default: return (

@@ -72,6 +72,20 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) 
     // Mock growth for now as we don't have historical comparison in /stats API yet
     const growth = 12.5;
 
+    // Sort history chronologically
+    const sortedHistory = [...history].sort((a, b) => {
+        const dateA = new Date(a.name).getTime();
+        const dateB = new Date(b.name).getTime();
+        return isNaN(dateA) || isNaN(dateB) ? 0 : dateA - dateB;
+    });
+
+    const formatYAxis = (value: number) => {
+        if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`;
+        if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
+        if (value >= 1000) return `₹${(value / 1000).toFixed(0)}k`;
+        return `₹${value}`;
+    };
+
     return (
         <div className="p-6 space-y-6">
             {/* KPI Cards */}
@@ -118,7 +132,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) 
                     <h3 className={`text-lg font-bold mb-6 ${textPrimary}`}>Revenue Trends</h3>
                     <div className="h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={history}>
+                            <AreaChart data={sortedHistory}>
                                 <defs>
                                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
@@ -127,7 +141,7 @@ export const FinanceOverview: React.FC<FinanceOverviewProps> = ({ isDarkMode }) 
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#334155' : '#e2e8f0'} vertical={false} />
                                 <XAxis dataKey="name" stroke={isDarkMode ? '#94a3b8' : '#64748b'} fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke={isDarkMode ? '#94a3b8' : '#64748b'} fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value / 1000}`} />
+                                <YAxis stroke={isDarkMode ? '#94a3b8' : '#64748b'} fontSize={12} tickLine={false} axisLine={false} tickFormatter={formatYAxis} />
                                 <Tooltip content={<CustomTooltip isDarkMode={isDarkMode} />} />
                                 <Area type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
                             </AreaChart>

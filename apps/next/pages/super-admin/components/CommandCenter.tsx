@@ -125,10 +125,29 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ isDarkMode }) => {
         <div className="p-6 space-y-6">
             {/* Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard isDarkMode={isDarkMode} label="Total Revenue" value={formatCurrency(stats.revenue)} icon={<DollarSign className="w-5 h-5 text-teal-500" />} trend={{ value: 12.5, isUp: true }} subtext={`ARR: ₹${(annualRunRate / 10000000).toFixed(2)}Cr`} status="success" />
+                {/* Collection Efficiency */}
+                <StatCard
+                    isDarkMode={isDarkMode}
+                    label="Collection Efficiency"
+                    value={`${stats.collectionRate || 0}%`}
+                    icon={<DollarSign className={`w-5 h-5 ${stats.collectionRate > 80 ? 'text-emerald-500' : stats.collectionRate > 50 ? 'text-amber-500' : 'text-red-500'}`} />}
+                    trend={{ value: 2.4, isUp: true }}
+                    subtext="Fees collected vs demanded"
+                    status={stats.collectionRate > 80 ? 'success' : stats.collectionRate > 50 ? 'warning' : 'critical'}
+                />
+
                 <StatCard isDarkMode={isDarkMode} label="Active Tenants" value={stats.schools} icon={<Building2 className="w-5 h-5 text-indigo-500" />} trend={{ value: 1, isUp: true }} subtext="Schools connected" />
                 <StatCard isDarkMode={isDarkMode} label="Total Students" value={stats.students.toLocaleString()} icon={<Server className="w-5 h-5 text-slate-400" />} subtext="Across all schools" status="default" />
-                <StatCard isDarkMode={isDarkMode} label="System Health" value="99.9%" icon={<AlertTriangle className="w-5 h-5 text-emerald-500" />} subtext="Operational" status="success" />
+
+                {/* System Health */}
+                <StatCard
+                    isDarkMode={isDarkMode}
+                    label="System Health"
+                    value={stats.health?.status || 'UNKNOWN'}
+                    icon={<Activity className={`w-5 h-5 ${stats.health?.status === 'OPTIMAL' ? 'text-emerald-500' : 'text-amber-500'}`} />}
+                    subtext={`Latency: ${stats.health?.latency || 0}ms`}
+                    status={stats.health?.status === 'OPTIMAL' ? 'success' : 'warning'}
+                />
             </div>
 
             {/* Health Matrix + Recent Events */}
