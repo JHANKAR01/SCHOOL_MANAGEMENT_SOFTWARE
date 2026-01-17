@@ -814,38 +814,139 @@ async function main() {
   console.log(`   ✅ ${bookLoansResult.count} book loans created`);
 
   // =========================================================================
-  // STEP 25: SEED INVOICES
+  // STEP 25: SEED SMART FINANCE (V2)
   // =========================================================================
-  console.log('\n💵 STEP 25: Seeding Invoices...');
+  console.log('\n💵 STEP 25: Seeding Smart Finance (Ledger System)...');
 
-  const invoiceData = DUMMY_INVOICES.map(inv => {
-    const isPaid = inv.status === InvoiceStatus.PAID;
-    const isPartial = inv.status === 'PARTIAL'; // Assuming we might add partial logic later
-    const amountPaid = isPaid ? inv.base_amount : 0;
-    const balanceAmount = isPaid ? 0 : inv.base_amount;
-
-    return {
-      student_id: inv.student_id,
-      // LEDGER FIELDS
-      total_amount: inv.base_amount,
-      discount_amount: inv.discount_amount,
-      amount_paid: amountPaid,
-      balance_amount: balanceAmount,
+  // 1. Create Master Fee Structures
+  console.log('   └─ Creating Fee Structures...');
+  const tuitionFee = await prisma.feeStructure.create({
+    data: {
+      school_id: SCHOOL_ID,
       academic_year_id: ACADEMIC_YEAR_2025_ID,
-
-      description: inv.description,
-      due_date: inv.due_date,
-      status: inv.status,
-      // utr removed, belongs to PaymentTransaction now
-      school_id: inv.school_id
-    };
+      name: 'Grade 10 Tuition Fee (Annual)',
+      amount: 25000,
+      category: 'TUITION',
+      frequency: 'YEARLY'
+    }
   });
 
-  const invoicesResult = await prisma.invoice.createMany({
-    data: invoiceData,
-    skipDuplicates: true
+  const transportFee = await prisma.feeStructure.create({
+    data: {
+      school_id: SCHOOL_ID,
+      academic_year_id: ACADEMIC_YEAR_2025_ID,
+      name: 'Bus Route A (Q1)',
+      amount: 6000,
+      category: 'TRANSPORT',
+      frequency: 'QUARTERLY'
+    }
   });
-  console.log(`   ✅ ${invoicesResult.count} invoices created`);
+
+  const fineFee = await prisma.feeStructure.create({
+    data: {
+      school_id: SCHOOL_ID,
+      academic_year_id: ACADEMIC_YEAR_2025_ID,
+      name: 'Late Payment Fine',
+      amount: 500,
+      category: 'MISC',
+      frequency: 'ONE_TIME'
+    }
+  });
+
+  // 2. Generate Invoices & Transactions for Students
+  console.log('   └─ Generating Invoices & Transactions...');
+
+  // Fetch students created earlier
+  const allStudents = await prisma.student.findMany({
+    where: { school_id: SCHOOL_ID },
+    take: 50 // Process first 50 students for demo
+  });
+
+  let financeCount = 0;
+  let transactionCount = 0; // Added for tracking
+
+  for (const [index, student] of allStudents.entries()) {
+    // LOGIC: 60% Good Payers, 20% Partial, 20% Defaulters
+    const isGoodPayer = index < 30;
+    const isPartialPayer = index >= 30 && index < 40;
+    const isDefaulter = index >= 40;
+
+    // Create Invoice (Demand)
+    const invoice = await prisma.invoice.create({
+      data: {
+        school_id: SCHOOL_ID,
+        student_id: student.id,
+        academic_year_id: ACADEMIC_YEAR_2025_ID,
+        due_date: new Date('2025-04-10'),
+        total_amount: tuitionFee.amount,
+        balance_amount: tuitionFee.amount, // Default full due
+        amount_paid: 0,
+        status: 'PENDING',
+        items: {
+          create: {
+            title: tuitionFee.name,
+            amount: tuitionFee.amount,
+            fee_structure_id: tuitionFee.id
+          }
+        }
+      }
+    });
+
+    // Create Transactions (Collection)
+    if (isGoodPayer) {
+      // PAY FULL
+      await prisma.paymentTransaction.create({
+        data: {
+          school_id: SCHOOL_ID,
+          invoice_id: invoice.id,
+          student_id: student.id,
+          amount: tuitionFee.amount,
+          mode: 'UPI',
+          date: new Date(),
+          remarks: 'Full Payment via App',
+          reference_no: `TXN${Math.floor(Math.random() * 100000)}`
+        }
+      });
+      transactionCount++;
+      // Update Invoice
+      await prisma.invoice.update({
+        where: { id: invoice.id },
+        data: { status: 'PAID', amount_paid: tuitionFee.amount, balance_amount: 0 }
+      });
+    }
+    else if (isPartialPayer) {
+      // PAY 40%
+      const paid = tuitionFee.amount * 0.4;
+      await prisma.paymentTransaction.create({
+        data: {
+          school_id: SCHOOL_ID,
+          invoice_id: invoice.id,
+          student_id: student.id,
+          amount: paid,
+          mode: 'CASH',
+          date: new Date(),
+          remarks: 'First Installment',
+          reference_no: `RCPT${Math.floor(Math.random() * 100000)}`
+        }
+      });
+      transactionCount++;
+      // Update Invoice
+      await prisma.invoice.update({
+        where: { id: invoice.id },
+        data: { status: 'PARTIAL', amount_paid: paid, balance_amount: tuitionFee.amount - paid }
+      });
+    }
+    else if (isDefaulter) {
+      // NO PAYMENT -> Mark Overdue
+      await prisma.invoice.update({
+        where: { id: invoice.id },
+        data: { status: 'OVERDUE' }
+      });
+    }
+    financeCount++;
+  }
+  console.log(`   ✅ Processed finance records for ${financeCount} students`);
+  console.log(`   ✅ Generated ${transactionCount} transactions`);
 
   // =========================================================================
   // STEP 26: SEED BUSES
@@ -1245,7 +1346,7 @@ async function main() {
   console.log('\n📚 LIBRARY & FINANCE:');
   console.log(`   ├─ ${booksResult.count} Books`);
   console.log(`   ├─ ${bookLoansResult.count} Book Loans`);
-  console.log(`   ├─ ${invoicesResult.count} Invoices`);
+  console.log(`   ├─ ${financeCount} Invoices`);
   console.log(`   └─ ${expensesResult.count} Expenses`);
 
   console.log('\n🚌 LOGISTICS:');
