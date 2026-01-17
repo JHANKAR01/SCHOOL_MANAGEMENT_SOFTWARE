@@ -12,19 +12,21 @@ if (!connectionString) {
 }
 
 // 1. Create the Pool with better timeouts and limits
+// 1. Create the Pool with better timeouts and limits
 const pool = new Pool({
   connectionString,
   ssl: { rejectUnauthorized: false }, // Required for Supabase
-  connectionTimeoutMillis: 10000,     // Wait 10s before failing
-  idleTimeoutMillis: 20000,           // Close idle clients after 20s
+  connectionTimeoutMillis: 20000,     // Wait 20s before failing (Increased)
+  idleTimeoutMillis: 30000,           // Close idle clients after 30s
   max: 10,                            // Limit pool size
+  keepAlive: true,                    // TCP Keep-Alive
   options: '-c search_path=schoolmanagementsystem'
 });
 
 // 2. Add Error Listeners (Prevents crash on idle client error)
 pool.on('error', (err) => {
-  console.error('[DB] 🔴 Unexpected error on idle client', err);
-  process.exit(-1);
+  console.warn('[DB] ⚠️ Unexpected error on idle client (Pool will recover):', err.message);
+  // Do NOT exit process. The pool will discard the bad client and create a new one.
 });
 
 // 3. Initialize Adapter
