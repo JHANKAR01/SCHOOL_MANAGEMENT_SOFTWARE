@@ -17,6 +17,7 @@ export const PERMISSIONS = {
     // Users & Security
     MANAGE_USERS: 'MANAGE_USERS',         // Grant/Revoke Logins
     VIEW_AUDIT_LOGS: 'VIEW_AUDIT_LOGS',
+    DEMASK_PII: 'DEMASK_PII',             // View unmasked Aadhaar/Bank (5-min window)
 
     // Admissions
     MANAGE_ADMISSIONS: 'MANAGE_ADMISSIONS',
@@ -25,6 +26,10 @@ export const PERMISSIONS = {
     MANAGE_TRANSPORT: 'MANAGE_TRANSPORT',
     MANAGE_HOSTEL: 'MANAGE_HOSTEL',
     MANAGE_LIBRARY: 'MANAGE_LIBRARY',
+
+    // Principal-specific
+    APPROVE_RESULTS: 'APPROVE_RESULTS',   // Approve & publish exam results
+    APPROVE_LEAVES: 'APPROVE_LEAVES',     // Approve staff leave applications
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -41,4 +46,14 @@ export const SCHOOL_ADMIN_DEFAULT_PERMISSIONS: Permission[] = [
     PERMISSIONS.MANAGE_TRANSPORT,
     PERMISSIONS.MANAGE_HOSTEL,
     PERMISSIONS.MANAGE_LIBRARY,
+];
+
+// Default permissions for PRINCIPAL role
+export const PRINCIPAL_DEFAULT_PERMISSIONS: Permission[] = [
+    PERMISSIONS.MANAGE_ACADEMICS,
+    PERMISSIONS.VIEW_ACADEMICS,
+    PERMISSIONS.VIEW_AUDIT_LOGS,
+    PERMISSIONS.DEMASK_PII,
+    PERMISSIONS.APPROVE_RESULTS,
+    PERMISSIONS.APPROVE_LEAVES,
 ];

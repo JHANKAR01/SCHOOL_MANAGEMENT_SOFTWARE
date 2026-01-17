@@ -608,6 +608,14 @@ model Result {
   grade            String?
   remarks          String?
   created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  
+  // Approval Workflow Fields (Principal Dashboard)
+  status           ResultApprovalStatus @default(DRAFT)
+  submitted_at     DateTime?            @db.Timestamptz(6)
+  submitted_by     String?              // FK to User who submitted
+  approved_at      DateTime?            @db.Timestamptz(6)
+  approved_by      String?              // FK to User (Principal) who approved
+  rejection_reason String?
 
   // Normalized relation - replaces subject_marks JSON
   marks   ResultMark[]
@@ -618,6 +626,7 @@ model Result {
   @@index([school_id])
   @@index([exam_id])
   @@index([student_id])
+  @@index([status])  // For filtering by approval status
   @@schema("schoolmanagementsystem")
 }
 
@@ -1415,6 +1424,16 @@ enum ExamType {
   INTERNAL
   MIDTERM
   FINAL
+
+  @@schema("schoolmanagementsystem")
+}
+
+/// Result approval workflow status for Principal dashboard
+enum ResultApprovalStatus {
+  DRAFT             // Teacher is entering marks
+  PENDING_APPROVAL  // Submitted for Principal review
+  PUBLISHED         // Approved and visible to parents/students
+  REJECTED          // Sent back to teacher for corrections
 
   @@schema("schoolmanagementsystem")
 }
