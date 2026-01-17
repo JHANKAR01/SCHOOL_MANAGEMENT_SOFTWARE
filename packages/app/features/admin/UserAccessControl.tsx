@@ -41,7 +41,7 @@ export const UserAccessControl: React.FC = () => {
     const fetchUsers = async () => {
         try {
             const res = await fetch('/api/system-admin/users', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                headers: { Authorization: `Bearer ${localStorage.getItem('sovereign_token')}` }
             });
             const data = await res.json();
             if (data.success) {
@@ -60,7 +60,7 @@ export const UserAccessControl: React.FC = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('token')}`
+                    Authorization: `Bearer ${localStorage.getItem('sovereign_token')}`
                 },
                 body: JSON.stringify({
                     person_type: formData.personType,
@@ -91,7 +91,7 @@ export const UserAccessControl: React.FC = () => {
         try {
             await fetch(`/api/system-admin/users/${userId}/revoke`, {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                headers: { Authorization: `Bearer ${localStorage.getItem('sovereign_token')}` }
             });
             fetchUsers();
         } catch (error) {
