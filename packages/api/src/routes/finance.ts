@@ -29,12 +29,12 @@ financeRouter.get('/stats', async (c) => {
     // Total Collected (PAID invoices)
     prisma.invoice.aggregate({
       where: { school_id: user.school_id, status: 'PAID' },
-      _sum: { base_amount: true, discount_amount: true }
+      _sum: { total_amount: true, discount_amount: true }
     }),
     // Total Pending (PENDING invoices)
     prisma.invoice.aggregate({
       where: { school_id: user.school_id, status: 'PENDING' },
-      _sum: { base_amount: true, discount_amount: true }
+      _sum: { total_amount: true, discount_amount: true }
     }),
     // Total Expenses
     prisma.expense.aggregate({
@@ -43,8 +43,8 @@ financeRouter.get('/stats', async (c) => {
     })
   ]);
 
-  const totalCollected = (collectedResult._sum.base_amount || 0) - (collectedResult._sum.discount_amount || 0);
-  const totalPending = (pendingResult._sum.base_amount || 0) - (pendingResult._sum.discount_amount || 0);
+  const totalCollected = (collectedResult._sum.total_amount || 0) - (collectedResult._sum.discount_amount || 0);
+  const totalPending = (pendingResult._sum.total_amount || 0) - (pendingResult._sum.discount_amount || 0);
   const totalExpenses = expensesResult._sum.amount || 0;
   const cashOnHand = totalCollected - totalExpenses;
 
@@ -115,7 +115,7 @@ financeRouter.get('/invoices', async (c) => {
 
 financeRouter.post('/invoices', async (c) => {
   const user = c.get('user');
-  const { studentId, baseAmount, discountAmount, description, dueDate } = await c.req.json();
+  const { studentId, totalAmount, discountAmount, description, dueDate, academicYearId } = await c.req.json();
 
   // Verify student exists in school
   const student = await prisma.student.findFirst({
@@ -125,12 +125,32 @@ financeRouter.post('/invoices', async (c) => {
     return c.json({ error: 'Student not found' }, 404);
   }
 
+  // Get current academic year if not provided
+  let ayId = academicYearId;
+  if (!ayId) {
+    const currentYear = await prisma.academicYear.findFirst({
+      where: { school_id: user.school_id, is_current: true },
+      select: { id: true }
+    });
+    ayId = currentYear?.id;
+  }
+
+  if (!ayId) {
+    return c.json({ error: 'No academic year found. Please set up academic year first.' }, 400);
+  }
+
+  const total = parseFloat(totalAmount);
+  const discount = parseFloat(discountAmount || '0');
+
   const invoice = await prisma.invoice.create({
     data: {
       school_id: user.school_id,
       student_id: studentId,
-      base_amount: parseFloat(baseAmount),
-      discount_amount: parseFloat(discountAmount || '0'),
+      academic_year_id: ayId,
+      total_amount: total,
+      amount_paid: 0,
+      balance_amount: total - discount,
+      discount_amount: discount,
       description: description || 'Fee',
       due_date: new Date(dueDate),
       status: 'PENDING'
@@ -143,20 +163,38 @@ financeRouter.post('/invoices', async (c) => {
 financeRouter.patch('/invoices/:id/pay', async (c) => {
   const user = c.get('user');
   const { id } = c.req.param();
-  const { method, utr } = await c.req.json(); // CASH | ONLINE | CHEQUE
+  const { method, referenceNo } = await c.req.json(); // CASH | ONLINE | CHEQUE
 
-  // Verify ownership and update
-  const result = await prisma.invoice.updateMany({
-    where: { id, school_id: user.school_id, status: 'PENDING' },
+  // Fetch invoice first
+  const invoice = await prisma.invoice.findFirst({
+    where: { id, school_id: user.school_id, status: 'PENDING' }
+  });
+
+  if (!invoice) {
+    return c.json({ error: 'Invoice not found or already paid' }, 404);
+  }
+
+  // Update invoice to PAID and set balance to 0
+  await prisma.invoice.update({
+    where: { id },
     data: {
       status: 'PAID',
-      utr: utr || `${method}_${Date.now()}`
+      amount_paid: invoice.total_amount,
+      balance_amount: 0
     }
   });
 
-  if (result.count === 0) {
-    return c.json({ error: 'Invoice not found or already paid' }, 404);
-  }
+  // Create payment transaction
+  await prisma.paymentTransaction.create({
+    data: {
+      invoice_id: id,
+      school_id: user.school_id,
+      student_id: invoice.student_id,
+      amount: invoice.total_amount - invoice.discount_amount,
+      mode: method || 'CASH',
+      reference_no: referenceNo || `${method}_${Date.now()}`
+    }
+  });
 
   return c.json({ success: true, id, status: 'PAID' });
 });
