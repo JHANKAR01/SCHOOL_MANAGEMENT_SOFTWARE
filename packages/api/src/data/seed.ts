@@ -307,85 +307,88 @@ async function main() {
   // =========================================================================
   console.log('\n👨‍🏫 STEP 5: Seeding Staff Users...');
 
-  for (const staffUser of DUMMY_STAFF_USERS) {
-    // Use the same pre-computed hash for ALL users
-    const passwordHash = hashedPassword;
+  const staffUserData = DUMMY_STAFF_USERS.map(staffUser => ({
+    id: staffUser.id,
+    name: staffUser.name,
+    email: staffUser.email,
+    phone: staffUser.phone,
+    password_hash: hashedPassword,
+    role: staffUser.role,
+    department: staffUser.department,
+    school_id: staffUser.school_id
+  }));
 
-    const createdUser = await prisma.user.create({
-      data: {
-        id: staffUser.id,
-        name: staffUser.name,
-        email: staffUser.email,
-        phone: staffUser.phone,
-        password_hash: passwordHash,
-        role: staffUser.role,
-        department: staffUser.department,
-        school_id: staffUser.school_id
-      }
-    });
-    staffUserIdMap.set(staffUser.id, createdUser.id);
-  }
-  console.log(`   ✅ ${DUMMY_STAFF_USERS.length} staff users created`);
+  const staffUsersResult = await prisma.user.createMany({
+    data: staffUserData,
+    skipDuplicates: true
+  });
+
+  // Restore map population for consistency
+  DUMMY_STAFF_USERS.forEach(u => staffUserIdMap.set(u.id, u.id));
+  console.log(`   ✅ ${staffUsersResult.count} staff users created`);
 
   // =========================================================================
   // STEP 6: SEED STAFF PROFILES
   // =========================================================================
   console.log('\n📋 STEP 6: Seeding Staff Profiles...');
 
-  for (const profile of DUMMY_STAFF_PROFILES) {
-    const createdProfile = await prisma.staffProfile.create({
-      data: {
-        id: profile.id,
-        user_id: profile.user_id,
-        school_id: profile.school_id,
-        employee_id: profile.employee_id,
-        designation: profile.designation,
-        department: profile.department,
-        employment_type: profile.employment_type,
-        joining_date: profile.joining_date,
-        qualification: profile.qualification,
-        experience_years: profile.experience_years,
-        date_of_birth: profile.date_of_birth,
-        gender: profile.gender,
-        blood_group: profile.blood_group,
-        address_line1: profile.address_line1,
-        city: profile.city,
-        state: profile.state,
-        pincode: profile.pincode,
-        aadhaar_number: profile.aadhaar_number,
-        pan_number: profile.pan_number,
-        emergency_contact_name: profile.emergency_contact_name,
-        emergency_contact_phone: profile.emergency_contact_phone,
-        status: profile.status
-      }
-    });
-    staffProfileIdMap.set(profile.user_id, createdProfile.id);
-  }
-  console.log(`   ✅ ${DUMMY_STAFF_PROFILES.length} staff profiles created`);
+  const staffProfileData = DUMMY_STAFF_PROFILES.map(profile => ({
+    id: profile.id,
+    user_id: profile.user_id,
+    school_id: profile.school_id,
+    employee_id: profile.employee_id,
+    designation: profile.designation,
+    department: profile.department,
+    employment_type: profile.employment_type,
+    joining_date: profile.joining_date,
+    qualification: profile.qualification,
+    experience_years: profile.experience_years,
+    date_of_birth: profile.date_of_birth,
+    gender: profile.gender,
+    blood_group: profile.blood_group,
+    address_line1: profile.address_line1,
+    city: profile.city,
+    state: profile.state,
+    pincode: profile.pincode,
+    aadhaar_number: profile.aadhaar_number,
+    pan_number: profile.pan_number,
+    emergency_contact_name: profile.emergency_contact_name,
+    emergency_contact_phone: profile.emergency_contact_phone,
+    status: profile.status
+  }));
+
+  const staffProfilesResult = await prisma.staffProfile.createMany({
+    data: staffProfileData,
+    skipDuplicates: true
+  });
+
+  DUMMY_STAFF_PROFILES.forEach(p => staffProfileIdMap.set(p.user_id, p.id));
+  console.log(`   ✅ ${staffProfilesResult.count} staff profiles created`);
 
   // =========================================================================
   // STEP 7: SEED STAFF FINANCIALS
   // =========================================================================
   console.log('\n💰 STEP 7: Seeding Staff Financials...');
 
-  for (const financial of DUMMY_STAFF_FINANCIALS) {
-    await prisma.staffFinancial.create({
-      data: {
-        id: financial.id,
-        staff_profile_id: financial.staff_profile_id,
-        school_id: financial.school_id,
-        salary_grade: financial.salary_grade,
-        basic_salary: financial.basic_salary,
-        hra: financial.hra,
-        allowances: financial.allowances,
-        deductions: financial.deductions,
-        bank_name: financial.bank_name,
-        bank_account_no: financial.bank_account_no,
-        ifsc_code: financial.ifsc_code
-      }
-    });
-  }
-  console.log(`   ✅ ${DUMMY_STAFF_FINANCIALS.length} staff financial records created`);
+  const staffFinancialData = DUMMY_STAFF_FINANCIALS.map(financial => ({
+    id: financial.id,
+    staff_profile_id: financial.staff_profile_id,
+    school_id: financial.school_id,
+    salary_grade: financial.salary_grade,
+    basic_salary: financial.basic_salary,
+    hra: financial.hra,
+    allowances: financial.allowances,
+    deductions: financial.deductions,
+    bank_name: financial.bank_name,
+    bank_account_no: financial.bank_account_no,
+    ifsc_code: financial.ifsc_code
+  }));
+
+  const staffFinancialsResult = await prisma.staffFinancial.createMany({
+    data: staffFinancialData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${staffFinancialsResult.count} staff financial records created`);
 
   // =========================================================================
   // STEP 8: SEED SUBJECTS
