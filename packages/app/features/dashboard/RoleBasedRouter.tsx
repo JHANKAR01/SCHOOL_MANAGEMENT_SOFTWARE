@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { UserRole, SchoolConfig } from '../../../../types';
 
@@ -32,16 +31,14 @@ import { HostelWarden } from '../hostel/HostelWarden';
 import { ParentDashboard } from './ParentDashboard';
 import { StudentDashboard } from './StudentDashboard';
 
+// Import the new page component
+import SchoolAdminDashboardPage from '../../../../apps/next/pages/school-admin/dashboard';
+
 interface Props {
   role: UserRole;
   school: SchoolConfig;
   activeModule: string;
 }
-
-// Import the new page component
-import SchoolAdminDashboardPage from '../../../../apps/next/pages/school-admin/dashboard';
-
-// ...
 
 export const RoleBasedRouter: React.FC<Props> = ({ role, school, activeModule }) => {
   // Helper to check if Finance module is active for multi-module roles

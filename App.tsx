@@ -9,7 +9,7 @@ import { LanguageProvider, useTranslation } from './packages/app/provider/langua
 import { InteractionProvider } from './packages/app/provider/InteractionContext';
 import { ThemeProvider } from './packages/app/provider/ThemeProvider';
 import { useLowDataMode } from './packages/app/hooks/useLowDataMode';
-import { SchoolAdminDashboard } from './packages/app/features/dashboard/NewSchoolAdminDashboard';
+import SchoolAdminDashboard from './apps/next/pages/school-admin/dashboard';
 import { View, Text, TouchableOpacity, SafeAreaView, Platform, ScrollView, StatusBar } from 'react-native';
 import { Menu, LogOut, Zap, Shield } from 'lucide-react';
 import * as SecureStore from 'expo-secure-store';
