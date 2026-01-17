@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '../../provider/ThemeProvider';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // NEBULA CARD - Glassmorphic Card Component
@@ -19,18 +20,21 @@ export const NebulaCard: React.FC<NebulaCardProps> = ({
     noPadding = false,
     onClick,
 }) => {
+    const { isDarkMode } = useTheme();
     // Detect if we should use solid bg (mobile) or blur (desktop)
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
     const baseClasses = `
     rounded-2xl border transition-all duration-200
     ${noPadding ? '' : 'p-6'}
-    ${onClick ? 'cursor-pointer hover:border-white/20' : ''}
+    ${onClick ? 'cursor-pointer hover:border-slate-300 dark:hover:border-white/20' : ''}
   `;
 
-    const themeClasses = isMobile
-        ? 'bg-slate-900/95 border-white/10'  // Solid for mobile
-        : 'bg-slate-900/60 backdrop-blur-xl border-white/10';  // Glass for desktop
+    // LIGHT MODE: Clean Paper (White + Shadow + Thin Grey Border)
+    // DARK MODE: Glass (Translucent + Blur)
+    const themeClasses = isDarkMode
+        ? (isMobile ? 'bg-slate-900/95 border-white/10' : 'bg-slate-900/60 backdrop-blur-xl border-white/10')
+        : 'bg-white border-slate-200 shadow-sm';
 
     const modifyClasses = modifyMode
         ? 'border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.15)]'
@@ -69,31 +73,35 @@ export const NebulaStatCard: React.FC<NebulaStatCardProps> = ({
     trendValue,
     status = 'default',
 }) => {
+    const { isDarkMode } = useTheme();
+
     const statusColors = {
-        default: 'text-slate-50',
-        success: 'text-teal-400',
-        warning: 'text-amber-400',
-        critical: 'text-red-400',
+        default: isDarkMode ? 'text-slate-50' : 'text-slate-900',
+        success: isDarkMode ? 'text-teal-400' : 'text-teal-600',
+        warning: isDarkMode ? 'text-amber-400' : 'text-amber-600',
+        critical: isDarkMode ? 'text-red-400' : 'text-red-600',
     };
 
     const trendColors = {
-        up: 'text-emerald-400',
-        down: 'text-red-400',
+        up: isDarkMode ? 'text-emerald-400' : 'text-emerald-600',
+        down: isDarkMode ? 'text-red-400' : 'text-red-600',
         neutral: 'text-slate-400',
     };
 
     return (
         <NebulaCard className="relative overflow-hidden">
-            {/* Background accent */}
-            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/10 to-violet-500/5 blur-2xl" />
+            {/* Background accent - Dark Mode Only */}
+            {isDarkMode && (
+                <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/10 to-violet-500/5 blur-2xl" />
+            )}
 
             <div className="relative z-10">
                 <div className="flex items-start justify-between mb-4">
-                    <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                         {label}
                     </span>
                     {icon && (
-                        <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                        <div className={`p-2 rounded-lg border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'}`}>
                             {icon}
                         </div>
                     )}
