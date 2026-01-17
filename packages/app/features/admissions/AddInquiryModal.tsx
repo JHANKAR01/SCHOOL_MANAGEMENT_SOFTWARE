@@ -90,32 +90,31 @@ export const AddInquiryModal = ({ isOpen, onClose, onSuccess }: AddInquiryModalP
                                     <NebulaInput
                                         label="Student Name"
                                         value={formData.student_name}
-                                        onChangeText={(t) => setFormData({ ...formData, student_name: t })}
+                                        onChange={(t) => setFormData({ ...formData, student_name: t })}
                                         placeholder="e.g. Rahul Kumar"
                                     />
                                     <NebulaInput
                                         label="Parent/Guardian Name"
                                         value={formData.parent_name}
-                                        onChangeText={(t) => setFormData({ ...formData, parent_name: t })}
+                                        onChange={(t) => setFormData({ ...formData, parent_name: t })}
                                         placeholder="e.g. Mr. Suresh Kumar"
                                     />
                                     <NebulaInput
                                         label="Mobile Number"
                                         value={formData.phone}
-                                        onChangeText={(t) => setFormData({ ...formData, phone: t })}
+                                        onChange={(t) => setFormData({ ...formData, phone: t })}
                                         placeholder="e.g. 9876543210"
-                                        keyboardType="phone-pad"
                                     />
                                     <NebulaInput
                                         label="Target Class"
                                         value={formData.target_class}
-                                        onChangeText={(t) => setFormData({ ...formData, target_class: t })}
+                                        onChange={(t) => setFormData({ ...formData, target_class: t })}
                                         placeholder="e.g. 10"
                                     />
                                     <NebulaInput
                                         label="Previous School"
                                         value={formData.previous_school}
-                                        onChangeText={(t) => setFormData({ ...formData, previous_school: t })}
+                                        onChange={(t) => setFormData({ ...formData, previous_school: t })}
                                         placeholder="e.g. St. Mary's"
                                     />
                                 </View>
@@ -126,7 +125,7 @@ export const AddInquiryModal = ({ isOpen, onClose, onSuccess }: AddInquiryModalP
                                         <Text className="text-slate-400 font-medium">Cancel</Text>
                                     </TouchableOpacity>
                                     <View className="w-32">
-                                        <NebulaButton onPress={handleSubmit} disabled={loading}>
+                                        <NebulaButton onClick={handleSubmit} disabled={loading}>
                                             {loading ? <ActivityIndicator color="white" size="small" /> : 'Create Inquiry'}
                                         </NebulaButton>
                                     </View>
