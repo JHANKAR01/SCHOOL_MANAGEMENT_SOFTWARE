@@ -24,7 +24,9 @@ export const UserAccessControl: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const debouncedSearch = useDebounce(searchQuery, 500);
+    const [roleFilter, setRoleFilter] = useState('ALL');
     const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
     const [searchMode, setSearchMode] = useState(false);
     const [total, setTotal] = useState(0);
@@ -40,23 +42,24 @@ export const UserAccessControl: React.FC = () => {
         permissions: [] as string[]
     });
 
-    // Reset page when search changes
+    // Reset page when filters change
     useEffect(() => {
         setPage(1);
-    }, [debouncedSearch]);
+    }, [debouncedSearch, roleFilter, limit]);
 
     // Fetch when dependencies change
     useEffect(() => {
         fetchUsers();
-    }, [debouncedSearch, page]);
+    }, [debouncedSearch, roleFilter, page, limit]);
 
     const fetchUsers = async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
             if (debouncedSearch) params.append('search', debouncedSearch);
+            if (roleFilter !== 'ALL') params.append('role', roleFilter);
             params.append('page', page.toString());
-            params.append('limit', '50');
+            params.append('limit', limit.toString());
 
             const res = await fetch(`/api/system-admin/users?${params.toString()}`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('sovereign_token')}` }
@@ -65,7 +68,8 @@ export const UserAccessControl: React.FC = () => {
             if (data.success) {
                 setUsers(data.users);
                 setTotal(data.total || data.users.length);
-                setTotalPages(data.totalPages || Math.ceil((data.total || data.users.length) / 20));
+                setTotal(data.total || data.users.length);
+                setTotalPages(data.totalPages || Math.ceil((data.total || data.users.length) / limit));
                 setSearchMode(!!debouncedSearch);
             }
         } catch (error) {
@@ -160,6 +164,22 @@ export const UserAccessControl: React.FC = () => {
                                 }`}
                         />
                     </div>
+                </div>
+
+                {/* Role Filters */}
+                <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-none">
+                    {['ALL', 'TEACHER', 'STUDENT', 'SCHOOL_ADMIN', 'ACCOUNTANT', 'PARENT'].map(role => (
+                        <button
+                            key={role}
+                            onClick={() => setRoleFilter(role)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors border ${roleFilter === role
+                                ? 'bg-indigo-500 text-white border-indigo-500'
+                                : 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                }`}
+                        >
+                            {role.replace('_', ' ')}
+                        </button>
+                    ))}
                 </div>
 
                 {/* Loading State */}
@@ -261,12 +281,35 @@ export const UserAccessControl: React.FC = () => {
 
             {/* Pagination Stats Footer */}
             {users.length > 0 && (
-                <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50 dark:bg-slate-900 flex justify-between items-center bg-white dark:bg-slate-900 rounded-b-xl border-x border-b mx-0 mt-0">
-                    <div className="text-xs text-slate-500">
-                        Page <span className="font-bold text-slate-900 dark:text-white">{page}</span> of <span className="font-bold text-slate-900 dark:text-white">{totalPages}</span>
-                        <span className="mx-2 text-slate-300">|</span>
-                        Total Users: <span className="font-bold text-slate-900 dark:text-white">{total}</span>
+                <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50 dark:bg-slate-900 flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 rounded-b-xl border-x border-b mx-0 mt-0 gap-4">
+                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                        <div className="flex items-center gap-2">
+                            <span>Rows per page:</span>
+                            <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                                {[10, 20, 50].map(l => (
+                                    <button
+                                        key={l}
+                                        onClick={() => setLimit(l)}
+                                        className={`px-2 py-1 rounded-md transition-all ${limit === l
+                                            ? 'bg-white dark:bg-slate-700 shadow text-slate-900 dark:text-white'
+                                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                            }`}
+                                    >
+                                        {l}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <span className="hidden md:inline text-slate-300">|</span>
+                        <span>
+                            Page <span className="font-bold text-slate-900 dark:text-white">{page}</span> of <span className="font-bold text-slate-900 dark:text-white">{totalPages}</span>
+                        </span>
+                        <span className="hidden md:inline text-slate-300">|</span>
+                        <span>
+                            Total: <span className="font-bold text-slate-900 dark:text-white">{total}</span>
+                        </span>
                     </div>
+
                     <div className="flex gap-2">
                         <button
                             onClick={() => setPage(p => Math.max(1, p - 1))}
