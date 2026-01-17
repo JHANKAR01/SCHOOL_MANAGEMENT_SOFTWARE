@@ -147,8 +147,7 @@ export default function SchoolAdminDashboard() {
         { id: 'admissions', label: 'Admissions', icon: Users, badge: 'Kanban' },
         { id: 'academics', label: 'Academics', icon: GraduationCap },
         { id: 'finance', label: 'Finance Setup', icon: DollarSign },
-        { id: 'system-admin', label: 'System Access', icon: Shield },
-        { id: 'settings', label: 'Settings', icon: Settings },
+        { id: 'access', label: 'User Access', icon: Users },
     ];
 
     return (
@@ -179,12 +178,10 @@ export default function SchoolAdminDashboard() {
 
             {activeModule === 'finance' as Module && <FeeStructureManager />}
 
-            {activeModule === 'system-admin' as Module && <UserAccessControl />}
-
-            {activeModule === 'settings' as Module && <SchoolSettings />}
+            {activeModule === 'access' as Module && <UserAccessControl />}
 
             {/* Fallback for unmatched modules */}
-            {!['overview', 'admissions', 'academics', 'finance', 'system-admin', 'settings'].includes(activeModule) && (
+            {!['overview', 'admissions', 'academics', 'finance', 'access'].includes(activeModule) && (
                 <div className="flex flex-col items-center justify-center h-96 text-slate-400">
                     <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
                         <Activity className="w-8 h-8 text-indigo-500" />

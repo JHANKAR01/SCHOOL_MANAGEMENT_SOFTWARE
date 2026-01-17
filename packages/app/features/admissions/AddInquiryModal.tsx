@@ -74,7 +74,7 @@ export const AddInquiryModal = ({ isOpen, onClose, onSuccess }: AddInquiryModalP
             >
                 <View className="flex-1 bg-black/50 justify-center items-center p-4">
                     <View className="w-full max-w-md">
-                        <NebulaCard className="p-6 max-h-[90%]">
+                        <NebulaCard className="p-6 max-h-[90%] bg-white dark:bg-slate-900">
 
                             <ScrollView showsVerticalScrollIndicator={false}>
                                 {/* Header */}
@@ -119,12 +119,17 @@ export const AddInquiryModal = ({ isOpen, onClose, onSuccess }: AddInquiryModalP
                                     />
                                 </View>
 
-                                {/* Footer */}
-                                <View className="mt-8 flex-row justify-end space-x-3">
-                                    <TouchableOpacity onPress={onClose} className="px-4 py-2">
-                                        <Text className="text-slate-400 font-medium">Cancel</Text>
-                                    </TouchableOpacity>
-                                    <View className="w-32">
+                                {/* Footer - Fixed at bottom */}
+                                <View className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 flex-row justify-end items-center space-x-3">
+                                    <View className="w-24">
+                                        <NebulaButton
+                                            variant="ghost"
+                                            onClick={onClose}
+                                        >
+                                            <Text className="text-slate-500 dark:text-slate-400">Cancel</Text>
+                                        </NebulaButton>
+                                    </View>
+                                    <View className="w-40">
                                         <NebulaButton onClick={handleSubmit} disabled={loading}>
                                             {loading ? <ActivityIndicator color="white" size="small" /> : 'Create Inquiry'}
                                         </NebulaButton>

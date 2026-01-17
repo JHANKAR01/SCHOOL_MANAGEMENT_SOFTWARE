@@ -56,7 +56,7 @@ export const UserAccessControl: React.FC = () => {
             const params = new URLSearchParams();
             if (debouncedSearch) params.append('search', debouncedSearch);
             params.append('page', page.toString());
-            params.append('limit', '20');
+            params.append('limit', '50');
 
             const res = await fetch(`/api/system-admin/users?${params.toString()}`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('sovereign_token')}` }
