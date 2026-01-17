@@ -319,4 +319,83 @@ systemAdminRouter.get('/users', async (c) => {
     });
 });
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📊 DASHBOARD STATS - Real-time counts for School Admin Dashboard
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+systemAdminRouter.get('/stats', async (c) => {
+    const user = c.get('user');
+    const schoolId = user.school_id;
+
+    // Get current month date range
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+    try {
+        // Execute all counts in parallel for performance
+        const [
+            totalStudents,
+            totalStaff,
+            feeAggregation,
+            pendingIssues
+        ] = await Promise.all([
+            // 1. Total Students with active enrollment
+            prisma.student.count({
+                where: { school_id: schoolId }
+            }),
+
+            // 2. Total Staff
+            prisma.staffProfile.count({
+                where: { school_id: schoolId }
+            }),
+
+            // 3. Fee Collection this month (sum of payment transactions)
+            prisma.paymentTransaction.aggregate({
+                _sum: { amount: true },
+                where: {
+                    school_id: schoolId,
+                    date: {
+                        gte: startOfMonth,
+                        lte: endOfMonth
+                    }
+                }
+            }),
+
+            // 4. Pending Issues (New Inquiries)
+            prisma.inquiry.count({
+                where: {
+                    school_id: schoolId,
+                    status: 'NEW'
+                }
+            })
+        ]);
+
+        return c.json({
+            success: true,
+            data: {
+                totalStudents,
+                totalStaff,
+                collectedFee: feeAggregation._sum.amount || 0,
+                pendingIssues
+            },
+            period: {
+                month: now.toLocaleString('default', { month: 'long' }),
+                year: now.getFullYear()
+            }
+        });
+    } catch (error) {
+        console.error('[STATS_ERROR]', error);
+        return c.json({
+            success: false,
+            error: 'Failed to fetch dashboard stats',
+            data: {
+                totalStudents: 0,
+                totalStaff: 0,
+                collectedFee: 0,
+                pendingIssues: 0
+            }
+        }, 500);
+    }
+});
+
 export { systemAdminRouter };

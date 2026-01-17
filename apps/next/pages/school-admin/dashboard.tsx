@@ -1,26 +1,73 @@
 import React, { useState } from 'react';
 import { DashboardShell, Module } from '../../../../packages/app/components/DashboardShell';
-import { Activity, Bell, AlertTriangle, Users, LayoutDashboard, Shield, GraduationCap, DollarSign, Settings, BookOpen, School } from 'lucide-react';
+import { Activity, Bell, AlertTriangle, Users, LayoutDashboard, Shield, GraduationCap, DollarSign, Settings, BookOpen, School, Briefcase, CircleDollarSign, AlertCircle } from 'lucide-react';
 import { InquiryBoard } from '../../../../packages/app/features/admissions/InquiryBoard';
 import { UserAccessControl } from '../../../../packages/app/features/admin/UserAccessControl';
 import { ClassManager } from '../../../../packages/app/features/academics/ClassManager';
 import { SubjectManager } from '../../../../packages/app/features/academics/SubjectManager';
 import { FeeStructureManager } from '../../../../packages/app/features/finance/FeeStructureManager';
 import { SchoolSettings } from '../../../../packages/app/features/settings/SchoolSettings';
+import { useDashboardStats, DashboardStats } from '../../../../packages/app/hooks/useDashboardStats';
 
-// MOCK COMPONENTS (Overview Widgets)
-const SchoolPulseMetrics = () => (
+// Stats Card Configuration
+interface StatCardConfig {
+    label: string;
+    key: keyof DashboardStats;
+    icon: React.ComponentType<any>;
+    iconColor: string;
+    format?: 'number' | 'currency';
+}
+
+const STAT_CARDS: StatCardConfig[] = [
+    { label: 'Total Students', key: 'totalStudents', icon: Users, iconColor: 'text-blue-500', format: 'number' },
+    { label: 'Total Staff', key: 'totalStaff', icon: Briefcase, iconColor: 'text-green-500', format: 'number' },
+    { label: 'Fee Collection', key: 'collectedFee', icon: CircleDollarSign, iconColor: 'text-emerald-500', format: 'currency' },
+    { label: 'New Inquiries', key: 'pendingIssues', icon: AlertCircle, iconColor: 'text-amber-500', format: 'number' }
+];
+
+// Format number with commas
+const formatNumber = (num: number): string => {
+    return new Intl.NumberFormat('en-IN').format(num);
+};
+
+// Format currency
+const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0
+    }).format(amount);
+};
+
+// Real Stats Component
+interface SchoolPulseMetricsProps {
+    stats: DashboardStats;
+    loading: boolean;
+}
+
+const SchoolPulseMetrics: React.FC<SchoolPulseMetricsProps> = ({ stats, loading }) => (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {['Total Students', 'Staff Present', 'Fee Collection', 'Pending Issues'].map((label, idx) => (
-            <div key={idx} className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">{label}</span>
-                    <Activity className="w-4 h-4 text-indigo-500" />
+        {STAT_CARDS.map((card, idx) => {
+            const Icon = card.icon;
+            const value = stats[card.key];
+            const displayValue = card.format === 'currency' ? formatCurrency(value) : formatNumber(value);
+
+            return (
+                <div key={idx} className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">{card.label}</span>
+                        <Icon className={`w-4 h-4 ${card.iconColor}`} />
+                    </div>
+                    {loading ? (
+                        <div className="h-8 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                    ) : (
+                        <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                            {displayValue}
+                        </div>
+                    )}
                 </div>
-                <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">1,234</div>
-                <div className="text-xs text-green-600 font-medium">+5.2% from last month</div>
-            </div>
-        ))}
+            );
+        })}
     </div>
 );
 
@@ -91,6 +138,9 @@ const AcademicsModule: React.FC = () => {
 export default function SchoolAdminDashboard() {
     const [activeModule, setActiveModule] = useState<Module>('overview');
 
+    // Fetch dashboard stats
+    const { stats, loading: statsLoading } = useDashboardStats();
+
     // Sidebar Configuration
     const sidebarItems = [
         { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
@@ -108,7 +158,7 @@ export default function SchoolAdminDashboard() {
             activeModule={activeModule}
             onModuleChange={setActiveModule}
             navItems={sidebarItems}
-            stats={activeModule === 'overview' ? <SchoolPulseMetrics /> : undefined}
+            stats={activeModule === 'overview' ? <SchoolPulseMetrics stats={stats} loading={statsLoading} /> : undefined}
         >
             {/* ---------------------------------------------------------------------- */}
             {/* MODULE ROUTING */}
