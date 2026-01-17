@@ -126,7 +126,7 @@ export const SchoolSettings: React.FC = () => {
             </div>
 
             {/* Profile Card */}
-            <NebulaCard className="p-6">
+            <NebulaCard className="p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10">
                 <div className="flex items-start gap-6 mb-8">
                     {/* Logo Upload Placeholder */}
                     <div className="flex-shrink-0">
@@ -162,7 +162,7 @@ export const SchoolSettings: React.FC = () => {
                     <div className="md:col-span-2">
                         <div className="flex items-center gap-2 mb-3">
                             <MapPin className="w-4 h-4 text-slate-400" />
-                            <span className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                                 Address
                             </span>
                         </div>
@@ -198,7 +198,7 @@ export const SchoolSettings: React.FC = () => {
                     <div className="md:col-span-2 border-t border-slate-100 dark:border-slate-800 pt-6 mt-2">
                         <div className="flex items-center gap-2 mb-4">
                             <Phone className="w-4 h-4 text-slate-400" />
-                            <span className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                                 Contact Information
                             </span>
                         </div>

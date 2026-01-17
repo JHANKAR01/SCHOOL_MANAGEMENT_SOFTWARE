@@ -53,13 +53,13 @@ export const NebulaInput: React.FC<NebulaInputProps> = ({
   `;
 
     const stateClasses = isFocused && !disabled && !readOnly
-        ? 'border-indigo-500 bg-white/8 ring-1 ring-indigo-500/20'
-        : 'border-white/10 bg-white/5 hover:bg-white/8 hover:border-white/15';
+        ? 'border-indigo-500 ring-1 ring-indigo-500/20 bg-white dark:bg-slate-900'
+        : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-600';
 
     return (
         <div className={`space-y-1.5 ${className}`}>
             {label && (
-                <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     {label}
                     {disabled && <Lock className="inline w-3 h-3 ml-1 opacity-50" />}
                 </label>
@@ -86,7 +86,7 @@ export const NebulaInput: React.FC<NebulaInputProps> = ({
             ${stateClasses}
             ${icon ? 'pl-10' : ''}
             ${isPassword ? 'pr-10' : ''}
-            text-slate-50 placeholder:text-slate-500
+            text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500
             focus:outline-none
           `}
                 />

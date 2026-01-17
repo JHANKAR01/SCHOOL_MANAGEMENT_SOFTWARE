@@ -260,40 +260,46 @@ export const FeeStructureManager: React.FC = () => {
                 )}
 
                 {structures.map(fs => (
-                    <NebulaCard key={fs.id} className="p-5">
+                    <div key={fs.id} className="p-5 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 hover:shadow-lg transition-all group">
                         <div className="flex justify-between items-start mb-3">
                             <div>
-                                <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${fs.category === 'TUITION' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                        fs.category === 'TRANSPORT' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                                            fs.category === 'ADMISSION' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                                                'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                                <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider ${fs.category === 'TUITION' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300' :
+                                    fs.category === 'TRANSPORT' ? 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300' :
+                                        fs.category === 'ADMISSION' ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300' :
+                                            'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                                     }`}>
                                     {fs.category}
                                 </span>
                             </div>
                             <button
                                 onClick={() => handleDelete(fs.id, fs.name)}
-                                className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
                         </div>
 
-                        <h4 className={`font-bold text-lg mb-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        <h4 className="font-bold text-lg mb-1 text-slate-900 dark:text-white">
                             {fs.name}
                         </h4>
 
-                        <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-3">
+                        <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-4 tracking-tight">
                             {formatCurrency(fs.amount)}
                         </div>
 
-                        <div className="flex justify-between text-sm text-slate-500">
-                            <span className="flex items-center gap-1">
-                                {FREQUENCIES.find(f => f.value === fs.frequency)?.label || fs.frequency}
-                            </span>
-                            <span className="font-medium">{fs.class_name}</span>
+                        <div className="flex justify-between items-center text-sm pt-4 border-t border-slate-100 dark:border-slate-800">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Frequency</span>
+                                <span className="font-medium text-slate-700 dark:text-slate-300">
+                                    {FREQUENCIES.find(f => f.value === fs.frequency)?.label || fs.frequency}
+                                </span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Applies To</span>
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{fs.class_name}</span>
+                            </div>
                         </div>
-                    </NebulaCard>
+                    </div>
                 ))}
             </div>
         </div>

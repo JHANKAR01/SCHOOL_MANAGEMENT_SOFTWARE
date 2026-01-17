@@ -151,8 +151,8 @@ export const ClassManager: React.FC = () => {
                                         key={s}
                                         onClick={() => setFormData({ ...formData, section: s })}
                                         className={`px-4 py-2 rounded-lg font-bold transition-all ${formData.section === s
-                                                ? 'bg-indigo-500 text-white'
-                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                            ? 'bg-indigo-500 text-white'
+                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                                             }`}
                                     >
                                         {s}
@@ -184,23 +184,23 @@ export const ClassManager: React.FC = () => {
                 )}
 
                 {classes.map(cls => (
-                    <NebulaCard key={cls.id} className="p-4 hover:shadow-lg transition-shadow">
+                    <div key={cls.id} className="p-4 rounded-xl bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all group">
                         <div className="flex justify-between items-start mb-3">
                             <div className="flex items-center gap-3">
-                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${cls.is_current ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${cls.is_current ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
                                     }`}>
                                     {cls.grade}
                                 </div>
                                 <div>
-                                    <h4 className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                    <h4 className="font-bold text-slate-900 dark:text-white text-lg">
                                         Class {cls.name}
                                     </h4>
-                                    <p className="text-xs text-slate-500">{cls.academic_year}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">{cls.academic_year}</p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => handleDelete(cls.id, cls.name)}
-                                className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
                                 disabled={cls.student_count > 0}
                                 title={cls.student_count > 0 ? 'Cannot delete class with students' : 'Delete class'}
                             >
@@ -208,17 +208,17 @@ export const ClassManager: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="flex gap-4 text-sm">
-                            <div className="flex items-center gap-1.5 text-slate-500">
+                        <div className="flex gap-4 text-sm mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
                                 <Users className="w-4 h-4" />
                                 <span>{cls.student_count} students</span>
                             </div>
-                            <div className="flex items-center gap-1.5 text-slate-500">
+                            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
                                 <BookOpen className="w-4 h-4" />
                                 <span>{cls.subject_count} subjects</span>
                             </div>
                         </div>
-                    </NebulaCard>
+                    </div>
                 ))}
             </div>
         </div>

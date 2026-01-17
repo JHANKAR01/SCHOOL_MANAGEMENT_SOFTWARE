@@ -135,11 +135,11 @@ export const InquiryBoard: React.FC = () => {
                             const columnInquiries = activeInquiries.filter(i => i.status === column.id || (column.id === 'INTERVIEW_SCHEDULED' && i.status === 'INTERVIEW_DONE'));
 
                             return (
-                                <div key={column.id} className="flex-1 min-w-[280px] flex flex-col h-full">
+                                <div key={column.id} className="flex-1 min-w-[280px] flex flex-col h-full bg-slate-50 dark:bg-transparent rounded-xl p-2">
                                     {/* Column Header */}
-                                    <div className={`flex items-center justify-between p-3 rounded-t-lg border-t-4 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 shadow-sm mb-2 ${column.color}`}>
+                                    <div className={`flex items-center justify-between p-3 rounded-t-lg bg-transparent mb-2 border-b-2 ${column.color.replace('border-', 'border-')}`}>
                                         <h3 className="font-bold text-slate-700 dark:text-slate-200">{column.title}</h3>
-                                        <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold px-2 py-1 rounded-full">
+                                        <span className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
                                             {columnInquiries.length}
                                         </span>
                                     </div>
@@ -147,50 +147,50 @@ export const InquiryBoard: React.FC = () => {
                                     {/* Column Body */}
                                     <div className="flex-1 space-y-3 overflow-y-auto pr-1">
                                         {columnInquiries.map(inquiry => (
-                                            <NebulaCard key={inquiry.id} className="p-4 hover:shadow-md transition-shadow border-l-2 border-l-transparent hover:border-l-indigo-500">
+                                            <div key={inquiry.id} className="p-4 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 hover:shadow-md transition-all group">
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider ${isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+                                                    <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider ${isDarkMode ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-50 text-indigo-700'}`}>
                                                         Class {inquiry.target_class || '?'}
                                                     </span>
                                                     <div className="relative group/menu">
                                                         <MoreHorizontal className="w-4 h-4 text-slate-400 cursor-pointer hover:text-indigo-500" />
                                                         {/* Quick Actions Dropdown */}
-                                                        <div className="hidden group-hover/menu:block absolute right-0 top-4 w-40 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg z-20 overflow-hidden">
+                                                        <div className="hidden group-hover/menu:block absolute right-0 top-4 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg z-20 overflow-hidden">
                                                             {ACTIVE_COLUMNS.map(c => (
                                                                 c.id !== inquiry.status && (
-                                                                    <button key={c.id} onClick={() => updateStatus(inquiry.id, c.id)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800">
+                                                                    <button key={c.id} onClick={() => updateStatus(inquiry.id, c.id)} className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300">
                                                                         Move to {c.title}
                                                                     </button>
                                                                 )
                                                             ))}
                                                             <div className="border-t border-slate-100 dark:border-slate-800 my-1" />
-                                                            <button onClick={() => updateStatus(inquiry.id, 'REJECTED')} className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50">Reject</button>
+                                                            <button onClick={() => updateStatus(inquiry.id, 'REJECTED')} className="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10">Reject</button>
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 <div className="mb-3">
-                                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{inquiry.student_name}</div>
-                                                    <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                                                    <div className="font-bold text-slate-900 dark:text-white text-base">{inquiry.student_name}</div>
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
                                                         <User size={12} /> {inquiry.parent_name}
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-                                                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                                <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+                                                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
                                                         <Phone size={12} /> {inquiry.phone}
                                                     </div>
 
                                                     {column.id === 'SELECTED' && (
                                                         <button
                                                             onClick={() => handleConvert(inquiry.id)}
-                                                            className="flex items-center gap-1 text-xs font-bold text-green-600 hover:text-green-700 bg-green-50 px-2 py-1 rounded"
+                                                            className="flex items-center gap-1 text-xs font-bold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg shadow-sm transition-colors"
                                                         >
                                                             Convert <ArrowRight size={12} />
                                                         </button>
                                                     )}
                                                 </div>
-                                            </NebulaCard>
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
