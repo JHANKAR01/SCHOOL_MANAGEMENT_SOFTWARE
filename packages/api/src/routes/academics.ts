@@ -16,6 +16,250 @@ const academicsRouter = new Hono<{ Variables: Variables }>();
 academicsRouter.use('*', authMiddleware);
 
 // ============================================================================
+// CLASSES - CRUD for School Admin
+// ============================================================================
+academicsRouter.get('/classes', requireRole([UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL]), async (c) => {
+  const user = c.get('user');
+
+  const classes = await prisma.class.findMany({
+    where: { school_id: user.school_id },
+    include: {
+      academic_year: { select: { name: true, is_current: true } },
+      _count: { select: { enrollments: true, classSubjects: true } }
+    },
+    orderBy: [{ grade: 'asc' }, { section: 'asc' }]
+  });
+
+  return c.json({
+    success: true,
+    classes: classes.map(cls => ({
+      id: cls.id,
+      grade: cls.grade,
+      section: cls.section,
+      name: `${cls.grade}-${cls.section}`,
+      academic_year: cls.academic_year?.name || 'N/A',
+      is_current: cls.academic_year?.is_current || false,
+      student_count: cls._count.enrollments,
+      subject_count: cls._count.classSubjects
+    }))
+  });
+});
+
+academicsRouter.post('/classes', requireRole([UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL]), async (c) => {
+  const user = c.get('user');
+  const { grade, section, academic_year_id } = await c.req.json();
+
+  if (!grade || !section) {
+    return c.json({ error: 'Grade and Section are required' }, 400);
+  }
+
+  // Get current academic year if not provided
+  let ayId = academic_year_id;
+  if (!ayId) {
+    const currentYear = await prisma.academicYear.findFirst({
+      where: { school_id: user.school_id, is_current: true },
+      select: { id: true }
+    });
+    ayId = currentYear?.id;
+  }
+
+  if (!ayId) {
+    return c.json({ error: 'No academic year found. Please set up academic year first.' }, 400);
+  }
+
+  // Check for duplicate
+  const existing = await prisma.class.findFirst({
+    where: { school_id: user.school_id, grade, section, academic_year_id: ayId }
+  });
+
+  if (existing) {
+    return c.json({ error: `Class ${grade}-${section} already exists` }, 409);
+  }
+
+  const newClass = await prisma.class.create({
+    data: {
+      id: `cls_${Date.now()}`,
+      school_id: user.school_id,
+      grade,
+      section,
+      academic_year_id: ayId
+    }
+  });
+
+  return c.json({ success: true, class: newClass });
+});
+
+academicsRouter.delete('/classes/:id', requireRole([UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL]), async (c) => {
+  const user = c.get('user');
+  const { id } = c.req.param();
+
+  // Check if class has enrollments
+  const cls = await prisma.class.findFirst({
+    where: { id, school_id: user.school_id },
+    include: { _count: { select: { enrollments: true } } }
+  });
+
+  if (!cls) {
+    return c.json({ error: 'Class not found' }, 404);
+  }
+
+  if (cls._count.enrollments > 0) {
+    return c.json({ error: 'Cannot delete class with enrolled students' }, 400);
+  }
+
+  await prisma.class.delete({ where: { id } });
+
+  return c.json({ success: true, message: 'Class deleted' });
+});
+
+// ============================================================================
+// SUBJECTS - CRUD for School Admin (Uses ClassSubject junction table)
+// ============================================================================
+academicsRouter.get('/subjects', requireRole([UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL, UserRole.TEACHER, UserRole.HOD]), async (c) => {
+  const user = c.get('user');
+  const classId = c.req.query('class_id');
+
+  // If filtering by class, get subjects through ClassSubject junction
+  if (classId) {
+    const classSubjects = await prisma.classSubject.findMany({
+      where: { school_id: user.school_id, class_id: classId },
+      include: {
+        subject: true,
+        class: { select: { grade: true, section: true } }
+      }
+    });
+
+    return c.json({
+      success: true,
+      subjects: classSubjects.map(cs => ({
+        id: cs.subject.id,
+        name: cs.subject.name,
+        code: cs.subject.code,
+        class_id: cs.class_id,
+        class_name: `${cs.class.grade}-${cs.class.section}`
+      }))
+    });
+  }
+
+  // Otherwise, get all subjects in school
+  const subjects = await prisma.subject.findMany({
+    where: { school_id: user.school_id },
+    include: {
+      classSubjects: {
+        include: { class: { select: { grade: true, section: true } } },
+        take: 1
+      }
+    },
+    orderBy: [{ code: 'asc' }]
+  });
+
+  return c.json({
+    success: true,
+    subjects: subjects.map(sub => ({
+      id: sub.id,
+      name: sub.name,
+      code: sub.code,
+      is_optional: sub.is_optional,
+      class_count: sub.classSubjects.length
+    }))
+  });
+});
+
+academicsRouter.post('/subjects', requireRole([UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL]), async (c) => {
+  const user = c.get('user');
+  const { name, code, class_id, is_optional } = await c.req.json();
+
+  if (!name || !code) {
+    return c.json({ error: 'Name and Code are required' }, 400);
+  }
+
+  // Check for duplicate code in school
+  const existing = await prisma.subject.findFirst({
+    where: { school_id: user.school_id, code }
+  });
+
+  if (existing) {
+    return c.json({ error: `Subject with code ${code} already exists` }, 409);
+  }
+
+  // Create the subject
+  const subject = await prisma.subject.create({
+    data: {
+      id: `sub_${Date.now()}`,
+      school_id: user.school_id,
+      name,
+      code,
+      is_optional: is_optional || false
+    }
+  });
+
+  // If a class_id is provided, also link it via ClassSubject
+  if (class_id) {
+    await prisma.classSubject.create({
+      data: {
+        id: `cs_${Date.now()}`,
+        school_id: user.school_id,
+        class_id,
+        subject_id: subject.id
+      }
+    });
+  }
+
+  return c.json({ success: true, subject });
+});
+
+// Link an existing subject to a class
+academicsRouter.post('/subjects/:id/assign', requireRole([UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL]), async (c) => {
+  const user = c.get('user');
+  const { id } = c.req.param();
+  const { class_id } = await c.req.json();
+
+  if (!class_id) {
+    return c.json({ error: 'class_id is required' }, 400);
+  }
+
+  // Check if link exists
+  const existing = await prisma.classSubject.findFirst({
+    where: { school_id: user.school_id, class_id, subject_id: id }
+  });
+
+  if (existing) {
+    return c.json({ error: 'Subject is already assigned to this class' }, 409);
+  }
+
+  await prisma.classSubject.create({
+    data: {
+      id: `cs_${Date.now()}`,
+      school_id: user.school_id,
+      class_id,
+      subject_id: id
+    }
+  });
+
+  return c.json({ success: true, message: 'Subject assigned to class' });
+});
+
+academicsRouter.delete('/subjects/:id', requireRole([UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL]), async (c) => {
+  const user = c.get('user');
+  const { id } = c.req.param();
+
+  const subject = await prisma.subject.findFirst({
+    where: { id, school_id: user.school_id }
+  });
+
+  if (!subject) {
+    return c.json({ error: 'Subject not found' }, 404);
+  }
+
+  // Delete ClassSubject links first
+  await prisma.classSubject.deleteMany({ where: { subject_id: id } });
+  // Delete subject
+  await prisma.subject.delete({ where: { id } });
+
+  return c.json({ success: true, message: 'Subject deleted' });
+});
+
+// ============================================================================
 // GRADEBOOK - Fetch students for a class with their results (3NF Schema)
 // ============================================================================
 academicsRouter.get('/gradebook/:classId/:examId', requireRole([UserRole.TEACHER, UserRole.PRINCIPAL, UserRole.HOD]), async (c) => {

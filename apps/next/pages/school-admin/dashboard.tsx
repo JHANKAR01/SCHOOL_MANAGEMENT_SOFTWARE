@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { DashboardShell, Module } from '../../../../packages/app/components/DashboardShell';
-import { Activity, Bell, AlertTriangle, Users, LayoutDashboard, Shield, GraduationCap, DollarSign } from 'lucide-react';
+import { Activity, Bell, AlertTriangle, Users, LayoutDashboard, Shield, GraduationCap, DollarSign, Settings, BookOpen, School } from 'lucide-react';
 import { InquiryBoard } from '../../../../packages/app/features/admissions/InquiryBoard';
 import { UserAccessControl } from '../../../../packages/app/features/admin/UserAccessControl';
+import { ClassManager } from '../../../../packages/app/features/academics/ClassManager';
+import { SubjectManager } from '../../../../packages/app/features/academics/SubjectManager';
+import { FeeStructureManager } from '../../../../packages/app/features/finance/FeeStructureManager';
+import { SchoolSettings } from '../../../../packages/app/features/settings/SchoolSettings';
 
 // MOCK COMPONENTS (Overview Widgets)
 const SchoolPulseMetrics = () => (
@@ -49,6 +53,41 @@ const ActionCenter = () => (
     </div>
 );
 
+// Academics Sub-Module Tabs
+const AcademicsModule: React.FC = () => {
+    const [subTab, setSubTab] = useState<'classes' | 'subjects'>('classes');
+
+    return (
+        <div className="space-y-6">
+            {/* Sub-Navigation */}
+            <div className="flex gap-2 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 w-fit">
+                <button
+                    onClick={() => setSubTab('classes')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${subTab === 'classes'
+                            ? 'bg-indigo-500 text-white shadow'
+                            : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                >
+                    <School className="w-4 h-4" /> Classes
+                </button>
+                <button
+                    onClick={() => setSubTab('subjects')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${subTab === 'subjects'
+                            ? 'bg-indigo-500 text-white shadow'
+                            : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                >
+                    <BookOpen className="w-4 h-4" /> Subjects
+                </button>
+            </div>
+
+            {/* Sub-Module Content */}
+            {subTab === 'classes' && <ClassManager />}
+            {subTab === 'subjects' && <SubjectManager />}
+        </div>
+    );
+};
+
 export default function SchoolAdminDashboard() {
     const [activeModule, setActiveModule] = useState<Module>('overview');
 
@@ -57,8 +96,9 @@ export default function SchoolAdminDashboard() {
         { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'admissions', label: 'Admissions', icon: Users, badge: 'Kanban' },
         { id: 'academics', label: 'Academics', icon: GraduationCap },
-        { id: 'finance', label: 'Finance', icon: DollarSign },
+        { id: 'finance', label: 'Finance Setup', icon: DollarSign },
         { id: 'system-admin', label: 'System Access', icon: Shield },
+        { id: 'settings', label: 'Settings', icon: Settings },
     ];
 
     return (
@@ -85,18 +125,13 @@ export default function SchoolAdminDashboard() {
 
             {activeModule === 'admissions' && <InquiryBoard />}
 
-            {/* Note: 'system-admin' is a custom ID, casting to Module in switching logic or treating as extended type */}
+            {activeModule === 'academics' as Module && <AcademicsModule />}
+
+            {activeModule === 'finance' as Module && <FeeStructureManager />}
+
             {activeModule === 'system-admin' as Module && <UserAccessControl />}
 
-            {['academics', 'finance'].includes(activeModule) && (
-                <div className="flex flex-col items-center justify-center h-96 text-slate-400">
-                    <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
-                        <Activity className="w-8 h-8 text-indigo-500" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Coming Soon</h3>
-                    <p className="text-sm">This module is under development.</p>
-                </div>
-            )}
+            {activeModule === 'settings' as Module && <SchoolSettings />}
         </DashboardShell>
     );
 }

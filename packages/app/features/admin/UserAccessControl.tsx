@@ -161,8 +161,15 @@ export const UserAccessControl: React.FC = () => {
                                         <div className="text-xs text-slate-500">{user.email}</div>
                                     </td>
                                     <td className="px-4 py-3">
-                                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-                                            {user.role}
+                                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${user.role === 'TEACHER' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                                user.role === 'STUDENT' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                    user.role === 'PARENT' ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' :
+                                                        user.role === 'PRINCIPAL' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
+                                                            user.role === 'SCHOOL_ADMIN' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                                                                user.role === 'ACCOUNTANT' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                                    'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                                            }`}>
+                                            {user.role.replace('_', ' ')}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-sm">

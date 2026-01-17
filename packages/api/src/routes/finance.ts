@@ -19,6 +19,117 @@ financeRouter.use('*', authMiddleware);
 financeRouter.use('*', requireRole([UserRole.PRINCIPAL, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.FINANCE_MANAGER]));
 
 // ============================================================================
+// FEE STRUCTURES - Setup for School Admin (Define what to charge)
+// ============================================================================
+financeRouter.get('/structures', async (c) => {
+  const user = c.get('user');
+
+  const structures = await prisma.feeStructure.findMany({
+    where: { school_id: user.school_id },
+    include: {
+      class: { select: { grade: true, section: true } },
+      academicYear: { select: { name: true, is_current: true } }
+    },
+    orderBy: { created_at: 'desc' }
+  });
+
+  return c.json({
+    success: true,
+    structures: structures.map(fs => ({
+      id: fs.id,
+      name: fs.name,
+      amount: fs.amount,
+      frequency: fs.frequency,
+      category: fs.category,
+      class_id: fs.class_id,
+      class_name: fs.class ? `${fs.class.grade}-${fs.class.section}` : 'All Classes',
+      academic_year: fs.academicYear?.name || 'N/A'
+    }))
+  });
+});
+
+financeRouter.post('/structures', async (c) => {
+  const user = c.get('user');
+  const { name, amount, frequency, category, class_id, academic_year_id } = await c.req.json();
+
+  if (!name || !amount || !frequency || !category) {
+    return c.json({ error: 'Name, Amount, Frequency, and Category are required' }, 400);
+  }
+
+  // Get current academic year if not provided
+  let ayId = academic_year_id;
+  if (!ayId) {
+    const currentYear = await prisma.academicYear.findFirst({
+      where: { school_id: user.school_id, is_current: true },
+      select: { id: true }
+    });
+    ayId = currentYear?.id;
+  }
+
+  if (!ayId) {
+    return c.json({ error: 'No academic year found. Please set up academic year first.' }, 400);
+  }
+
+  const structure = await prisma.feeStructure.create({
+    data: {
+      id: `fs_${Date.now()}`,
+      school_id: user.school_id,
+      name,
+      amount: parseFloat(amount),
+      frequency, // MONTHLY, QUARTERLY, ANNUAL, ONE_TIME
+      category, // TUITION, TRANSPORT, HOSTEL, ADMISSION, LAB, LIBRARY, MISC
+      class_id: class_id || null, // null = applies to all classes
+      academic_year_id: ayId
+    }
+  });
+
+  return c.json({ success: true, structure });
+});
+
+financeRouter.patch('/structures/:id', async (c) => {
+  const user = c.get('user');
+  const { id } = c.req.param();
+  const { name, amount, frequency, category } = await c.req.json();
+
+  const existing = await prisma.feeStructure.findFirst({
+    where: { id, school_id: user.school_id }
+  });
+
+  if (!existing) {
+    return c.json({ error: 'Fee structure not found' }, 404);
+  }
+
+  const updated = await prisma.feeStructure.update({
+    where: { id },
+    data: {
+      name: name ?? existing.name,
+      amount: amount !== undefined ? parseFloat(amount) : existing.amount,
+      frequency: frequency ?? existing.frequency,
+      category: category ?? existing.category
+    }
+  });
+
+  return c.json({ success: true, structure: updated });
+});
+
+financeRouter.delete('/structures/:id', async (c) => {
+  const user = c.get('user');
+  const { id } = c.req.param();
+
+  const existing = await prisma.feeStructure.findFirst({
+    where: { id, school_id: user.school_id }
+  });
+
+  if (!existing) {
+    return c.json({ error: 'Fee structure not found' }, 404);
+  }
+
+  await prisma.feeStructure.delete({ where: { id } });
+
+  return c.json({ success: true, message: 'Fee structure deleted' });
+});
+
+// ============================================================================
 // FINANCE STATS - Aggregated on DB side (NOT fetching all records)
 // ============================================================================
 financeRouter.get('/stats', async (c) => {
