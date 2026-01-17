@@ -231,27 +231,92 @@ systemAdminRouter.get('/audit-logs',
 );
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// LIST USERS - For User Access Control screen
+// LIST USERS - Search-First Architecture (P9 Optimization)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 systemAdminRouter.get('/users', async (c) => {
     const user = c.get('user');
 
-    const users = await prisma.user.findMany({
-        where: { school_id: user.school_id },
-        select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            permissions: true,
-            created_at: true,
-            student_account: { select: { id: true, admission_no: true } },
-            staff_profile: { select: { id: true, designation: true } }
-        },
-        orderBy: { created_at: 'desc' }
-    });
+    // Parse query parameters
+    const search = c.req.query('search')?.trim() || '';
+    const roleFilter = c.req.query('role');
+    const page = Math.max(1, parseInt(c.req.query('page') || '1'));
+    const limit = Math.min(50, Math.max(1, parseInt(c.req.query('limit') || '20')));
+    const skip = (page - 1) * limit;
 
-    return c.json({ success: true, users });
+    // If no search query, return only recent 10 users (or empty if preferred)
+    if (!search) {
+        const recentUsers = await prisma.user.findMany({
+            where: { school_id: user.school_id },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                permissions: true,
+                created_at: true,
+                student_account: { select: { id: true, admission_no: true } },
+                staff_profile: { select: { id: true, designation: true } }
+            },
+            orderBy: { created_at: 'desc' },
+            take: 10
+        });
+
+        return c.json({
+            success: true,
+            users: recentUsers,
+            total: recentUsers.length,
+            searchMode: false,
+            message: 'Showing 10 most recent users. Use search to find specific users.'
+        });
+    }
+
+    // Build search where clause
+    const where: any = {
+        school_id: user.school_id,
+        OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } }
+        ]
+    };
+
+    // Add role filter if provided
+    if (roleFilter) {
+        where.role = roleFilter;
+    }
+
+    // Execute count and search in parallel
+    const [total, users] = await Promise.all([
+        prisma.user.count({ where }),
+        prisma.user.findMany({
+            where,
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                permissions: true,
+                created_at: true,
+                student_account: { select: { id: true, admission_no: true } },
+                staff_profile: { select: { id: true, designation: true } }
+            },
+            orderBy: { created_at: 'desc' },
+            skip,
+            take: limit
+        })
+    ]);
+
+    return c.json({
+        success: true,
+        users,
+        total,
+        searchMode: true,
+        pagination: {
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+            hasMore: page * limit < total
+        }
+    });
 });
 
 export { systemAdminRouter };

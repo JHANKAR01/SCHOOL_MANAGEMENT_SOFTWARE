@@ -64,8 +64,8 @@ const AcademicsModule: React.FC = () => {
                 <button
                     onClick={() => setSubTab('classes')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${subTab === 'classes'
-                            ? 'bg-indigo-500 text-white shadow'
-                            : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        ? 'bg-indigo-500 text-white shadow'
+                        : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
                         }`}
                 >
                     <School className="w-4 h-4" /> Classes
@@ -73,8 +73,8 @@ const AcademicsModule: React.FC = () => {
                 <button
                     onClick={() => setSubTab('subjects')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${subTab === 'subjects'
-                            ? 'bg-indigo-500 text-white shadow'
-                            : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        ? 'bg-indigo-500 text-white shadow'
+                        : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
                         }`}
                 >
                     <BookOpen className="w-4 h-4" /> Subjects
@@ -132,6 +132,17 @@ export default function SchoolAdminDashboard() {
             {activeModule === 'system-admin' as Module && <UserAccessControl />}
 
             {activeModule === 'settings' as Module && <SchoolSettings />}
+
+            {/* Fallback for unmatched modules */}
+            {!['overview', 'admissions', 'academics', 'finance', 'system-admin', 'settings'].includes(activeModule) && (
+                <div className="flex flex-col items-center justify-center h-96 text-slate-400">
+                    <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
+                        <Activity className="w-8 h-8 text-indigo-500" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Module Not Found</h3>
+                    <p className="text-sm">The module "{activeModule}" is not available.</p>
+                </div>
+            )}
         </DashboardShell>
     );
 }
