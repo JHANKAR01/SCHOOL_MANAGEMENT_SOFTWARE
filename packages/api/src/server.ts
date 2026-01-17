@@ -17,6 +17,7 @@ import { jitsiRouter } from './routes/jitsi.ts';
 import { operationsRouter } from './routes/operations.ts';
 import { attendanceRouter } from './routes/attendance.ts';
 import { superAdminRouter } from './routes/super-admin.ts';
+import announcementsRouter from './routes/announcements.ts';
 
 const app = new Hono();
 
@@ -52,6 +53,7 @@ app.route('/api/jitsi', jitsiRouter);
 app.route('/api/operations', operationsRouter);
 app.route('/api/attendance', attendanceRouter);
 app.route('/api/super-admin', superAdminRouter);
+app.route('/api/announcements', announcementsRouter);
 
 // --- REAL-TIME LAYER (Socket.io) ---
 const httpServer = serve({ fetch: app.fetch, port: 3000 });

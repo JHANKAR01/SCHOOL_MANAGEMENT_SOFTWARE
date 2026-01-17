@@ -257,7 +257,7 @@ async function main() {
   await prisma.systemSettings.create({
     data: {
       school_id: SCHOOL_ID,
-      lockdown_mode: false,
+      locked_roles: [],
       low_data_mode: false,
       announcement_ticker: 'Welcome to Sovereign High School - Academic Year 2025-2026!'
     }
@@ -814,9 +814,17 @@ async function main() {
   console.log(`   ✅ ${bookLoansResult.count} book loans created`);
 
   // =========================================================================
-  // STEP 25: SEED SMART FINANCE (V2)
   // =========================================================================
-  console.log('\n💵 STEP 25: Seeding Smart Finance (Ledger System)...');
+  // STEP 25: SEED SMART FINANCE (V2) - WITH HISTORY
+  // =========================================================================
+  console.log('\n💵 STEP 25: Seeding Smart Finance (Ledger System) with Historical Data...');
+
+  // Helper to subtract months safely
+  const subMonths = (date: Date, months: number) => {
+    const d = new Date(date);
+    d.setMonth(d.getMonth() - months);
+    return d;
+  };
 
   // 1. Create Master Fee Structures
   console.log('   └─ Creating Fee Structures...');
@@ -853,25 +861,30 @@ async function main() {
     }
   });
 
-  // 2. Generate Invoices & Transactions for Students
-  console.log('   └─ Generating Invoices & Transactions...');
+  // 2. Generate Invoices & Transactions with HISTORY
+  console.log('   └─ Generating Invoices & Transactions (Spread over 6 months)...');
 
-  // Fetch students created earlier
   const allStudents = await prisma.student.findMany({
     where: { school_id: SCHOOL_ID },
-    take: 50 // Process first 50 students for demo
+    take: 50
   });
 
   let financeCount = 0;
-  let transactionCount = 0; // Added for tracking
 
   for (const [index, student] of allStudents.entries()) {
-    // LOGIC: 60% Good Payers, 20% Partial, 20% Defaulters
     const isGoodPayer = index < 30;
     const isPartialPayer = index >= 30 && index < 40;
     const isDefaulter = index >= 40;
 
-    // Create Invoice (Demand)
+    // RANDOMIZE DATE: Spread transactions over last 6 months
+    const monthsAgo = Math.floor(Math.random() * 6);
+    const transactionDate = subMonths(new Date(), monthsAgo);
+
+    // Invoice created 5 days before transaction
+    const invoiceDate = new Date(transactionDate);
+    invoiceDate.setDate(invoiceDate.getDate() - 5);
+
+    // Create Invoice (Demand) with backdated creation
     const invoice = await prisma.invoice.create({
       data: {
         school_id: SCHOOL_ID,
@@ -879,9 +892,10 @@ async function main() {
         academic_year_id: ACADEMIC_YEAR_2025_ID,
         due_date: new Date('2025-04-10'),
         total_amount: tuitionFee.amount,
-        balance_amount: tuitionFee.amount, // Default full due
+        balance_amount: tuitionFee.amount,
         amount_paid: 0,
         status: 'PENDING',
+        created_at: invoiceDate, // BACKDATED
         items: {
           create: {
             title: tuitionFee.name,
@@ -894,28 +908,24 @@ async function main() {
 
     // Create Transactions (Collection)
     if (isGoodPayer) {
-      // PAY FULL
       await prisma.paymentTransaction.create({
         data: {
           school_id: SCHOOL_ID,
           invoice_id: invoice.id,
           student_id: student.id,
           amount: tuitionFee.amount,
-          mode: 'UPI',
-          date: new Date(),
-          remarks: 'Full Payment via App',
-          reference_no: `TXN${Math.floor(Math.random() * 100000)}`
+          mode: Math.random() > 0.5 ? 'UPI' : 'BANK_TRANSFER',
+          date: transactionDate, // BACKDATED
+          remarks: 'Full Payment',
+          reference_no: `TXN${Math.floor(Math.random() * 1000000)}`
         }
       });
-      transactionCount++;
-      // Update Invoice
       await prisma.invoice.update({
         where: { id: invoice.id },
         data: { status: 'PAID', amount_paid: tuitionFee.amount, balance_amount: 0 }
       });
     }
     else if (isPartialPayer) {
-      // PAY 40%
       const paid = tuitionFee.amount * 0.4;
       await prisma.paymentTransaction.create({
         data: {
@@ -924,20 +934,17 @@ async function main() {
           student_id: student.id,
           amount: paid,
           mode: 'CASH',
-          date: new Date(),
+          date: transactionDate, // BACKDATED
           remarks: 'First Installment',
-          reference_no: `RCPT${Math.floor(Math.random() * 100000)}`
+          reference_no: `RCPT${Math.floor(Math.random() * 1000000)}`
         }
       });
-      transactionCount++;
-      // Update Invoice
       await prisma.invoice.update({
         where: { id: invoice.id },
         data: { status: 'PARTIAL', amount_paid: paid, balance_amount: tuitionFee.amount - paid }
       });
     }
     else if (isDefaulter) {
-      // NO PAYMENT -> Mark Overdue
       await prisma.invoice.update({
         where: { id: invoice.id },
         data: { status: 'OVERDUE' }
@@ -946,7 +953,6 @@ async function main() {
     financeCount++;
   }
   console.log(`   ✅ Processed finance records for ${financeCount} students`);
-  console.log(`   ✅ Generated ${transactionCount} transactions`);
 
   // =========================================================================
   // STEP 26: SEED BUSES

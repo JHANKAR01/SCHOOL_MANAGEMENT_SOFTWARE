@@ -3,6 +3,8 @@ import { Context, Next } from 'hono';
 import { verify } from 'hono/jwt';
 import { UserRole } from '../../../../types';
 
+import prisma from '../db';
+
 // Extend Hono Context via Generics or simply cast usage below.
 // Hardcoded for consistency during debugging
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_do_not_use_in_prod';
@@ -30,6 +32,23 @@ export const authMiddleware = async (c: Context, next: Next) => {
       role: payload.role as UserRole,
       school_id: payload.school_id as string
     };
+
+    // 🔒 LOCKDOWN CHECK START 🔒
+    // Skip check for Super Admin to prevent locking yourself out
+    if (userContext.role !== 'SUPER_ADMIN') {
+      const settings = await prisma.systemSettings.findUnique({
+        where: { school_id: userContext.school_id },
+        select: { locked_roles: true }
+      });
+
+      if (settings?.locked_roles && settings.locked_roles.includes(userContext.role)) {
+        return c.json({
+          error: 'System Lockdown',
+          message: 'The system is currently in maintenance mode for your role.'
+        }, 403);
+      }
+    }
+    // 🔒 LOCKDOWN CHECK END 🔒
 
     c.set('user', userContext);
 

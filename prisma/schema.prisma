@@ -46,6 +46,7 @@ model School {
   Visitor          Visitor[]
 
   // NEW relations
+  announcements      Announcement[]
   academicYears      AcademicYear[]
   classes            Class[]
   subjects           Subject[]
@@ -204,6 +205,7 @@ model User {
   classTeacherOf   Class[]        @relation("ClassTeacher")
   attendanceMarked Attendance[]   @relation("AttendanceMarkedBy")
   bookLoans        BookLoan[]
+  createdAnnouncements Announcement[]
 
   @@index([school_id])
   @@schema("schoolmanagementsystem")
@@ -1102,12 +1104,30 @@ model Ticket {
 
 model SystemSettings {
   school_id           String    @id
-  lockdown_mode       Boolean?  @default(false)
+  locked_roles        String[]  @default([])
   low_data_mode       Boolean?  @default(false)
   announcement_ticker String?
   updated_at          DateTime? @default(now()) @db.Timestamptz(6)
   School              School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@schema("schoolmanagementsystem")
+}
+
+model Announcement {
+  id           String    @id @default(cuid())
+  school_id    String
+  author_id    String
+  title        String
+  message      String
+  target_roles String[]  @default([]) // Empty = All, or ["TEACHER", "STUDENT"]
+  is_public    Boolean   @default(false) // True = Show on Login Page
+  expires_at   DateTime?
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+
+  School       School    @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  author       User      @relation(fields: [author_id], references: [id])
+  
+  @@index([school_id])
   @@schema("schoolmanagementsystem")
 }
 
