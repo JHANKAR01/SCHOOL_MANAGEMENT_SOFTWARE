@@ -55,6 +55,7 @@ export const RoleBasedRouter: React.FC<Props> = ({ role, school, activeModule })
     case UserRole.PRINCIPAL:
       // PRINCIPAL: Oversight/Audit - can access Finance if module selected
       if (isFinanceActive) return <FinanceDashboard school={school} activeModule={activeModule} />;
+      if (activeModule === 'ADMISSIONS' || activeModule === 'admissions') return <AdmissionsDashboard />;
       return <PrincipalDashboard activeModule={activeModule} />;
 
     case UserRole.VICE_PRINCIPAL:

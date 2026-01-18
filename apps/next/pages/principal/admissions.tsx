@@ -1,7 +1,7 @@
 import React from 'react';
 import { DashboardShell } from '../../../../packages/app/components/DashboardShell';
 import { AdmissionsDashboard } from '../../../../packages/app/features/admissions/AdmissionsDashboard';
-import { UserRole } from '../../../../packages/app/types';
+import { UserRole } from '../../../../types';
 
 export default function PrincipalAdmissionsPage() {
     return (
