@@ -19,6 +19,8 @@ import { ApprovalsCenter } from './ApprovalsCenter';
 import { AttendanceAnalytics } from './AttendanceAnalytics';
 import { ResultsCommandCenter } from './ResultsCommandCenter';
 import { ClassroomWalkthrough } from './ClassroomWalkthrough';
+import { SubstitutionManager } from './SubstitutionManager';
+import { LessonPlanOversight } from './LessonPlanOversight';
 import { DemaskPIIDemo } from '../admin/DemaskPII';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -148,6 +150,12 @@ export const PrincipalDashboard: React.FC<Props> = () => {
 
       case 'classrooms':
         return <ClassroomWalkthrough onBack={() => setCurrentModule('overview')} />;
+
+      case 'substitutions':
+        return <SubstitutionManager onBack={() => setCurrentModule('overview')} />;
+
+      case 'curriculum':
+        return <LessonPlanOversight onBack={() => setCurrentModule('overview')} />;
 
       case 'overview':
       default:

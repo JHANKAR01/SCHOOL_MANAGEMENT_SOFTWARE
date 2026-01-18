@@ -10,7 +10,7 @@ import { useTheme } from '../provider/ThemeProvider';
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TYPES & CONFIG
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings' | 'health' | 'flags' | 'admissions' | 'system-admin' | 'approvals' | 'attendance' | 'risk' | 'results' | 'classrooms';
+export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings' | 'health' | 'flags' | 'admissions' | 'system-admin' | 'approvals' | 'attendance' | 'risk' | 'results' | 'classrooms' | 'substitutions' | 'curriculum';
 
 interface NavigationItem {
     id: Module;
@@ -226,6 +226,8 @@ const Sidebar: React.FC<{
                 { id: 'risk', label: 'Risk Monitor', icon: Activity },
                 { id: 'results', label: 'Results', icon: Activity },
                 { id: 'classrooms', label: 'Classrooms', icon: Building2 },
+                { id: 'substitutions', label: 'Substitutions', icon: Activity },
+                { id: 'curriculum', label: 'Curriculum', icon: Building2 },
             ];
         }
         return [{ id: 'overview', label: 'Overview', icon: LayoutDashboard }];
