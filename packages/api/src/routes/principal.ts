@@ -397,4 +397,47 @@ principalRouter.get('/approvals', async (c) => {
     }
 });
 
+/**
+ * POST /api/principal/demask
+ * Log demask PII action for audit compliance
+ */
+principalRouter.post('/demask', async (c) => {
+    const user = c.get('user');
+    const { studentId, justification, fields } = await c.req.json();
+
+    // Validate required fields
+    if (!studentId || !justification || !fields) {
+        return c.json({ success: false, error: 'Missing required fields' }, 400);
+    }
+
+    try {
+        // Create audit log for compliance
+        await prisma.auditLog.create({
+            data: {
+                school_id: user.school_id,
+                user_id: user.id,
+                action: 'DEMASK_PII',
+                target_type: 'Student',
+                target_id: studentId,
+                metadata: {
+                    justification,
+                    fields_accessed: fields,
+                    timestamp: new Date().toISOString(),
+                    duration_minutes: 5
+                }
+            }
+        });
+
+        return c.json({
+            success: true,
+            message: 'Access granted. This action has been logged.',
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+        });
+    } catch (error) {
+        console.error('[Principal] Demask error:', error);
+        return c.json({ success: false, error: 'Failed to log demask action' }, 500);
+    }
+});
+
 export { principalRouter };
+

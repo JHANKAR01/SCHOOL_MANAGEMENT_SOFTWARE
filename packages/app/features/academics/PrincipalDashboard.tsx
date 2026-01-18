@@ -16,6 +16,8 @@ import {
   getApprovalColor,
   getUrgencyColor
 } from '../../hooks/usePrincipalStats';
+import { ResultReviewModal } from './ResultReviewModal';
+import { LeaveReviewModal } from './LeaveReviewModal';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TYPES
@@ -293,19 +295,30 @@ const RiskMonitor: React.FC<RiskMonitorProps> = ({ metrics, onViewReport }) => {
 export const PrincipalDashboard: React.FC<Props> = ({ activeModule }) => {
   const { stats, loading, error, refetch } = usePrincipalStats();
   const [selectedApproval, setSelectedApproval] = useState<ApprovalRequest | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
 
-  // Handle review button click
+  // Handle review button click - opens appropriate modal
   const handleReview = (item: ApprovalRequest) => {
     setSelectedApproval(item);
-    // TODO: Phase 8/9 - Open review modal based on type
-    console.log('Review clicked:', item);
-
-    // Temporary alert for demo
     if (item.type === 'RESULT_PUBLISH') {
-      alert(`Result Review Modal (Phase 8)\n\nExam: ${item.title}\nSubmitted by: ${item.requester}\n\nThis will open the result review modal where you can view marks, make edits, and approve/reject.`);
+      setShowResultModal(true);
     } else if (item.type === 'LEAVE_REQUEST') {
-      alert(`Leave Review Modal (Phase 9)\n\nRequest: ${item.title}\nFrom: ${item.requester}\n\nThis will open the leave detail view with approve/reject options.`);
+      setShowLeaveModal(true);
     }
+  };
+
+  // Handle approval success
+  const handleApprovalSuccess = () => {
+    refetch(); // Refresh data
+    setSelectedApproval(null);
+  };
+
+  // Handle rejection
+  const handleReject = (reason: string) => {
+    console.log('Rejected with reason:', reason);
+    refetch(); // Refresh data
+    setSelectedApproval(null);
   };
 
   // Handle risk report view
@@ -355,6 +368,31 @@ export const PrincipalDashboard: React.FC<Props> = ({ activeModule }) => {
           />
         </div>
       </div>
+
+      {/* Result Review Modal */}
+      <ResultReviewModal
+        isOpen={showResultModal}
+        onClose={() => {
+          setShowResultModal(false);
+          setSelectedApproval(null);
+        }}
+        approvalId={selectedApproval?.id || ''}
+        examId={selectedApproval?.metadata?.examId || ''}
+        onApprove={handleApprovalSuccess}
+        onReject={handleReject}
+      />
+
+      {/* Leave Review Modal */}
+      <LeaveReviewModal
+        isOpen={showLeaveModal}
+        onClose={() => {
+          setShowLeaveModal(false);
+          setSelectedApproval(null);
+        }}
+        leaveId={selectedApproval?.id || ''}
+        onApprove={handleApprovalSuccess}
+        onReject={handleReject}
+      />
     </div>
   );
 };
