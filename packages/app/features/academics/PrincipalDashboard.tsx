@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import {
   Users, FileText, AlertTriangle, CheckCircle, Clock, Shield,
-  RefreshCw, ChevronRight, Loader2, Settings
+  RefreshCw, ChevronRight, Loader2
 } from 'lucide-react';
 import { NebulaCard } from '../../components/nebula/NebulaCard';
 import { NebulaButton } from '../../components/nebula/NebulaButton';
@@ -15,7 +15,8 @@ import { useTheme } from '../../provider/ThemeProvider';
 import { ResultReviewModal } from './ResultReviewModal';
 import { LeaveReviewModal } from './LeaveReviewModal';
 import { RiskAnalytics } from './RiskAnalytics';
-import { AttendanceHeatmap } from './AttendanceHeatmap';
+import { ApprovalsCenter } from './ApprovalsCenter';
+import { AttendanceAnalytics } from './AttendanceAnalytics';
 import { DemaskPIIDemo } from '../admin/DemaskPII';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -52,10 +53,9 @@ export const PrincipalDashboard: React.FC<Props> = () => {
   const getTitle = (): string => {
     switch (currentModule) {
       case 'overview': return "Principal's Overview";
-      case 'approvals': return 'Approvals & Requests';
-      case 'attendance': return 'Attendance Dashboard';
+      case 'approvals': return 'Approvals Center';
+      case 'attendance': return 'Attendance Analytics';
       case 'risk': return 'Risk Monitor';
-      case 'settings': return 'System Settings';
       default: return "Principal's Office";
     }
   };
@@ -134,18 +134,11 @@ export const PrincipalDashboard: React.FC<Props> = () => {
         return <RiskAnalytics onBack={() => setCurrentModule('overview')} />;
 
       case 'attendance':
-        return <AttendanceHeatmap />;
-
-      case 'settings':
-        return (
-          <div className="flex flex-col items-center justify-center p-12">
-            <Settings className="w-12 h-12 text-slate-300 mb-4" />
-            <h2 className="text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">Settings</h2>
-            <p className="text-slate-500 text-center">System settings will be available in a future update.</p>
-          </div>
-        );
+        return <AttendanceAnalytics onBack={() => setCurrentModule('overview')} />;
 
       case 'approvals':
+        return <ApprovalsCenter onBack={() => setCurrentModule('overview')} />;
+
       case 'overview':
       default:
         return renderOverviewContent();
@@ -232,8 +225,8 @@ export const PrincipalDashboard: React.FC<Props> = () => {
                     className="flex items-center p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors border-b border-slate-50 dark:border-slate-800 last:border-0"
                   >
                     <div className={`p-2 rounded-lg mr-4 ${item.type === 'RESULT_PUBLISH' ? 'bg-blue-50 dark:bg-blue-900/20' :
-                        item.type === 'DEMASK_PII' ? 'bg-purple-50 dark:bg-purple-900/20' :
-                          'bg-slate-100 dark:bg-slate-800'
+                      item.type === 'DEMASK_PII' ? 'bg-purple-50 dark:bg-purple-900/20' :
+                        'bg-slate-100 dark:bg-slate-800'
                       }`}>
                       {item.type === 'RESULT_PUBLISH' && <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
                       {item.type === 'DEMASK_PII' && <Shield className="w-4 h-4 text-purple-600 dark:text-purple-400" />}

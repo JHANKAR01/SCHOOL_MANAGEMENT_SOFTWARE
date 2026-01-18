@@ -224,7 +224,6 @@ const Sidebar: React.FC<{
                 { id: 'approvals', label: 'Approvals', icon: Activity },
                 { id: 'attendance', label: 'Attendance', icon: Building2 },
                 { id: 'risk', label: 'Risk Monitor', icon: Activity },
-                { id: 'settings', label: 'Settings', icon: UserCog },
             ];
         }
         return [{ id: 'overview', label: 'Overview', icon: LayoutDashboard }];
