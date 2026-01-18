@@ -222,7 +222,7 @@ const Sidebar: React.FC<{
         if (role === 'PRINCIPAL') {
             return [
                 { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-                { id: 'admissions', label: 'Admissions', icon: UserPlus, href: '/principal/admissions' },
+                { id: 'admissions', label: 'Admissions', icon: UserPlus }, // No href - use SPA module switching
                 { id: 'approvals', label: 'Approvals', icon: Activity },
                 { id: 'attendance', label: 'Attendance', icon: Building2 },
                 { id: 'risk', label: 'Risk Monitor', icon: Activity },

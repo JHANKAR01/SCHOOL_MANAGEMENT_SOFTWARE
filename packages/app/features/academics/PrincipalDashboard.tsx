@@ -22,6 +22,7 @@ import { ClassroomWalkthrough } from './ClassroomWalkthrough';
 import { SubstitutionManager } from './SubstitutionManager';
 import { LessonPlanOversight } from './LessonPlanOversight';
 import { DemaskPIIDemo } from '../admin/DemaskPII';
+import { AdmissionsDashboard } from '../admissions/AdmissionsDashboard';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TYPES
@@ -156,6 +157,9 @@ export const PrincipalDashboard: React.FC<Props> = () => {
 
       case 'curriculum':
         return <LessonPlanOversight onBack={() => setCurrentModule('overview')} />;
+
+      case 'admissions':
+        return <AdmissionsDashboard />;
 
       case 'overview':
       default:
