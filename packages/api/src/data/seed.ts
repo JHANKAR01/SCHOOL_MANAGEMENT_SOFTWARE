@@ -49,8 +49,13 @@ import {
   DUMMY_HOMEWORK,
   DUMMY_LIVE_CLASSES,
   DUMMY_PAPERS,
-  DUMMY_SYLLABUS,
-  DUMMY_SUBSTITUTIONS,
+  // DUMMY_SYLLABUS, // Removed Phase 5
+  // DUMMY_SUBSTITUTIONS, // Removed Phase 5
+  // Phase 5 New Data
+  DUMMY_SYLLABUS_TOPICS,
+  DUMMY_TOPIC_COMPLETIONS,
+  DUMMY_SUBSTITUTIONS_NEW,
+  DUMMY_NUDGE_LOGS,
   DUMMY_MEDICAL_LOGS,
   DUMMY_COUNSELING,
   DUMMY_HOSTEL_ROOMS,
@@ -82,7 +87,7 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool, { schema: 'schoolmanagementsystem' });
 
 // ✅ PrismaClient WITH adapter
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({ adapter }) as unknown as PrismaClient;
 
 // ============================================================================
 // PART 1: MAIN FUNCTION - SETUP, CLEANUP & BASE TABLES
@@ -98,6 +103,24 @@ async function main() {
   console.log('\n🧹 STEP 1: Clearing existing data in FK-safe order...');
 
   // Delete in reverse FK order (child tables first)
+  console.log('   └─ Clearing PaymentTransaction...');
+  await prisma.paymentTransaction.deleteMany();
+
+  console.log('   └─ Clearing InvoiceItem...');
+  await prisma.invoiceItem.deleteMany();
+
+  console.log('   └─ Clearing FeeStructure...');
+  await prisma.feeStructure.deleteMany();
+
+  console.log('   └─ Clearing TransportStop...');
+  await prisma.transportStop.deleteMany();
+
+  console.log('   └─ Clearing Bus...');
+  await prisma.bus.deleteMany();
+
+  console.log('   └─ Clearing TransportRoute...');
+  await prisma.transportRoute.deleteMany();
+
   console.log('   └─ Clearing ResultMark...');
   await prisma.resultMark.deleteMany();
 
@@ -185,8 +208,14 @@ async function main() {
   console.log('   └─ Clearing Paper...');
   await prisma.paper.deleteMany();
 
-  console.log('   └─ Clearing Syllabus...');
-  await prisma.syllabus.deleteMany();
+  console.log('   └─ Clearing TopicCompletion...');
+  await prisma.topicCompletion.deleteMany();
+
+  console.log('   └─ Clearing SyllabusTopic...');
+  await prisma.syllabusTopic.deleteMany();
+
+  console.log('   └─ Clearing NudgeLog...');
+  await prisma.nudgeLog.deleteMany();
 
 
 
@@ -957,6 +986,35 @@ async function main() {
   // =========================================================================
   // STEP 26: SEED BUSES
   // =========================================================================
+  // =========================================================================
+  // STEP 25b: SEED TRANSPORT ROUTES
+  // =========================================================================
+  console.log('\n🛣️ STEP 25b: Seeding Transport Routes...');
+
+  const routes = [
+    { id: 'R-01', name: 'Route 1 - North Zone', start_point: 'City Center', end_point: 'North Campus' },
+    { id: 'R-02', name: 'Route 2 - South Zone', start_point: 'Old City', end_point: 'South Campus' },
+    { id: 'R-03', name: 'Route 3 - East Zone', start_point: 'Station', end_point: 'East Campus' },
+    { id: 'R-04', name: 'Route 4 - West Zone', start_point: 'Airport Road', end_point: 'West Campus' },
+    { id: 'R-05', name: 'Route 5 - Central Zone', start_point: 'Market', end_point: 'Central Campus' },
+  ];
+
+  for (const route of routes) {
+    await prisma.transportRoute.create({
+      data: {
+        id: route.id,
+        school_id: SCHOOL_ID,
+        name: route.name,
+        start_point: route.start_point,
+        end_point: route.end_point
+      }
+    });
+  }
+  console.log(`   ✅ ${routes.length} transport routes created`);
+
+  // =========================================================================
+  // STEP 26: SEED BUSES
+  // =========================================================================
   console.log('\n🚌 STEP 26: Seeding Buses...');
 
   const busData = DUMMY_BUSES.map(bus => ({
@@ -964,7 +1022,7 @@ async function main() {
     plateNumber: bus.plateNumber,
     driverName: bus.driverName,
     capacity: bus.capacity,
-    routeId: bus.routeId,
+    route_id: bus.routeId,
     insuranceExpiry: bus.insuranceExpiry,
     school_id: bus.school_id
   }));
@@ -1085,42 +1143,87 @@ async function main() {
   console.log(`   ✅ ${papersResult.count} papers created`);
 
   // =========================================================================
-  // STEP 32: SEED SYLLABUS
+  // STEP 32: SEED SYLLABUS TOPICS (Phase 5)
   // =========================================================================
-  console.log('\n📖 STEP 32: Seeding Syllabus...');
+  console.log('\n📚 STEP 32: Seeding Syllabus Topics (Master Plan)...');
 
-  const syllabusResult = await prisma.syllabus.createMany({
-    data: DUMMY_SYLLABUS.map(s => ({
-      id: s.id,
-      school_id: s.school_id,
-      subject_id: s.subject_id,
-      class_id: s.class_id,
-      topic: s.topic,
-      status: s.status,
-      teacher_id: s.teacher_id,
-      completed_at: s.completed_at
+  const syllabusTopicsResult = await prisma.syllabusTopic.createMany({
+    data: DUMMY_SYLLABUS_TOPICS.map(topic => ({
+      id: topic.id,
+      school_id: topic.school_id,
+      title: topic.title,
+      description: topic.description,
+      order: topic.order,
+      estimatedHours: topic.estimatedHours,
+      classId: topic.classId,
+      subjectId: topic.subjectId,
     })),
     skipDuplicates: true
   });
-  console.log(`   ✅ ${syllabusResult.count} syllabus topics created`);
+  console.log(`   ✅ ${syllabusTopicsResult.count} syllabus topics created`);
 
   // =========================================================================
-  // STEP 33: SEED SUBSTITUTIONS
+  // STEP 33: SEED TOPIC COMPLETIONS (Phase 5)
   // =========================================================================
-  console.log('\n🔄 STEP 33: Seeding Substitutions...');
+  console.log('\n✅ STEP 33: Seeding Topic Completions (Progress)...');
+
+  const topicCompletionsResult = await prisma.topicCompletion.createMany({
+    data: DUMMY_TOPIC_COMPLETIONS.map(tc => ({
+      id: tc.id,
+      status: tc.status,
+      completedAt: tc.completedAt,
+      classId: tc.classId,
+      section: tc.section,
+      topicId: tc.topicId,
+      markedById: tc.markedById,
+      school_id: tc.school_id
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${topicCompletionsResult.count} topic completions marked`);
+
+  // =========================================================================
+  // STEP 33b: SEED SUBSTITUTIONS (Phase 5)
+  // =========================================================================
+  console.log('\n🔄 STEP 33b: Seeding Substitutions...');
 
   const substitutionsResult = await prisma.substitution.createMany({
-    data: DUMMY_SUBSTITUTIONS.map(sub => ({
+    data: DUMMY_SUBSTITUTIONS_NEW.map(sub => ({
       id: sub.id,
       school_id: sub.school_id,
       date: sub.date,
-      original_teacher_id: sub.original_teacher_id,
-      substitute_teacher_id: sub.substitute_teacher_id,
-      timetable_id: sub.timetable_id
+      period: sub.period,
+      status: sub.status,
+      reason: sub.reason,
+      originalTeacherId: sub.originalTeacherId,
+      substituteTeacherId: sub.substituteTeacherId,
+      classId: sub.classId,
+      section: sub.section,
+      subjectId: sub.subjectId,
+      // timetableId is optional and not in dummy data
     })),
     skipDuplicates: true
   });
   console.log(`   ✅ ${substitutionsResult.count} substitutions created`);
+
+  // =========================================================================
+  // STEP 33c: SEED NUDGE LOGS (Phase 5)
+  // =========================================================================
+  console.log('\n🔔 STEP 33c: Seeding Nudge Logs...');
+
+  const nudgeLogsResult = await prisma.nudgeLog.createMany({
+    data: DUMMY_NUDGE_LOGS.map(nudge => ({
+      id: nudge.id,
+      school_id: nudge.school_id,
+      type: nudge.type,
+      message: nudge.message,
+      senderId: nudge.senderId,
+      receiverId: nudge.receiverId,
+      isRead: nudge.isRead,
+    })),
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${nudgeLogsResult.count} nudge logs created`);
 
   // =========================================================================
   // STEP 34: SEED MEDICAL LOGS
@@ -1347,7 +1450,8 @@ async function main() {
   console.log(`   ├─ ${homeworkResult.count} Homework Assignments`);
   console.log(`   ├─ ${liveClassResult.count} Live Classes`);
   console.log(`   ├─ ${papersResult.count} Exam Papers`);
-  console.log(`   └─ ${syllabusResult.count} Syllabus Topics`);
+  console.log(`   ├─ ${syllabusTopicsResult.count} Syllabus Topics`);
+  console.log(`   └─ ${topicCompletionsResult.count} Topic Completions`);
 
   console.log('\n📚 LIBRARY & FINANCE:');
   console.log(`   ├─ ${booksResult.count} Books`);

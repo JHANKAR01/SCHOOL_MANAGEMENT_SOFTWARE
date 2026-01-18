@@ -38,7 +38,6 @@ model School {
   Result           Result[]
   students         Student[]
   Substitution     Substitution[]
-  Syllabus         Syllabus[]
   SystemSettings   SystemSettings?
   Ticket           Ticket[]
   Timetable        Timetable[]
@@ -59,6 +58,11 @@ model School {
   classSubjects      ClassSubject[]
   staffSubjects      StaffSubject[]
   staffClasses       StaffClass[]
+
+  // Phase 5 Relations
+  syllabusTopics    SyllabusTopic[]
+  topicCompletions  TopicCompletion[]
+  nudgeLogs         NudgeLog[]
 
   // FINANCE RELATIONS (V2)
   financeFeeStructures FeeStructure[]
@@ -124,9 +128,13 @@ model Class {
   homework      Homework[]
   liveClasses   LiveClass[]
   papers        Paper[]
-  syllabi       Syllabus[]
   classSubjects ClassSubject[]
   staffClasses  StaffClass[]
+  
+  // Phase 5 Relations
+  substitutions     Substitution[]
+  syllabusTopics    SyllabusTopic[]
+  topicCompletions  TopicCompletion[]
   
   // FINANCE RELATIONS (V2)
   financeFeeStructures FeeStructure[]
@@ -151,10 +159,13 @@ model Subject {
   timetables    Timetable[]
   homework      Homework[]
   liveClasses   LiveClass[]
-  syllabi       Syllabus[]
   staffSubjects StaffSubject[]
   resultMarks   ResultMark[]
   papers        Paper[]
+  
+  // Phase 5 Relations
+  substitutions   Substitution[]
+  syllabusTopics  SyllabusTopic[]
 
   @@unique([school_id, code])
   @@index([school_id])
@@ -199,9 +210,6 @@ model User {
   LeaveApplication                                      LeaveApplication[]
   LiveClass                                             LiveClass[]
   parent_links                                          ParentStudent[]
-  Substitution_Substitution_original_teacher_idToUser   Substitution[]     @relation("Substitution_original_teacher_idToUser")
-  Substitution_Substitution_substitute_teacher_idToUser Substitution[]     @relation("Substitution_substitute_teacher_idToUser")
-  Syllabus                                              Syllabus[]
   Ticket                                                Ticket[]
   Timetable                                             Timetable[]
   school                                                School             @relation(fields: [school_id], references: [id])
@@ -402,6 +410,13 @@ model StaffProfile {
   staffSubjects    StaffSubject[]
   staffClasses     StaffClass[]
   financialDetails StaffFinancial? // 1-to-1 for RLS security
+  
+  // Phase 5: New Relations
+  absences         Substitution[]    @relation("Absences")
+  substitutions    Substitution[]    @relation("Substitutions")
+  completedTopics  TopicCompletion[]
+  sentNudges       NudgeLog[]        @relation("SentNudges")
+  receivedNudges   NudgeLog[]        @relation("ReceivedNudges")
 
   @@unique([school_id, employee_id])
   @@index([school_id])
@@ -746,42 +761,133 @@ model Paper {
 }
 
 /// Syllabus with proper FKs to Class and Subject
-model Syllabus {
-  id           String          @id
-  school_id    String
-  subject_id   String // Now FK to Subject (renamed from 'subject')
-  class_id     String // Now FK to Class
-  topic        String
-  status       SyllabusStatus? @default(NOT_STARTED)
-  teacher_id   String?
-  completed_at DateTime?       @db.Timestamptz(6)
+// ============================================================================
+// 1. ADVANCED SUBSTITUTION MANAGEMENT
+// ============================================================================
 
-  class   Class   @relation(fields: [class_id], references: [id])
-  subject Subject @relation(fields: [subject_id], references: [id])
-  School  School  @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  User    User?   @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+model Substitution {
+  id        String   @id @default(cuid())
+  school_id String
+  date      DateTime @default(now()) @db.Date
+  period    Int      // 1, 2, 3, 4
+  
+  // Status Tracking
+  status    String   @default("PENDING") // PENDING, ASSIGNED, COMPLETED
+  reason    String?  // SICK, CASUAL, EMERGENCY, OFFICIAL_DUTY
+  
+  // Relations: Pointing to StaffProfile (Better for HR logic)
+  originalTeacherId String
+  originalTeacher     StaffProfile @relation("Absences", fields: [originalTeacherId], references: [id])
+  substituteTeacherId String?
+  substituteTeacher   StaffProfile? @relation("Substitutions", fields: [substituteTeacherId], references: [id])
 
-  @@index([class_id])
-  @@index([subject_id])
+  // Context
+  classId     String
+  class       Class    @relation(fields: [classId], references: [id])
+  section     Section  // Explicit Enum field for easy filtering
+  
+  subjectId   String?
+  subject     Subject? @relation(fields: [subjectId], references: [id])
+  
+  // Optional: Link to original timetable slot if it exists
+  timetableId String?
+  Timetable   Timetable? @relation(fields: [timetableId], references: [id])
+  
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt
+
+  school    School   @relation(fields: [school_id], references: [id])
+
+  @@index([date, status])
   @@index([school_id])
-  @@index([teacher_id])  // Teacher's syllabus progress
-  @@index([status])      // Completion status filter
+  @@index([originalTeacherId])
+  @@index([substituteTeacherId])
   @@schema("schoolmanagementsystem")
 }
 
-model Substitution {
-  id                                            String     @id
-  school_id                                     String
-  date                                          DateTime   @default(dbgenerated("CURRENT_DATE")) @db.Date
-  original_teacher_id                           String?
-  substitute_teacher_id                         String?
-  timetable_id                                  String?
-  User_Substitution_original_teacher_idToUser   User?      @relation("Substitution_original_teacher_idToUser", fields: [original_teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  School                                        School     @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  User_Substitution_substitute_teacher_idToUser User?      @relation("Substitution_substitute_teacher_idToUser", fields: [substitute_teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Timetable                                     Timetable? @relation(fields: [timetable_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+// ============================================================================
+// 2. LESSON PLAN & SYLLABUS OVERSIGHT
+// ============================================================================
+
+// The "Master Plan" (What needs to be taught for Class 10 Math)
+model SyllabusTopic {
+  id             String   @id @default(cuid())
+  school_id      String
+  title          String   // e.g. "Intro to Trigonometry"
+  description    String?
+  order          Int      // 1, 2, 3 (Teaching sequence)
+  estimatedHours Int?     @default(1)
+
+  // Hierarchy
+  classId     String
+  class       Class    @relation(fields: [classId], references: [id])
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+
+  // Tracking
+  completions TopicCompletion[]
+  school      School @relation(fields: [school_id], references: [id])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt
 
   @@index([school_id])
+  @@index([classId])
+  @@index([subjectId])
+  @@schema("schoolmanagementsystem")
+}
+
+// The "Reality" (What 10-A has actually finished)
+model TopicCompletion {
+  id          String   @id @default(cuid())
+  status      String   @default("COMPLETED") // COMPLETED, SKIPPED, IN_PROGRESS
+  completedAt DateTime @default(now()) @db.Timestamptz(6)
+
+  // Specific Scope
+  classId   String  // Links to Class 10-A
+  class     Class   @relation(fields: [classId], references: [id])
+  section   Section // Explicit Enum field
+  
+  // The Topic
+  topicId   String
+  topic     SyllabusTopic @relation(fields: [topicId], references: [id])
+
+  // Which teacher marked it?
+  markedById String?
+  markedBy   StaffProfile? @relation(fields: [markedById], references: [id])
+
+  school_id String
+  school    School @relation(fields: [school_id], references: [id])
+
+  @@unique([classId, topicId]) // One completion per class-section per topic
+  @@index([topicId])
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// 3. NUDGE & COMMUNICATION LOG
+// ============================================================================
+
+model NudgeLog {
+  id        String   @id @default(cuid())
+  school_id String
+  type      String   // SYLLABUS_LAG, ATTENDANCE, GENERAL
+  message   String
+  
+  senderId    String
+  sender      StaffProfile @relation("SentNudges", fields: [senderId], references: [id])
+  
+  receiverId  String
+  receiver    StaffProfile @relation("ReceivedNudges", fields: [receiverId], references: [id])
+  
+  isRead      Boolean  @default(false)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  school    School   @relation(fields: [school_id], references: [id])
+
+  @@index([school_id])
+  @@index([receiverId, isRead])
   @@schema("schoolmanagementsystem")
 }
 

@@ -1474,7 +1474,7 @@ function generateInvoices(): DummyInvoice[] {
       status = InvoiceStatus.PAID;
       utr = `UPI${(1000000000 + i).toString()}`;
     } else if (i % 3 === 1) {
-      status = InvoiceStatus.VERIFIED;
+      status = InvoiceStatus.PAID;
       utr = `NEFT${(2000000000 + i).toString()}`;
     } else {
       status = InvoiceStatus.PENDING;
@@ -1732,76 +1732,7 @@ function generatePapers(): DummyPaper[] {
 
 export const DUMMY_PAPERS: DummyPaper[] = generatePapers();
 
-// --- Syllabus ---
-export interface DummySyllabus {
-  id: string;
-  school_id: string;
-  subject_id: string;
-  class_id: string;
-  topic: string;
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
-  teacher_id: string | null;
-  completed_at: Date | null;
-}
 
-function generateSyllabus(): DummySyllabus[] {
-  const syllabusList: DummySyllabus[] = [];
-  const teachers = DUMMY_STAFF_USERS.filter(u => u.role === UserRole.TEACHER);
-  const statuses: ('NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED')[] = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED'];
-  const topics = ['Introduction', 'Fundamentals', 'Advanced Concepts', 'Applications', 'Revision'];
-  const classes = ['cls_6_A', 'cls_7_B', 'cls_8_C', 'cls_9_A'];
-  const subjects = ['sub_math', 'sub_sci', 'sub_eng', 'sub_sst'];
-
-  for (let i = 0; i < 20; i++) {
-    const status = statuses[i % 3];
-    syllabusList.push({
-      id: `syl_${(i + 1).toString().padStart(4, '0')}`,
-      school_id: SCHOOL_ID,
-      subject_id: subjects[i % 4],
-      class_id: classes[i % 4],
-      topic: `${topics[i % 5]} - Unit ${Math.floor(i / 5) + 1}`,
-      status,
-      teacher_id: teachers[i % teachers.length].id,
-      completed_at: status === 'COMPLETED' ? new Date() : null
-    });
-  }
-  return syllabusList;
-}
-
-export const DUMMY_SYLLABUS: DummySyllabus[] = generateSyllabus();
-
-// --- Substitutions ---
-export interface DummySubstitution {
-  id: string;
-  school_id: string;
-  date: Date;
-  original_teacher_id: string;
-  substitute_teacher_id: string;
-  timetable_id: string | null;
-}
-
-function generateSubstitutions(): DummySubstitution[] {
-  const substitutions: DummySubstitution[] = [];
-  const teachers = DUMMY_STAFF_USERS.filter(u => u.role === UserRole.TEACHER);
-
-  const baseDate = new Date();
-  for (let i = 0; i < 10; i++) {
-    const date = new Date(baseDate);
-    date.setDate(date.getDate() - i);
-
-    substitutions.push({
-      id: `sub_${(i + 1).toString().padStart(4, '0')}`,
-      school_id: SCHOOL_ID,
-      date,
-      original_teacher_id: teachers[i % teachers.length].id,
-      substitute_teacher_id: teachers[(i + 10) % teachers.length].id,
-      timetable_id: i < DUMMY_TIMETABLE.length ? DUMMY_TIMETABLE[i].id : null
-    });
-  }
-  return substitutions;
-}
-
-export const DUMMY_SUBSTITUTIONS: DummySubstitution[] = generateSubstitutions();
 
 // --- Medical Logs ---
 export interface DummyMedicalLog {
@@ -2227,3 +2158,225 @@ export const DUMMY_IDENTITY_DOCUMENTS: DummyIdentityDocument[] = generateIdentit
 // Buses: 5
 // ============================================================================
 
+// ============================================================================
+// PHASE 5: ACADEMIC OVERSIGHT & SUBSTITUTIONS
+// ============================================================================
+
+// --- Syllabus Topics ---
+export interface DummySyllabusTopic {
+  id: string;
+  school_id: string;
+  title: string;
+  description: string;
+  order: number;
+  estimatedHours: number;
+  classId: string;
+  subjectId: string;
+}
+
+function generateSyllabusTopics(): DummySyllabusTopic[] {
+  const topics: DummySyllabusTopic[] = [];
+  let topicIndex = 0;
+
+  // We need to generate topics for each Class-Subject pair?
+  // Actually, SyllabusTopic is linked to Class and Subject.
+  // In our schema: classId references Class.
+  // DUMMY_CLASS_SUBJECTS has {class_id, subject_id}.
+
+  // Note: DUMMY_CLASS_SUBJECTS links specific SECTION classes (e.g. 10-A) to subjects.
+  // But usually syllabus is same for 10-A, 10-B. 
+  // Our schema stores SyllabusTopic per Class ID. 
+  // If we want them to share topics, we'd need a master 'GradeSubject' link, 
+  // but current schema links to Class (10-A).
+  // So we will generate duplicate topics for each section for now (or just for A and propagate logic, but separate rows).
+
+  // To avoid massive count, let's just generate for FIRST 5 classes for testing
+  const testClasses = DUMMY_CLASSES.slice(0, 10);
+  const relevantClassSubjects = DUMMY_CLASS_SUBJECTS.filter(cs => testClasses.some(c => c.id === cs.class_id));
+
+  for (const cs of relevantClassSubjects) {
+    const subject = DUMMY_SUBJECTS.find(s => s.id === cs.subject_id);
+    if (!subject) continue;
+
+    for (let i = 1; i <= 10; i++) {
+      topics.push({
+        id: `syl_topic_${topicIndex++}`,
+        school_id: SCHOOL_ID,
+        title: `${subject.name} - Chapter ${i}`,
+        description: `Detailed description for Chapter ${i}`,
+        order: i,
+        estimatedHours: 5,
+        classId: cs.class_id,
+        subjectId: cs.subject_id
+      });
+    }
+  }
+  return topics;
+}
+
+export const DUMMY_SYLLABUS_TOPICS: DummySyllabusTopic[] = generateSyllabusTopics();
+
+// --- Topic Completions ---
+export interface DummyTopicCompletion {
+  id: string;
+  status: 'COMPLETED' | 'SKIPPED' | 'IN_PROGRESS';
+  completedAt: Date;
+  classId: string;
+  section: Section;
+  topicId: string;
+  markedById: string | null;
+  school_id: string;
+}
+
+function generateTopicCompletions(): DummyTopicCompletion[] {
+  const completions: DummyTopicCompletion[] = [];
+  let compIndex = 0;
+
+  // We iterate over the generated topics
+  // DUMMY_SYLLABUS_TOPICS are already linked to specific classId (e.g. 10-A).
+
+  for (const topic of DUMMY_SYLLABUS_TOPICS) {
+    const cls = DUMMY_CLASSES.find(c => c.id === topic.classId);
+    if (!cls) continue;
+
+    // Logic: 
+    // Section A: 50% complete (Topics 1-5)
+    // Section B: 20% complete (Topics 1-2)
+    // Section C: 80% complete (Topics 1-8)
+    // Section D: 0% complete
+
+    // Check if we should mark this topic as completed
+    let shouldComplete = false;
+    if (cls.section === Section.A && topic.order <= 5) shouldComplete = true;
+    else if (cls.section === Section.B && topic.order <= 2) shouldComplete = true;
+    else if (cls.section === Section.C && topic.order <= 8) shouldComplete = true;
+
+    if (shouldComplete) {
+      // Fix: markedById expects StaffProfile ID, but cls.class_teacher_id is User ID
+      const teacherProfile = DUMMY_STAFF_PROFILES.find(p => p.user_id === cls.class_teacher_id);
+
+      completions.push({
+        id: `tc_${compIndex++}`,
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        classId: topic.classId,
+        section: cls.section,
+        topicId: topic.id,
+        markedById: teacherProfile ? teacherProfile.id : null,
+        school_id: SCHOOL_ID
+      });
+    }
+  }
+  return completions;
+}
+
+export const DUMMY_TOPIC_COMPLETIONS: DummyTopicCompletion[] = generateTopicCompletions();
+
+
+// --- Substitutions ---
+export interface DummySubstitution {
+  id: string;
+  school_id: string;
+  date: Date;
+  period: number;
+  status: 'PENDING' | 'ASSIGNED' | 'COMPLETED';
+  reason: string;
+  originalTeacherId: string;
+  substituteTeacherId: string | null;
+  classId: string;
+  section: Section;
+  subjectId: string | null;
+}
+
+function generateSubstitutions(): DummySubstitution[] {
+  const subs: DummySubstitution[] = [];
+
+  // Create 5 substitutions for Today
+  const today = new Date();
+  const teachers = DUMMY_STAFF_PROFILES.filter(p => DUMMY_STAFF_USERS.find(u => u.id === p.user_id)?.role === UserRole.TEACHER);
+
+  if (teachers.length < 10) return subs; // logic needs teachers
+
+  // 1. Pending (Sick leave)
+  subs.push({
+    id: 'sub_1', school_id: SCHOOL_ID, date: today, period: 1,
+    status: 'PENDING', reason: 'SICK',
+    originalTeacherId: teachers[0].id, substituteTeacherId: null,
+    classId: DUMMY_CLASSES[0].id, section: DUMMY_CLASSES[0].section, subjectId: DUMMY_SUBJECTS[0].id
+  });
+
+  // 2. Assigned (Casual leave)
+  subs.push({
+    id: 'sub_2', school_id: SCHOOL_ID, date: today, period: 2,
+    status: 'ASSIGNED', reason: 'CASUAL',
+    originalTeacherId: teachers[1].id, substituteTeacherId: teachers[5].id,
+    classId: DUMMY_CLASSES[1].id, section: DUMMY_CLASSES[1].section, subjectId: DUMMY_SUBJECTS[1].id
+  });
+
+  // 3. Pending (Emergency)
+  subs.push({
+    id: 'sub_3', school_id: SCHOOL_ID, date: today, period: 3,
+    status: 'PENDING', reason: 'EMERGENCY',
+    originalTeacherId: teachers[2].id, substituteTeacherId: null,
+    classId: DUMMY_CLASSES[2].id, section: DUMMY_CLASSES[2].section, subjectId: DUMMY_SUBJECTS[2].id
+  });
+
+  // 4. Assigned
+  subs.push({
+    id: 'sub_4', school_id: SCHOOL_ID, date: today, period: 4,
+    status: 'ASSIGNED', reason: 'OFFICIAL_DUTY',
+    originalTeacherId: teachers[3].id, substituteTeacherId: teachers[6].id,
+    classId: DUMMY_CLASSES[3].id, section: DUMMY_CLASSES[3].section, subjectId: DUMMY_SUBJECTS[3].id
+  });
+
+  // 5. Completed
+  subs.push({
+    id: 'sub_5', school_id: SCHOOL_ID, date: today, period: 5,
+    status: 'COMPLETED', reason: 'SICK',
+    originalTeacherId: teachers[4].id, substituteTeacherId: teachers[7].id,
+    classId: DUMMY_CLASSES[4].id, section: DUMMY_CLASSES[4].section, subjectId: DUMMY_SUBJECTS[4].id
+  });
+
+  return subs;
+}
+
+export const DUMMY_SUBSTITUTIONS_NEW: DummySubstitution[] = generateSubstitutions();
+
+// --- Nudge Logs ---
+export interface DummyNudgeLog {
+  id: string;
+  school_id: string;
+  type: string;
+  message: string;
+  senderId: string;
+  receiverId: string;
+  isRead: boolean;
+  created_at: Date;
+}
+
+function generateNudgeLogs(): DummyNudgeLog[] {
+  const nudges: DummyNudgeLog[] = [];
+
+  // Principal sends nudge to teacher
+  const principal = DUMMY_STAFF_PROFILES.find(p => p.designation === 'Principal');
+  const teacher = DUMMY_STAFF_PROFILES.find(p => p.designation === 'Teacher');
+
+  if (principal && teacher) {
+    nudges.push({
+      id: 'nudge_1', school_id: SCHOOL_ID, type: 'SYLLABUS_LAG',
+      message: 'Please speed up Math syllabus for Class 10-A',
+      senderId: principal.id, receiverId: teacher.id,
+      isRead: false, created_at: new Date()
+    });
+
+    nudges.push({
+      id: 'nudge_2', school_id: SCHOOL_ID, type: 'ATTENDANCE',
+      message: 'Please mark attendance by 9 AM',
+      senderId: principal.id, receiverId: teacher.id,
+      isRead: true, created_at: new Date()
+    });
+  }
+  return nudges;
+}
+
+export const DUMMY_NUDGE_LOGS: DummyNudgeLog[] = generateNudgeLogs();
