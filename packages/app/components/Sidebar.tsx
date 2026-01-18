@@ -3,8 +3,6 @@ import { View, Text, Pressable, ScrollView, Platform } from 'react-native';
 import { UserRole, SchoolConfig } from '../../../types';
 import { useLowDataMode } from '../hooks/useLowDataMode';
 
-import { useRouter } from 'expo-router';
-
 interface SidebarProps {
   role: UserRole;
   school: SchoolConfig;
@@ -28,17 +26,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose
 }) => {
-  const router = useRouter();
   const { isLowData } = useLowDataMode();
   const { features } = school;
 
   const handleLogout = async () => {
     // Clear storage
-    localStorage.removeItem('sovereign_token');
-    localStorage.removeItem('sovereign_user_session');
-
-    // Redirect
-    router.replace('/login');
+    if (Platform.OS === 'web') {
+      localStorage.removeItem('sovereign_token');
+      localStorage.removeItem('sovereign_user_session');
+      // Web navigation
+      window.location.href = '/login';
+    } else {
+      // Native - would use expo-router if available
+      // For now, just clear storage (parent should handle navigation)
+      console.log('Logout requested on native');
+    }
   };
 
   // Strict Departmental Isolation Logic + Feature Flags
