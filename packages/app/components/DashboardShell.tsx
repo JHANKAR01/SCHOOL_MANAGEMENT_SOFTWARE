@@ -10,7 +10,7 @@ import { useTheme } from '../provider/ThemeProvider';
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TYPES & CONFIG
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings' | 'health' | 'flags' | 'admissions' | 'system-admin';
+export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings' | 'health' | 'flags' | 'admissions' | 'system-admin' | 'approvals' | 'attendance' | 'risk';
 
 interface NavigationItem {
     id: Module;
@@ -216,6 +216,15 @@ const Sidebar: React.FC<{
                 { id: 'staff', label: 'Staff', icon: User },
                 { id: 'students', label: 'Students', icon: UserCog },
                 { id: 'finance', label: 'Finance', icon: Activity },
+            ];
+        }
+        if (role === 'PRINCIPAL') {
+            return [
+                { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+                { id: 'approvals', label: 'Approvals', icon: Activity },
+                { id: 'attendance', label: 'Attendance', icon: Building2 },
+                { id: 'risk', label: 'Risk Monitor', icon: Activity },
+                { id: 'settings', label: 'Settings', icon: UserCog },
             ];
         }
         return [{ id: 'overview', label: 'Overview', icon: LayoutDashboard }];

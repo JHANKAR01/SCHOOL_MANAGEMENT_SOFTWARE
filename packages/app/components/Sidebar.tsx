@@ -57,11 +57,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       case UserRole.PRINCIPAL: // Academic Head + Oversight
         items = [
-          { id: 'OVERVIEW', label: 'School Overview', icon: '📊' },
+          { id: 'OVERVIEW', label: 'Overview', icon: '📊' },
+          { id: 'APPROVALS', label: 'Approvals', icon: '✅' },
+          { id: 'ATTENDANCE', label: 'Attendance', icon: '📅' },
+          { id: 'RISK', label: 'Risk Monitor', icon: '⚠️' },
           { id: 'CLASSROOMS', label: 'Classrooms', icon: '🏫' },
           { id: 'RESULTS', label: 'Publish Results', icon: '📢' },
+          { id: 'SETTINGS', label: 'Settings', icon: '⚙️' },
         ];
-        if (features.attendance) items.push({ id: 'ATTENDANCE_REP', label: 'Attendance Reports', icon: '📋' });
         if (features.fees) items.push({ id: 'FINANCE', label: 'Finance', icon: '💰' });
         break;
 
