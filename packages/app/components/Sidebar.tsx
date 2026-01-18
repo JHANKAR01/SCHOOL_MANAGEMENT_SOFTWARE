@@ -12,10 +12,13 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+import { UserPlus } from 'lucide-react';
+
 interface MenuItem {
   id: string;
   label: string;
-  icon: string;
+  icon: any; // string (emoji) or Component
+  href?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -60,6 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       case UserRole.PRINCIPAL: // Academic Head + Oversight
         items = [
           { id: 'OVERVIEW', label: 'Overview', icon: '📊' },
+          { id: 'ADMISSIONS', label: 'Admissions', icon: UserPlus, href: '/principal/admissions' },
           { id: 'APPROVALS', label: 'Approvals', icon: '✅' },
           { id: 'ATTENDANCE', label: 'Attendance', icon: '📅' },
           { id: 'RISK', label: 'Risk Monitor', icon: '⚠️' },
@@ -70,6 +74,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ];
         if (features.fees) items.push({ id: 'FINANCE', label: 'Finance', icon: '💰' });
         break;
+
+      // ... (other cases omitted for brevity in replace tool, effectively keeping them if I target specifically, but existing tool usage replaces a specific block. I'll target the Principal block primarily, but the rendering login is SEPARATE. I need 2 chunks)
+
+      // Chunk 1: Principal Menu
+      // Chunk 2: Rendering Loop
+
+      // Wait, I can't put comment in ReplacementContent like that.
+      // I will split into 2 chunks.
+
 
       case UserRole.FINANCE_MANAGER: // Finance Approver
       case UserRole.ACCOUNTANT: // Primary Operator
@@ -187,11 +200,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
           {menuItems.map((item) => {
             const isActive = activeModule === item.id;
+            const IconComponent = item.icon;
+
             return (
               <Pressable
                 key={item.id}
                 onPress={() => {
-                  setActiveModule(item.id);
+                  if (item.href) {
+                    if (Platform.OS === 'web') window.location.href = item.href;
+                  } else {
+                    setActiveModule(item.id);
+                  }
                   onClose();
                 }}
                 className={`flex-row w-full items-center px-4 py-3.5 mb-1 rounded-lg ${isActive
@@ -207,9 +226,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   />
                 )}
 
-                <Text className={`mr-3 text-lg ${isActive ? 'scale-110' : 'text-gray-400'}`}>
-                  {item.icon}
-                </Text>
+                <View className="mr-3 w-6 items-center">
+                  {typeof item.icon === 'string' ? (
+                    <Text className={`text-lg ${isActive ? 'scale-110' : 'text-gray-400'}`}>
+                      {item.icon}
+                    </Text>
+                  ) : (
+                    <IconComponent size={20} color={isActive ? '#4F46E5' : '#6B7280'} />
+                  )}
+                </View>
                 <Text className={`text-sm font-medium ${isActive ? 'text-gray-900' : 'text-gray-600'}`}>
                   {item.label}
                 </Text>

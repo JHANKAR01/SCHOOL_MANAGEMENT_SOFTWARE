@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     LayoutDashboard, Building2, Database, UserCog, Sun, Moon,
     Menu, X, LogOut, Activity, ChevronDown, User, Settings,
-    Bell, Search, ChevronRight, Command
+    Bell, Search, ChevronRight, Command, UserPlus
 } from 'lucide-react';
 import { UserRole } from '../../../types';
 import { useTheme } from '../provider/ThemeProvider';
@@ -17,6 +17,7 @@ interface NavigationItem {
     label: string;
     icon: React.ComponentType<any>;
     badge?: string;
+    href?: string;
 }
 
 interface DashboardShellProps {
@@ -221,6 +222,7 @@ const Sidebar: React.FC<{
         if (role === 'PRINCIPAL') {
             return [
                 { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+                { id: 'admissions', label: 'Admissions', icon: UserPlus, href: '/principal/admissions' },
                 { id: 'approvals', label: 'Approvals', icon: Activity },
                 { id: 'attendance', label: 'Attendance', icon: Building2 },
                 { id: 'risk', label: 'Risk Monitor', icon: Activity },
@@ -262,7 +264,11 @@ const Sidebar: React.FC<{
                         <button
                             key={item.id}
                             onClick={() => {
-                                onModuleChange(item.id as Module);
+                                if (item.href) {
+                                    window.location.href = item.href;
+                                } else {
+                                    onModuleChange(item.id as Module);
+                                }
                                 if (isMobile) onClose();
                             }}
                             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-r-lg text-sm font-medium transition-all group ${getItemClass(activeModule === item.id)}`}
