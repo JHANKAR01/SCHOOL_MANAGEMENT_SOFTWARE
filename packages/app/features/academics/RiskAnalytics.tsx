@@ -1,301 +1,395 @@
 // packages/app/features/academics/RiskAnalytics.tsx
-// Risk Analytics View - Shows at-risk students with filters and actions
-import React, { useState, useEffect } from 'react';
+// Phase 3: Risk Monitor 2.0 - Scenario Builder with Dynamic Filtering
+import React, { useState, useMemo } from 'react';
 import {
-    AlertTriangle, Users, TrendingDown, Filter, Search,
-    ChevronDown, Mail, Phone, FileText, Loader2, ArrowLeft
+    AlertTriangle, TrendingDown, ArrowLeft, Users, BookOpen,
+    Filter, ChevronDown, Search, ChevronRight, Clock, Calendar
 } from 'lucide-react';
 import { NebulaCard } from '../../components/nebula/NebulaCard';
 import { NebulaButton } from '../../components/nebula/NebulaButton';
-import { NebulaInput } from '../../components/nebula/NebulaInput';
 import { useTheme } from '../../provider/ThemeProvider';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TYPES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-type RiskType = 'attendance' | 'academic' | 'both';
+type RiskType = 'attendance' | 'academic';
 
-interface AtRiskStudent {
+interface StudentRisk {
     id: string;
     name: string;
     rollNo: string;
-    className: string;
+    class: string;
     section: string;
-    riskType: RiskType;
-    attendancePercent: number;
+    attendancePct: number;
     failingSubjects: number;
-    lastAbsentDate: string;
-    parentName: string;
-    parentPhone: string;
-    counselingNotes?: string;
+    lastAbsent: string;
+    parentContact: string;
+    riskLevel: 'critical' | 'high' | 'medium';
 }
 
-interface RiskAnalyticsProps {
-    onBack: () => void;
+interface Props {
+    onBack?: () => void;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // MOCK DATA
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const MOCK_AT_RISK: AtRiskStudent[] = [
-    { id: '1', name: 'Vikash Joshi', rollNo: '007', className: '10', section: 'A', riskType: 'both', attendancePercent: 62, failingSubjects: 3, lastAbsentDate: '2026-01-17', parentName: 'Mr. Suresh Joshi', parentPhone: '+91 98765 43210', counselingNotes: 'Family issues reported. Counselor meeting scheduled.' },
-    { id: '2', name: 'Rohit Mehta', rollNo: '015', className: '9', section: 'B', riskType: 'attendance', attendancePercent: 68, failingSubjects: 0, lastAbsentDate: '2026-01-16', parentName: 'Mrs. Priya Mehta', parentPhone: '+91 98765 43211' },
-    { id: '3', name: 'Sneha Kapoor', rollNo: '023', className: '10', section: 'C', riskType: 'academic', attendancePercent: 89, failingSubjects: 4, lastAbsentDate: '2026-01-10', parentName: 'Mr. Amit Kapoor', parentPhone: '+91 98765 43212' },
-    { id: '4', name: 'Ankit Sharma', rollNo: '031', className: '8', section: 'A', riskType: 'attendance', attendancePercent: 71, failingSubjects: 1, lastAbsentDate: '2026-01-15', parentName: 'Mrs. Rekha Sharma', parentPhone: '+91 98765 43213' },
-    { id: '5', name: 'Priya Singh', rollNo: '042', className: '11', section: 'B', riskType: 'both', attendancePercent: 58, failingSubjects: 2, lastAbsentDate: '2026-01-17', parentName: 'Mr. Raj Singh', parentPhone: '+91 98765 43214', counselingNotes: 'Health issues - frequent hospital visits.' },
-    { id: '6', name: 'Karan Patel', rollNo: '056', className: '9', section: 'A', riskType: 'academic', attendancePercent: 92, failingSubjects: 3, lastAbsentDate: '2026-01-05', parentName: 'Mrs. Neha Patel', parentPhone: '+91 98765 43215' },
-    { id: '7', name: 'Aisha Khan', rollNo: '067', className: '10', section: 'B', riskType: 'attendance', attendancePercent: 65, failingSubjects: 0, lastAbsentDate: '2026-01-16', parentName: 'Mr. Zafar Khan', parentPhone: '+91 98765 43216' },
-    { id: '8', name: 'Rahul Verma', rollNo: '078', className: '12', section: 'A', riskType: 'both', attendancePercent: 55, failingSubjects: 4, lastAbsentDate: '2026-01-17', parentName: 'Mrs. Suman Verma', parentPhone: '+91 98765 43217', counselingNotes: 'Board exam pressure. Weekly counseling ongoing.' },
+const ALL_AT_RISK_STUDENTS: StudentRisk[] = [
+    { id: 'std_001', name: 'Aarav Sharma', rollNo: '10A-01', class: '10', section: 'A', attendancePct: 45, failingSubjects: 4, lastAbsent: '2026-01-17', parentContact: '+91 98765 43210', riskLevel: 'critical' },
+    { id: 'std_002', name: 'Priya Patel', rollNo: '10B-15', class: '10', section: 'B', attendancePct: 52, failingSubjects: 3, lastAbsent: '2026-01-16', parentContact: '+91 98765 43211', riskLevel: 'critical' },
+    { id: 'std_003', name: 'Rahul Kumar', rollNo: '9A-08', class: '9', section: 'A', attendancePct: 68, failingSubjects: 2, lastAbsent: '2026-01-15', parentContact: '+91 98765 43212', riskLevel: 'high' },
+    { id: 'std_004', name: 'Kavya Iyer', rollNo: '9B-22', class: '9', section: 'B', attendancePct: 62, failingSubjects: 3, lastAbsent: '2026-01-14', parentContact: '+91 98765 43213', riskLevel: 'high' },
+    { id: 'std_005', name: 'Arjun Nair', rollNo: '8A-11', class: '8', section: 'A', attendancePct: 72, failingSubjects: 1, lastAbsent: '2026-01-13', parentContact: '+91 98765 43214', riskLevel: 'medium' },
+    { id: 'std_006', name: 'Sneha Gupta', rollNo: '8B-19', class: '8', section: 'B', attendancePct: 78, failingSubjects: 2, lastAbsent: '2026-01-12', parentContact: '+91 98765 43215', riskLevel: 'medium' },
+    { id: 'std_007', name: 'Vikram Reddy', rollNo: '7A-05', class: '7', section: 'A', attendancePct: 58, failingSubjects: 4, lastAbsent: '2026-01-17', parentContact: '+91 98765 43216', riskLevel: 'critical' },
+    { id: 'std_008', name: 'Ananya Singh', rollNo: '7B-14', class: '7', section: 'B', attendancePct: 74, failingSubjects: 1, lastAbsent: '2026-01-10', parentContact: '+91 98765 43217', riskLevel: 'medium' },
+    { id: 'std_009', name: 'Rohan Mehta', rollNo: '6A-03', class: '6', section: 'A', attendancePct: 55, failingSubjects: 3, lastAbsent: '2026-01-16', parentContact: '+91 98765 43218', riskLevel: 'critical' },
+    { id: 'std_010', name: 'Ishita Verma', rollNo: '6B-21', class: '6', section: 'B', attendancePct: 82, failingSubjects: 0, lastAbsent: '2026-01-05', parentContact: '+91 98765 43219', riskLevel: 'medium' },
+    { id: 'std_011', name: 'Aditya Joshi', rollNo: '10A-12', class: '10', section: 'A', attendancePct: 65, failingSubjects: 2, lastAbsent: '2026-01-14', parentContact: '+91 98765 43220', riskLevel: 'high' },
+    { id: 'std_012', name: 'Meera Rao', rollNo: '9A-18', class: '9', section: 'A', attendancePct: 71, failingSubjects: 2, lastAbsent: '2026-01-11', parentContact: '+91 98765 43221', riskLevel: 'medium' },
 ];
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// HELPER COMPONENTS
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-const RiskBadge: React.FC<{ type: RiskType }> = ({ type }) => {
-    const config = {
-        attendance: { label: 'Attendance', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-        academic: { label: 'Academic', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-        both: { label: 'Critical', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-    };
-    return (
-        <span className={`px-2 py-1 rounded text-xs font-bold ${config[type].color}`}>
-            {config[type].label}
-        </span>
-    );
-};
-
-const StatCard: React.FC<{ label: string; value: number; icon: React.ReactNode; color: string }> = ({ label, value, icon, color }) => (
-    <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div className={`p-3 rounded-lg ${color}`}>{icon}</div>
-        <div>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
-            <p className="text-sm text-slate-500">{label}</p>
-        </div>
-    </div>
-);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // MAIN COMPONENT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export const RiskAnalytics: React.FC<RiskAnalyticsProps> = ({ onBack }) => {
+export const RiskAnalytics: React.FC<Props> = ({ onBack }) => {
     const { isDarkMode } = useTheme();
-    const [loading, setLoading] = useState(true);
-    const [students, setStudents] = useState<AtRiskStudent[]>([]);
+
+    // Control Panel State
+    const [riskType, setRiskType] = useState<RiskType>('attendance');
+    const [threshold, setThreshold] = useState<number>(75);
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterType, setFilterType] = useState<RiskType | 'all'>('all');
-    const [filterClass, setFilterClass] = useState<string>('all');
-    const [selectedStudent, setSelectedStudent] = useState<AtRiskStudent | null>(null);
+    const [selectedStudent, setSelectedStudent] = useState<StudentRisk | null>(null);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
 
-    // Load data
-    useEffect(() => {
-        setLoading(true);
-        setTimeout(() => {
-            setStudents(MOCK_AT_RISK);
-            setLoading(false);
-        }, 400);
-    }, []);
+    // Dynamic Filtering based on risk type and threshold
+    const filteredStudents = useMemo(() => {
+        return ALL_AT_RISK_STUDENTS.filter(student => {
+            // Apply risk type filter
+            if (riskType === 'attendance') {
+                if (student.attendancePct >= threshold) return false;
+            } else {
+                // Academic risk: students failing > threshold subjects
+                if (student.failingSubjects <= threshold) return false;
+            }
 
-    // Filter students
-    const filteredStudents = students.filter(s => {
-        const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            s.rollNo.includes(searchQuery);
-        const matchesType = filterType === 'all' || s.riskType === filterType;
-        const matchesClass = filterClass === 'all' || s.className === filterClass;
-        return matchesSearch && matchesType && matchesClass;
-    });
+            // Apply search filter
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                const matchesName = student.name.toLowerCase().includes(query);
+                const matchesRoll = student.rollNo.toLowerCase().includes(query);
+                const matchesClass = `${student.class}-${student.section}`.toLowerCase().includes(query);
+                if (!matchesName && !matchesRoll && !matchesClass) return false;
+            }
 
-    // Calculate stats
-    const stats = {
-        total: students.length,
-        attendance: students.filter(s => s.riskType === 'attendance' || s.riskType === 'both').length,
-        academic: students.filter(s => s.riskType === 'academic' || s.riskType === 'both').length,
-        critical: students.filter(s => s.riskType === 'both').length
+            return true;
+        });
+    }, [riskType, threshold, searchQuery]);
+
+    // Summary stats
+    const summaryStats = useMemo(() => {
+        const critical = filteredStudents.filter(s => s.riskLevel === 'critical').length;
+        const high = filteredStudents.filter(s => s.riskLevel === 'high').length;
+        const medium = filteredStudents.filter(s => s.riskLevel === 'medium').length;
+        return { total: filteredStudents.length, critical, high, medium };
+    }, [filteredStudents]);
+
+    const getRiskColor = (level: string) => {
+        switch (level) {
+            case 'critical': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+            case 'high': return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
+            case 'medium': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+            default: return 'bg-slate-100 text-slate-700';
+        }
     };
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // STUDENT DETAIL VIEW
+    // ─────────────────────────────────────────────────────────────────────────
+    if (selectedStudent) {
+        return (
+            <div className="h-full flex flex-col">
+                <div className="flex items-center gap-4 mb-6">
+                    <button
+                        onClick={() => setSelectedStudent(null)}
+                        className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                        <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                    </button>
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{selectedStudent.name}</h1>
+                        <p className="text-sm text-slate-500">Class {selectedStudent.class}-{selectedStudent.section} • Roll: {selectedStudent.rollNo}</p>
+                    </div>
+                    <span className={`ml-auto px-3 py-1 rounded-full text-sm font-bold ${getRiskColor(selectedStudent.riskLevel)}`}>
+                        {selectedStudent.riskLevel.toUpperCase()} RISK
+                    </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Attendance Card */}
+                    <NebulaCard className="p-6">
+                        <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-indigo-500" /> Attendance
+                        </h3>
+                        <div className="text-center py-6">
+                            <p className={`text-5xl font-bold ${selectedStudent.attendancePct < 60 ? 'text-red-600' :
+                                    selectedStudent.attendancePct < 75 ? 'text-amber-600' : 'text-slate-900 dark:text-white'
+                                }`}>
+                                {selectedStudent.attendancePct}%
+                            </p>
+                            <p className="text-sm text-slate-500 mt-2">Current Attendance</p>
+                        </div>
+                        <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+                            <p className="text-sm text-slate-500">Last Absent: <span className="font-medium text-slate-900 dark:text-white">{selectedStudent.lastAbsent}</span></p>
+                        </div>
+                    </NebulaCard>
+
+                    {/* Academic Card */}
+                    <NebulaCard className="p-6">
+                        <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                            <BookOpen className="w-5 h-5 text-amber-500" /> Academic Performance
+                        </h3>
+                        <div className="text-center py-6">
+                            <p className={`text-5xl font-bold ${selectedStudent.failingSubjects >= 3 ? 'text-red-600' :
+                                    selectedStudent.failingSubjects >= 2 ? 'text-amber-600' : 'text-slate-900 dark:text-white'
+                                }`}>
+                                {selectedStudent.failingSubjects}
+                            </p>
+                            <p className="text-sm text-slate-500 mt-2">Failing Subjects</p>
+                        </div>
+                        <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+                            <p className="text-sm text-slate-500">Needs intervention in {selectedStudent.failingSubjects > 0 ? selectedStudent.failingSubjects : 'no'} subject(s)</p>
+                        </div>
+                    </NebulaCard>
+
+                    {/* Contact Card */}
+                    <NebulaCard className="p-6 md:col-span-2">
+                        <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                            <Users className="w-5 h-5 text-emerald-500" /> Parent Contact
+                        </h3>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-lg font-medium text-slate-900 dark:text-white">{selectedStudent.parentContact}</p>
+                                <p className="text-sm text-slate-500">Guardian phone number</p>
+                            </div>
+                            <NebulaButton variant="primary">
+                                Schedule Call
+                            </NebulaButton>
+                        </div>
+                    </NebulaCard>
+                </div>
+            </div>
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // MAIN VIEW
+    // ─────────────────────────────────────────────────────────────────────────
     return (
-        <div className="space-y-6">
+        <div className="h-full flex flex-col space-y-6">
             {/* Header */}
-            <div className="flex items-center gap-4">
-                <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
-                    <ArrowLeft className="w-5 h-5 text-slate-500" />
-                </button>
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Risk Analytics</h1>
-                    <p className="text-sm text-slate-500">Students requiring intervention</p>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    {onBack && (
+                        <button onClick={onBack} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                            <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                        </button>
+                    )}
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Risk Monitor 2.0</h1>
+                        <p className="text-sm text-slate-500">Scenario Builder • Dynamic Filtering</p>
+                    </div>
                 </div>
             </div>
 
-            {/* Stats Row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard label="Total At-Risk" value={stats.total} icon={<Users className="w-5 h-5 text-white" />} color="bg-slate-600" />
-                <StatCard label="Low Attendance" value={stats.attendance} icon={<TrendingDown className="w-5 h-5 text-white" />} color="bg-amber-500" />
-                <StatCard label="Academic Issues" value={stats.academic} icon={<FileText className="w-5 h-5 text-white" />} color="bg-red-500" />
-                <StatCard label="Critical (Both)" value={stats.critical} icon={<AlertTriangle className="w-5 h-5 text-white" />} color="bg-purple-500" />
-            </div>
+            {/* Control Panel */}
+            <NebulaCard className="p-4">
+                <div className="flex flex-wrap items-center gap-4">
+                    {/* Risk Type Dropdown */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setDropdownOpen(!dropdownOpen)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                                } hover:border-indigo-400`}
+                        >
+                            {riskType === 'attendance' ? (
+                                <Calendar className="w-4 h-4 text-indigo-500" />
+                            ) : (
+                                <BookOpen className="w-4 h-4 text-amber-500" />
+                            )}
+                            <span className="font-medium text-slate-900 dark:text-white">
+                                {riskType === 'attendance' ? 'Attendance Risk' : 'Academic Risk'}
+                            </span>
+                            <ChevronDown className="w-4 h-4 text-slate-400" />
+                        </button>
 
-            {/* Filters */}
-            <NebulaCard>
-                <div className="flex flex-wrap gap-4">
-                    <div className="flex-1 min-w-[200px]">
-                        <NebulaInput
+                        {dropdownOpen && (
+                            <div className={`absolute top-full left-0 mt-1 w-48 rounded-lg shadow-lg border z-50 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                                }`}>
+                                <button
+                                    onClick={() => { setRiskType('attendance'); setThreshold(75); setDropdownOpen(false); }}
+                                    className={`w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700 ${riskType === 'attendance' ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''
+                                        }`}
+                                >
+                                    <Calendar className="w-4 h-4 text-indigo-500" />
+                                    <span className="text-sm font-medium">Attendance Risk</span>
+                                </button>
+                                <button
+                                    onClick={() => { setRiskType('academic'); setThreshold(2); setDropdownOpen(false); }}
+                                    className={`w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700 ${riskType === 'academic' ? 'bg-amber-50 dark:bg-amber-900/20' : ''
+                                        }`}
+                                >
+                                    <BookOpen className="w-4 h-4 text-amber-500" />
+                                    <span className="text-sm font-medium">Academic Risk</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Threshold Input */}
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                        }`}>
+                        <Filter className="w-4 h-4 text-slate-400" />
+                        <span className="text-sm text-slate-500">
+                            {riskType === 'attendance' ? 'Below' : 'Failing >'}
+                        </span>
+                        <input
+                            type="number"
+                            value={threshold}
+                            onChange={(e) => setThreshold(Number(e.target.value) || 0)}
+                            className="w-12 bg-transparent border-none outline-none text-sm font-bold text-center text-indigo-600 dark:text-indigo-400"
+                            min={0}
+                            max={riskType === 'attendance' ? 100 : 10}
+                        />
+                        <span className="text-sm text-slate-500">
+                            {riskType === 'attendance' ? '%' : 'subjects'}
+                        </span>
+                    </div>
+
+                    {/* Search */}
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border flex-1 max-w-xs ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                        }`}>
+                        <Search className="w-4 h-4 text-slate-400" />
+                        <input
                             type="text"
                             placeholder="Search student..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            icon={<Search className="w-4 h-4" />}
+                            className="flex-1 bg-transparent border-none outline-none text-sm"
                         />
                     </div>
-                    <select
-                        value={filterType}
-                        onChange={(e) => setFilterType(e.target.value as RiskType | 'all')}
-                        className={`px-4 py-2 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200'}`}
-                    >
-                        <option value="all">All Risk Types</option>
-                        <option value="attendance">Attendance Only</option>
-                        <option value="academic">Academic Only</option>
-                        <option value="both">Critical (Both)</option>
-                    </select>
-                    <select
-                        value={filterClass}
-                        onChange={(e) => setFilterClass(e.target.value)}
-                        className={`px-4 py-2 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200'}`}
-                    >
-                        <option value="all">All Classes</option>
-                        {['8', '9', '10', '11', '12'].map(c => (
-                            <option key={c} value={c}>Class {c}</option>
-                        ))}
-                    </select>
+
+                    {/* Summary Badge */}
+                    <div className={`ml-auto px-4 py-2 rounded-full text-sm font-bold ${summaryStats.total > 0
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        }`}>
+                        Found {summaryStats.total} student{summaryStats.total !== 1 ? 's' : ''} matching criteria
+                    </div>
                 </div>
             </NebulaCard>
 
-            {/* Students Table */}
-            <NebulaCard noPadding>
-                {loading ? (
-                    <div className="flex justify-center py-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+            {/* Summary Stats */}
+            <div className="grid grid-cols-3 gap-4">
+                <NebulaCard className="p-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-lg">
+                            <AlertTriangle className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-red-600">{summaryStats.critical}</p>
+                            <p className="text-xs text-slate-500">Critical</p>
+                        </div>
+                    </div>
+                </NebulaCard>
+
+                <NebulaCard className="p-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                            <TrendingDown className="w-5 h-5 text-orange-600" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-orange-600">{summaryStats.high}</p>
+                            <p className="text-xs text-slate-500">High Risk</p>
+                        </div>
+                    </div>
+                </NebulaCard>
+
+                <NebulaCard className="p-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-100 dark:bg-amber-900/20 rounded-lg">
+                            <Clock className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-amber-600">{summaryStats.medium}</p>
+                            <p className="text-xs text-slate-500">Medium Risk</p>
+                        </div>
+                    </div>
+                </NebulaCard>
+            </div>
+
+            {/* Student List */}
+            <NebulaCard className="flex-1">
+                <div className="p-4 border-b border-slate-100 dark:border-slate-800">
+                    <h3 className="font-semibold text-slate-900 dark:text-white">
+                        At-Risk Students ({filteredStudents.length})
+                    </h3>
+                </div>
+
+                {filteredStudents.length === 0 ? (
+                    <div className="flex flex-col items-center py-16">
+                        <AlertTriangle className="w-12 h-12 text-emerald-300 dark:text-emerald-800 mb-4" />
+                        <p className="text-slate-500 font-medium">No students match the criteria</p>
+                        <p className="text-sm text-slate-400">Try adjusting the threshold</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className={isDarkMode ? 'bg-slate-800' : 'bg-slate-50'}>
-                                <tr>
-                                    <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Student</th>
-                                    <th className="text-center px-4 py-4 text-xs font-semibold text-slate-500 uppercase">Class</th>
-                                    <th className="text-center px-4 py-4 text-xs font-semibold text-slate-500 uppercase">Risk Type</th>
-                                    <th className="text-center px-4 py-4 text-xs font-semibold text-slate-500 uppercase">Attendance</th>
-                                    <th className="text-center px-4 py-4 text-xs font-semibold text-slate-500 uppercase">Failing</th>
-                                    <th className="text-center px-4 py-4 text-xs font-semibold text-slate-500 uppercase">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                {filteredStudents.map(student => (
-                                    <tr key={student.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                        <td className="px-6 py-4">
-                                            <div>
-                                                <p className="font-medium text-slate-900 dark:text-white">{student.name}</p>
-                                                <p className="text-xs text-slate-500">Roll: {student.rollNo}</p>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-4 text-center text-sm text-slate-600 dark:text-slate-400">
-                                            {student.className}-{student.section}
-                                        </td>
-                                        <td className="px-4 py-4 text-center">
-                                            <RiskBadge type={student.riskType} />
-                                        </td>
-                                        <td className="px-4 py-4 text-center">
-                                            <span className={`font-medium ${student.attendancePercent < 75 ? 'text-red-600' : 'text-slate-600 dark:text-slate-400'}`}>
-                                                {student.attendancePercent}%
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4 text-center">
-                                            <span className={`font-medium ${student.failingSubjects > 2 ? 'text-red-600' : 'text-slate-600 dark:text-slate-400'}`}>
-                                                {student.failingSubjects}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4 text-center">
-                                            <div className="flex justify-center gap-2">
-                                                <button
-                                                    onClick={() => setSelectedStudent(student)}
-                                                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                                                    title="View Details"
-                                                >
-                                                    <FileText className="w-4 h-4 text-slate-500" />
-                                                </button>
-                                                <a
-                                                    href={`tel:${student.parentPhone}`}
-                                                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                                                    title="Call Parent"
-                                                >
-                                                    <Phone className="w-4 h-4 text-slate-500" />
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        {filteredStudents.length === 0 && (
-                            <div className="py-12 text-center">
-                                <p className="text-slate-500">No students match your filters</p>
-                            </div>
-                        )}
+                    <div className="divide-y divide-slate-50 dark:divide-slate-800/50 max-h-96 overflow-y-auto">
+                        {filteredStudents.map(student => (
+                            <button
+                                key={student.id}
+                                onClick={() => setSelectedStudent(student)}
+                                className="w-full flex items-center gap-4 px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 text-left"
+                            >
+                                <div className={`p-3 rounded-xl ${student.riskLevel === 'critical' ? 'bg-red-100 dark:bg-red-900/20' :
+                                        student.riskLevel === 'high' ? 'bg-orange-100 dark:bg-orange-900/20' :
+                                            'bg-amber-100 dark:bg-amber-900/20'
+                                    }`}>
+                                    <Users className={`w-5 h-5 ${student.riskLevel === 'critical' ? 'text-red-600' :
+                                            student.riskLevel === 'high' ? 'text-orange-600' : 'text-amber-600'
+                                        }`} />
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-slate-900 dark:text-white">{student.name}</p>
+                                    <p className="text-xs text-slate-500">Class {student.class}-{student.section} • {student.rollNo}</p>
+                                </div>
+
+                                <div className="text-right">
+                                    {riskType === 'attendance' ? (
+                                        <p className={`text-lg font-bold ${student.attendancePct < 60 ? 'text-red-600' : 'text-amber-600'
+                                            }`}>{student.attendancePct}%</p>
+                                    ) : (
+                                        <p className={`text-lg font-bold ${student.failingSubjects >= 3 ? 'text-red-600' : 'text-amber-600'
+                                            }`}>{student.failingSubjects} subjects</p>
+                                    )}
+                                    <p className="text-xs text-slate-500">
+                                        {riskType === 'attendance' ? 'Attendance' : 'Failing'}
+                                    </p>
+                                </div>
+
+                                <span className={`px-2 py-1 rounded text-xs font-bold ${getRiskColor(student.riskLevel)}`}>
+                                    {student.riskLevel.toUpperCase()}
+                                </span>
+
+                                <ChevronRight className="w-5 h-5 text-slate-400" />
+                            </button>
+                        ))}
                     </div>
                 )}
             </NebulaCard>
-
-            {/* Student Detail Modal */}
-            {selectedStudent && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedStudent(null)} />
-                    <div className={`relative w-full max-w-lg p-6 rounded-xl shadow-2xl ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
-                            {selectedStudent.name}
-                        </h3>
-                        <div className="space-y-3">
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">Class</span>
-                                <span className="font-medium text-slate-900 dark:text-white">{selectedStudent.className}-{selectedStudent.section}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">Attendance</span>
-                                <span className={`font-medium ${selectedStudent.attendancePercent < 75 ? 'text-red-600' : 'text-slate-900 dark:text-white'}`}>
-                                    {selectedStudent.attendancePercent}%
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">Failing Subjects</span>
-                                <span className="font-medium text-slate-900 dark:text-white">{selectedStudent.failingSubjects}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">Last Absent</span>
-                                <span className="font-medium text-slate-900 dark:text-white">{selectedStudent.lastAbsentDate}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">Parent</span>
-                                <span className="font-medium text-slate-900 dark:text-white">{selectedStudent.parentName}</span>
-                            </div>
-                            {selectedStudent.counselingNotes && (
-                                <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-amber-900/20' : 'bg-amber-50'}`}>
-                                    <p className="text-xs font-semibold text-amber-600 mb-1">Counseling Notes</p>
-                                    <p className="text-sm text-slate-700 dark:text-slate-300">{selectedStudent.counselingNotes}</p>
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex gap-3 mt-6">
-                            <NebulaButton variant="secondary" onClick={() => setSelectedStudent(null)} className="flex-1">
-                                Close
-                            </NebulaButton>
-                            <NebulaButton variant="primary" className="flex-1">
-                                <Mail className="w-4 h-4 mr-2" /> Email Parent
-                            </NebulaButton>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

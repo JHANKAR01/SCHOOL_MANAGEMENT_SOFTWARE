@@ -1,10 +1,9 @@
 // packages/app/features/academics/AttendanceAnalytics.tsx
-// Advanced Attendance Analytics Dashboard with Charts, Filters, and Drill-Down
+// Phase 3: Advanced Attendance Analytics with Reactive Filtering & CSS Bar Chart
 import React, { useState, useMemo } from 'react';
 import {
     Calendar, TrendingUp, TrendingDown, Minus, AlertTriangle,
-    ChevronRight, ArrowLeft, Users, Clock, Filter, Search,
-    Sun, Coffee
+    ChevronRight, ArrowLeft, Users, Filter, Search, Sun, Coffee
 } from 'lucide-react';
 import { NebulaCard } from '../../components/nebula/NebulaCard';
 import { NebulaButton } from '../../components/nebula/NebulaButton';
@@ -20,9 +19,17 @@ type Granularity = 'daily' | 'weekly' | 'monthly';
 interface DayData {
     date: string;
     label: string;
-    percentage: number | null; // null = holiday/sunday
+    shortLabel: string;
+    percentage: number;
     isHoliday: boolean;
     holidayName?: string;
+}
+
+interface WeekData {
+    weekNum: number;
+    label: string;
+    percentage: number;
+    daysCount: number;
 }
 
 interface ClassAttendance {
@@ -33,6 +40,7 @@ interface ClassAttendance {
     presentToday: number;
     weeklyAvg: number;
     monthlyAvg: number;
+    yearlyAvg: number;
     trend: 'up' | 'down' | 'stable';
     atRiskStudents: number;
 }
@@ -51,45 +59,106 @@ interface Props {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// MOCK DATA
+// HOLIDAYS CONFIG
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const HOLIDAYS = [
-    { date: '2026-01-14', name: 'Makar Sankranti' },
-    { date: '2026-01-26', name: 'Republic Day' },
-];
+const HOLIDAYS: Record<string, string> = {
+    '2026-01-14': 'Makar Sankranti',
+    '2026-01-26': 'Republic Day',
+    '2026-03-14': 'Holi',
+    '2026-08-15': 'Independence Day',
+    '2026-10-02': 'Gandhi Jayanti',
+    '2026-11-01': 'Diwali',
+    '2026-12-25': 'Christmas',
+};
 
-const generateWeekData = (): DayData[] => {
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MOCK DATA GENERATORS (Skip Sundays!)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const generateDailyData = (days: number): DayData[] => {
     const today = new Date();
     const data: DayData[] = [];
+    let daysAdded = 0;
+    let offset = 0;
 
-    for (let i = 6; i >= 0; i--) {
+    // Work backwards, skipping Sundays
+    while (daysAdded < days) {
         const date = new Date(today);
-        date.setDate(date.getDate() - i);
+        date.setDate(date.getDate() - offset);
         const dateStr = date.toISOString().split('T')[0];
         const dayOfWeek = date.getDay();
-        const isSunday = dayOfWeek === 0;
-        const holiday = HOLIDAYS.find(h => h.date === dateStr);
 
-        data.push({
-            date: dateStr,
-            label: date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }),
-            percentage: (isSunday || holiday) ? null : Math.floor(Math.random() * 15) + 85,
-            isHoliday: isSunday || !!holiday,
-            holidayName: isSunday ? 'Sunday' : holiday?.name,
-        });
+        offset++;
+
+        // Skip Sundays entirely
+        if (dayOfWeek === 0) continue;
+
+        const holiday = HOLIDAYS[dateStr];
+
+        // If it's a holiday, still add but mark it
+        if (holiday) {
+            data.unshift({
+                date: dateStr,
+                label: date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }),
+                shortLabel: date.toLocaleDateString('en-IN', { weekday: 'short' }),
+                percentage: 0,
+                isHoliday: true,
+                holidayName: holiday,
+            });
+        } else {
+            // Generate random but realistic attendance (80-98%)
+            const baseAttendance = 88 + Math.random() * 10;
+            const variance = (Math.random() - 0.5) * 8;
+            const attendance = Math.max(70, Math.min(100, baseAttendance + variance));
+
+            data.unshift({
+                date: dateStr,
+                label: date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }),
+                shortLabel: date.toLocaleDateString('en-IN', { weekday: 'short' }),
+                percentage: Math.round(attendance * 10) / 10,
+                isHoliday: false,
+            });
+        }
+
+        daysAdded++;
     }
+
     return data;
 };
 
-const MOCK_CLASSES: ClassAttendance[] = [
-    { id: 'cls_10a', name: 'Class 10', section: 'A', totalStudents: 42, presentToday: 40, weeklyAvg: 94.5, monthlyAvg: 93.2, trend: 'stable', atRiskStudents: 2 },
-    { id: 'cls_10b', name: 'Class 10', section: 'B', totalStudents: 40, presentToday: 28, weeklyAvg: 72.3, monthlyAvg: 74.8, trend: 'down', atRiskStudents: 8 },
-    { id: 'cls_9a', name: 'Class 9', section: 'A', totalStudents: 45, presentToday: 43, weeklyAvg: 96.1, monthlyAvg: 95.5, trend: 'up', atRiskStudents: 1 },
-    { id: 'cls_9b', name: 'Class 9', section: 'B', totalStudents: 38, presentToday: 26, weeklyAvg: 68.4, monthlyAvg: 71.2, trend: 'down', atRiskStudents: 10 },
-    { id: 'cls_8a', name: 'Class 8', section: 'A', totalStudents: 44, presentToday: 42, weeklyAvg: 95.2, monthlyAvg: 94.8, trend: 'stable', atRiskStudents: 2 },
-    { id: 'cls_8b', name: 'Class 8', section: 'B', totalStudents: 41, presentToday: 39, weeklyAvg: 92.7, monthlyAvg: 91.5, trend: 'stable', atRiskStudents: 3 },
-    { id: 'cls_7a', name: 'Class 7', section: 'A', totalStudents: 43, presentToday: 30, weeklyAvg: 73.5, monthlyAvg: 76.2, trend: 'down', atRiskStudents: 7 },
+const generateWeeklyData = (weeks: number): WeekData[] => {
+    const data: WeekData[] = [];
+
+    for (let i = weeks - 1; i >= 0; i--) {
+        // Each week has 6 working days (Mon-Sat)
+        const attendance = 85 + Math.random() * 12;
+        data.push({
+            weekNum: weeks - i,
+            label: `Week ${weeks - i}`,
+            percentage: Math.round(attendance * 10) / 10,
+            daysCount: 6,
+        });
+    }
+
+    return data;
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MOCK CLASS DATA
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const ALL_CLASSES: ClassAttendance[] = [
+    { id: 'cls_10a', name: 'Class 10', section: 'A', totalStudents: 42, presentToday: 40, weeklyAvg: 94.5, monthlyAvg: 93.2, yearlyAvg: 91.8, trend: 'stable', atRiskStudents: 2 },
+    { id: 'cls_10b', name: 'Class 10', section: 'B', totalStudents: 40, presentToday: 28, weeklyAvg: 72.3, monthlyAvg: 74.8, yearlyAvg: 76.2, trend: 'down', atRiskStudents: 8 },
+    { id: 'cls_9a', name: 'Class 9', section: 'A', totalStudents: 45, presentToday: 43, weeklyAvg: 96.1, monthlyAvg: 95.5, yearlyAvg: 94.2, trend: 'up', atRiskStudents: 1 },
+    { id: 'cls_9b', name: 'Class 9', section: 'B', totalStudents: 38, presentToday: 26, weeklyAvg: 68.4, monthlyAvg: 71.2, yearlyAvg: 73.5, trend: 'down', atRiskStudents: 10 },
+    { id: 'cls_8a', name: 'Class 8', section: 'A', totalStudents: 44, presentToday: 42, weeklyAvg: 95.2, monthlyAvg: 94.8, yearlyAvg: 93.1, trend: 'stable', atRiskStudents: 2 },
+    { id: 'cls_8b', name: 'Class 8', section: 'B', totalStudents: 41, presentToday: 39, weeklyAvg: 92.7, monthlyAvg: 91.5, yearlyAvg: 90.3, trend: 'stable', atRiskStudents: 3 },
+    { id: 'cls_7a', name: 'Class 7', section: 'A', totalStudents: 43, presentToday: 30, weeklyAvg: 73.5, monthlyAvg: 76.2, yearlyAvg: 78.9, trend: 'down', atRiskStudents: 7 },
+    { id: 'cls_7b', name: 'Class 7', section: 'B', totalStudents: 40, presentToday: 38, weeklyAvg: 89.5, monthlyAvg: 88.2, yearlyAvg: 87.5, trend: 'stable', atRiskStudents: 4 },
+    { id: 'cls_6a', name: 'Class 6', section: 'A', totalStudents: 45, presentToday: 44, weeklyAvg: 97.2, monthlyAvg: 96.5, yearlyAvg: 95.8, trend: 'up', atRiskStudents: 1 },
+    { id: 'cls_6b', name: 'Class 6', section: 'B', totalStudents: 42, presentToday: 29, weeklyAvg: 69.8, monthlyAvg: 72.1, yearlyAvg: 74.5, trend: 'down', atRiskStudents: 9 },
 ];
 
 const MOCK_STUDENTS: StudentDetail[] = [
@@ -100,64 +169,74 @@ const MOCK_STUDENTS: StudentDetail[] = [
     { id: 'std_005', name: 'Vikram Reddy', rollNo: '05', attendancePct: 88, absentDays: 3, status: 'present' },
     { id: 'std_006', name: 'Kavya Iyer', rollNo: '06', attendancePct: 62, absentDays: 8, status: 'late' },
     { id: 'std_007', name: 'Arjun Nair', rollNo: '07', attendancePct: 72, absentDays: 6, status: 'present' },
+    { id: 'std_008', name: 'Sneha Gupta', rollNo: '08', attendancePct: 91, absentDays: 2, status: 'present' },
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// CHART COMPONENT (Simple SVG)
+// CSS BAR CHART COMPONENT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const TrendChart: React.FC<{ data: DayData[]; isDarkMode: boolean }> = ({ data, isDarkMode }) => {
-    const workingDays = data.filter(d => d.percentage !== null);
-    const width = 100;
-    const height = 50;
-    const padding = 5;
+interface BarChartProps {
+    data: (DayData | WeekData)[];
+    granularity: Granularity;
+    isDarkMode: boolean;
+}
 
-    if (workingDays.length < 2) return null;
+const CSSBarChart: React.FC<BarChartProps> = ({ data, granularity, isDarkMode }) => {
+    const isDaily = granularity === 'daily';
+    const maxHeight = 160; // px
 
-    const maxVal = 100;
-    const minVal = 60;
-    const range = maxVal - minVal;
+    // Filter out holidays for display calculation
+    const workingData = isDaily
+        ? (data as DayData[]).filter(d => !d.isHoliday)
+        : data;
 
-    const points = workingDays.map((d, i) => {
-        const x = padding + (i / (workingDays.length - 1)) * (width - padding * 2);
-        const y = height - padding - ((d.percentage! - minVal) / range) * (height - padding * 2);
-        return `${x},${y}`;
-    }).join(' ');
+    const getBarColor = (pct: number): string => {
+        if (pct < 75) return 'bg-red-500';
+        if (pct < 85) return 'bg-amber-500';
+        if (pct >= 90) return 'bg-emerald-500';
+        return 'bg-indigo-500';
+    };
 
     return (
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-32">
-            {/* Grid lines */}
-            <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding}
-                stroke={isDarkMode ? '#334155' : '#e2e8f0'} strokeWidth="0.5" />
-            <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2}
-                stroke={isDarkMode ? '#334155' : '#e2e8f0'} strokeWidth="0.5" strokeDasharray="2,2" />
+        <div className="flex items-end justify-between gap-1 h-48 px-2">
+            {(data as any[]).map((item, idx) => {
+                const isHoliday = isDaily && (item as DayData).isHoliday;
+                const pct = isHoliday ? 0 : (item.percentage || 0);
+                const barHeight = isHoliday ? 0 : (pct / 100) * maxHeight;
+                const label = isDaily ? (item as DayData).shortLabel : (item as WeekData).label;
 
-            {/* Trend line */}
-            <polyline
-                fill="none"
-                stroke="#6366f1"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                points={points}
-            />
-
-            {/* Data points */}
-            {workingDays.map((d, i) => {
-                const x = padding + (i / (workingDays.length - 1)) * (width - padding * 2);
-                const y = height - padding - ((d.percentage! - minVal) / range) * (height - padding * 2);
-                const isLow = d.percentage! < 80;
                 return (
-                    <g key={d.date}>
-                        <circle cx={x} cy={y} r="2.5" fill={isLow ? '#ef4444' : '#6366f1'} />
-                        <text x={x} y={height - 1} textAnchor="middle"
-                            className={`text-[4px] ${isDarkMode ? 'fill-slate-400' : 'fill-slate-500'}`}>
-                            {d.label.split(' ')[0]}
-                        </text>
-                    </g>
+                    <div key={idx} className="flex flex-col items-center flex-1 max-w-16">
+                        {/* Value Label */}
+                        <span className={`text-xs font-medium mb-1 ${isHoliday ? 'text-amber-500' :
+                                pct < 75 ? 'text-red-600' :
+                                    isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                            }`}>
+                            {isHoliday ? '🏖️' : `${pct}%`}
+                        </span>
+
+                        {/* Bar Container */}
+                        <div
+                            className={`w-full rounded-t-md transition-all duration-300 ${isHoliday
+                                    ? 'bg-amber-100 dark:bg-amber-900/20 border-2 border-dashed border-amber-300 dark:border-amber-700'
+                                    : getBarColor(pct)
+                                }`}
+                            style={{
+                                height: isHoliday ? 40 : barHeight,
+                                minHeight: isHoliday ? 40 : 4,
+                            }}
+                        />
+
+                        {/* X-axis Label */}
+                        <span className={`text-[10px] mt-1 font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'
+                            }`}>
+                            {label}
+                        </span>
+                    </div>
                 );
             })}
-        </svg>
+        </div>
     );
 };
 
@@ -168,25 +247,54 @@ const TrendChart: React.FC<{ data: DayData[]; isDarkMode: boolean }> = ({ data, 
 export const AttendanceAnalytics: React.FC<Props> = ({ onBack }) => {
     const { isDarkMode } = useTheme();
 
-    // State
+    // Control State
     const [timeScope, setTimeScope] = useState<TimeScope>('week');
     const [granularity, setGranularity] = useState<Granularity>('daily');
     const [threshold, setThreshold] = useState<number>(75);
     const [selectedClass, setSelectedClass] = useState<ClassAttendance | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Generate chart data
-    const chartData = useMemo(() => generateWeekData(), [timeScope]);
+    // Generate chart data based on time scope and granularity
+    const chartData = useMemo(() => {
+        if (granularity === 'daily') {
+            const days = timeScope === 'week' ? 6 : timeScope === 'month' ? 24 : 48;
+            return generateDailyData(days);
+        } else if (granularity === 'weekly') {
+            const weeks = timeScope === 'week' ? 1 : timeScope === 'month' ? 4 : 12;
+            return generateWeeklyData(weeks);
+        } else {
+            // Monthly - show 4 or 12 months
+            const months = timeScope === 'year' ? 12 : 4;
+            return generateWeeklyData(months); // Reuse weekly generator as placeholder
+        }
+    }, [timeScope, granularity]);
 
-    // Filter classes below threshold
+    // REACTIVE FILTER: Classes below threshold
     const filteredClasses = useMemo(() => {
-        return MOCK_CLASSES.filter(cls => {
-            const avg = timeScope === 'week' ? cls.weeklyAvg : cls.monthlyAvg;
+        return ALL_CLASSES.filter(cls => {
+            const avg = timeScope === 'week' ? cls.weeklyAvg :
+                timeScope === 'month' ? cls.monthlyAvg : cls.yearlyAvg;
             return avg < threshold;
         });
     }, [threshold, timeScope]);
 
-    // Filtered students in drill-down
+    // Summary statistics
+    const summaryStats = useMemo(() => {
+        const workingDays = (chartData as DayData[]).filter(d => !d.isHoliday);
+        const avgAttendance = workingDays.length > 0
+            ? workingDays.reduce((sum, d) => sum + (d.percentage || 0), 0) / workingDays.length
+            : 0;
+        const holidayCount = (chartData as DayData[]).filter(d => d.isHoliday).length;
+
+        return {
+            avgAttendance: avgAttendance.toFixed(1),
+            workingDays: workingDays.length,
+            holidayCount,
+            atRiskClasses: filteredClasses.length,
+        };
+    }, [chartData, filteredClasses]);
+
+    // Filtered students for drill-down
     const filteredStudents = useMemo(() => {
         if (!selectedClass) return [];
         return MOCK_STUDENTS.filter(s => {
@@ -196,29 +304,12 @@ export const AttendanceAnalytics: React.FC<Props> = ({ onBack }) => {
         });
     }, [selectedClass, searchQuery]);
 
-    // Summary stats
-    const summaryStats = useMemo(() => {
-        const workingDays = chartData.filter(d => !d.isHoliday);
-        const avgAttendance = workingDays.reduce((sum, d) => sum + (d.percentage || 0), 0) / workingDays.length;
-        const lowDays = workingDays.filter(d => d.percentage && d.percentage < 85).length;
-        const holidayCount = chartData.filter(d => d.isHoliday).length;
-
-        return {
-            avgAttendance: avgAttendance.toFixed(1),
-            workingDays: workingDays.length,
-            lowDays,
-            holidayCount,
-            atRiskClasses: filteredClasses.length,
-        };
-    }, [chartData, filteredClasses]);
-
     // ─────────────────────────────────────────────────────────────────────────
-    // DRILL-DOWN VIEW (Student List)
+    // DRILL-DOWN VIEW
     // ─────────────────────────────────────────────────────────────────────────
     if (selectedClass) {
         return (
             <div className="h-full flex flex-col">
-                {/* Header */}
                 <div className="flex items-center gap-4 mb-6">
                     <button
                         onClick={() => setSelectedClass(null)}
@@ -228,57 +319,51 @@ export const AttendanceAnalytics: React.FC<Props> = ({ onBack }) => {
                     </button>
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                            {selectedClass.name}-{selectedClass.section} Students
+                            {selectedClass.name}-{selectedClass.section}
                         </h1>
                         <p className="text-sm text-slate-500">
-                            {selectedClass.atRiskStudents} at-risk students • {selectedClass.totalStudents} total
+                            {selectedClass.atRiskStudents} at-risk • {selectedClass.totalStudents} total
                         </p>
                     </div>
                 </div>
 
-                {/* Search */}
                 <div className={`flex items-center gap-2 px-3 py-2 mb-4 rounded-lg border max-w-md ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
                     }`}>
                     <Search className="w-4 h-4 text-slate-400" />
                     <input
                         type="text"
-                        placeholder="Search student name or roll no..."
+                        placeholder="Search student..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="flex-1 bg-transparent border-none outline-none text-sm"
                     />
                 </div>
 
-                {/* Student List */}
                 <NebulaCard className="flex-1">
-                    <div className="grid grid-cols-5 gap-4 px-4 py-3 border-b border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        <div>Roll No</div>
+                    <div className="grid grid-cols-5 gap-4 px-4 py-3 border-b border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-500 uppercase">
+                        <div>Roll</div>
                         <div className="col-span-2">Student</div>
                         <div className="text-center">Attendance</div>
                         <div className="text-center">Status</div>
                     </div>
                     <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                        {filteredStudents.map(student => (
-                            <div key={student.id} className="grid grid-cols-5 gap-4 px-4 py-3 items-center hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                                <div className="text-sm font-mono text-slate-600 dark:text-slate-400">{student.rollNo}</div>
+                        {filteredStudents.map(s => (
+                            <div key={s.id} className="grid grid-cols-5 gap-4 px-4 py-3 items-center">
+                                <div className="font-mono text-sm text-slate-600 dark:text-slate-400">{s.rollNo}</div>
                                 <div className="col-span-2">
-                                    <p className="font-medium text-slate-900 dark:text-white">{student.name}</p>
-                                    <p className="text-xs text-slate-500">{student.absentDays} days absent</p>
+                                    <p className="font-medium text-slate-900 dark:text-white">{s.name}</p>
+                                    <p className="text-xs text-slate-500">{s.absentDays} days absent</p>
                                 </div>
                                 <div className="text-center">
-                                    <span className={`text-lg font-bold ${student.attendancePct < 75 ? 'text-red-600' :
-                                            student.attendancePct < 85 ? 'text-amber-600' : 'text-emerald-600'
-                                        }`}>
-                                        {student.attendancePct}%
-                                    </span>
+                                    <span className={`text-lg font-bold ${s.attendancePct < 75 ? 'text-red-600' :
+                                            s.attendancePct < 85 ? 'text-amber-600' : 'text-emerald-600'
+                                        }`}>{s.attendancePct}%</span>
                                 </div>
                                 <div className="text-center">
-                                    <span className={`px-2 py-1 rounded text-xs font-medium ${student.status === 'present' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                            student.status === 'late' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${s.status === 'present' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                            s.status === 'late' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
                                                 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                        }`}>
-                                        {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
-                                    </span>
+                                        }`}>{s.status}</span>
                                 </div>
                             </div>
                         ))}
@@ -297,16 +382,13 @@ export const AttendanceAnalytics: React.FC<Props> = ({ onBack }) => {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     {onBack && (
-                        <button
-                            onClick={onBack}
-                            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                        >
+                        <button onClick={onBack} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
                             <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                         </button>
                     )}
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Attendance Analytics</h1>
-                        <p className="text-sm text-slate-500">Diagnose attendance problems and track trends</p>
+                        <p className="text-sm text-slate-500">Diagnose problems • Track trends • Sunday excluded</p>
                     </div>
                 </div>
             </div>
@@ -315,45 +397,37 @@ export const AttendanceAnalytics: React.FC<Props> = ({ onBack }) => {
             <div className="flex flex-wrap items-center gap-4">
                 {/* Time Scope */}
                 <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                    {[
-                        { id: 'week' as TimeScope, label: 'This Week' },
-                        { id: 'month' as TimeScope, label: 'This Month' },
-                        { id: 'year' as TimeScope, label: 'Academic Year' },
-                    ].map(scope => (
+                    {(['week', 'month', 'year'] as TimeScope[]).map(scope => (
                         <button
-                            key={scope.id}
-                            onClick={() => setTimeScope(scope.id)}
-                            className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${timeScope === scope.id
+                            key={scope}
+                            onClick={() => setTimeScope(scope)}
+                            className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${timeScope === scope
                                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
                                     : 'text-slate-600 dark:text-slate-400'
                                 }`}
                         >
-                            {scope.label}
+                            This {scope.charAt(0).toUpperCase() + scope.slice(1)}
                         </button>
                     ))}
                 </div>
 
                 {/* Granularity */}
                 <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                    {[
-                        { id: 'daily' as Granularity, label: 'Daily' },
-                        { id: 'weekly' as Granularity, label: 'Weekly' },
-                        { id: 'monthly' as Granularity, label: 'Monthly' },
-                    ].map(g => (
+                    {(['daily', 'weekly', 'monthly'] as Granularity[]).map(g => (
                         <button
-                            key={g.id}
-                            onClick={() => setGranularity(g.id)}
-                            className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${granularity === g.id
+                            key={g}
+                            onClick={() => setGranularity(g)}
+                            className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${granularity === g
                                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
                                     : 'text-slate-600 dark:text-slate-400'
                                 }`}
                         >
-                            {g.label}
+                            {g.charAt(0).toUpperCase() + g.slice(1)}
                         </button>
                     ))}
                 </div>
 
-                {/* Problem Finder */}
+                {/* Problem Finder - REACTIVE */}
                 <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
                     }`}>
                     <Filter className="w-4 h-4 text-slate-400" />
@@ -361,12 +435,22 @@ export const AttendanceAnalytics: React.FC<Props> = ({ onBack }) => {
                     <input
                         type="number"
                         value={threshold}
-                        onChange={(e) => setThreshold(Number(e.target.value))}
+                        onChange={(e) => setThreshold(Number(e.target.value) || 0)}
                         className="w-12 bg-transparent border-none outline-none text-sm font-bold text-center text-indigo-600 dark:text-indigo-400"
                         min={50}
                         max={100}
                     />
                     <span className="text-sm text-slate-500">%</span>
+                </div>
+
+                {/* Summary Badge */}
+                <div className={`px-3 py-1.5 rounded-full text-sm font-medium ${filteredClasses.length > 0
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                    }`}>
+                    {filteredClasses.length > 0
+                        ? `⚠️ ${filteredClasses.length} classes at risk`
+                        : '✅ All classes healthy'}
                 </div>
             </div>
 
@@ -403,7 +487,7 @@ export const AttendanceAnalytics: React.FC<Props> = ({ onBack }) => {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-slate-900 dark:text-white">{summaryStats.holidayCount}</p>
-                            <p className="text-xs text-slate-500">Holidays/Sundays</p>
+                            <p className="text-xs text-slate-500">Holidays</p>
                         </div>
                     </div>
                 </NebulaCard>
@@ -414,53 +498,40 @@ export const AttendanceAnalytics: React.FC<Props> = ({ onBack }) => {
                             <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-red-600 dark:text-red-400">{summaryStats.atRiskClasses}</p>
+                            <p className="text-2xl font-bold text-red-600">{summaryStats.atRiskClasses}</p>
                             <p className="text-xs text-slate-500">At-Risk Classes</p>
                         </div>
                     </div>
                 </NebulaCard>
             </div>
 
-            {/* Trend Chart */}
+            {/* Bar Chart */}
             <NebulaCard className="p-4">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-slate-900 dark:text-white">Attendance Trend</h3>
                     <div className="flex items-center gap-4 text-xs text-slate-500">
-                        <span className="flex items-center gap-1">
-                            <div className="w-3 h-3 rounded-full bg-indigo-500" /> Working Day
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <div className="w-3 h-3 rounded-full bg-red-500" /> Below 80%
-                        </span>
+                        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-500" /> &gt;90%</span>
+                        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-indigo-500" /> 85-90%</span>
+                        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-amber-500" /> 75-85%</span>
+                        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-500" /> &lt;75%</span>
                     </div>
                 </div>
-                <TrendChart data={chartData} isDarkMode={isDarkMode} />
-
-                {/* Holiday Legend */}
-                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                    {chartData.filter(d => d.isHoliday).map(d => (
-                        <span key={d.date} className="flex items-center gap-1 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 rounded text-xs text-amber-700 dark:text-amber-400">
-                            <Coffee className="w-3 h-3" />
-                            {d.label}: {d.holidayName}
-                        </span>
-                    ))}
-                </div>
+                <CSSBarChart data={chartData} granularity={granularity} isDarkMode={isDarkMode} />
             </NebulaCard>
 
-            {/* Drill-Down List */}
+            {/* Class List */}
             <NebulaCard>
-                <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between">
                     <h3 className="font-semibold text-slate-900 dark:text-white">
-                        Classes Below {threshold}% Attendance
+                        Classes Below {threshold}%
                     </h3>
-                    <span className="text-sm text-slate-500">{filteredClasses.length} classes found</span>
+                    <span className="text-sm text-slate-500">{filteredClasses.length} found</span>
                 </div>
 
                 {filteredClasses.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12">
+                    <div className="flex flex-col items-center py-12">
                         <TrendingUp className="w-12 h-12 text-emerald-300 dark:text-emerald-800 mb-4" />
-                        <p className="text-slate-500 font-medium">All classes meet the threshold!</p>
-                        <p className="text-sm text-slate-400">No classes below {threshold}% attendance</p>
+                        <p className="text-slate-500 font-medium">All classes above threshold!</p>
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
@@ -468,32 +539,28 @@ export const AttendanceAnalytics: React.FC<Props> = ({ onBack }) => {
                             <button
                                 key={cls.id}
                                 onClick={() => setSelectedClass(cls)}
-                                className="w-full flex items-center gap-4 px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors text-left"
+                                className="w-full flex items-center gap-4 px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 text-left"
                             >
                                 <div className={`p-3 rounded-xl ${cls.weeklyAvg < 70 ? 'bg-red-100 dark:bg-red-900/20' : 'bg-amber-100 dark:bg-amber-900/20'
                                     }`}>
-                                    <Users className={`w-5 h-5 ${cls.weeklyAvg < 70 ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'
+                                    <Users className={`w-5 h-5 ${cls.weeklyAvg < 70 ? 'text-red-600' : 'text-amber-600'
                                         }`} />
                                 </div>
-
                                 <div className="flex-1">
                                     <p className="font-semibold text-slate-900 dark:text-white">{cls.name}-{cls.section}</p>
-                                    <p className="text-xs text-slate-500">{cls.atRiskStudents} at-risk students • {cls.totalStudents} total</p>
+                                    <p className="text-xs text-slate-500">{cls.atRiskStudents} at-risk • {cls.totalStudents} total</p>
                                 </div>
-
                                 <div className="text-right">
-                                    <p className={`text-xl font-bold ${cls.weeklyAvg < 70 ? 'text-red-600' : 'text-amber-600'
-                                        }`}>
-                                        {cls.weeklyAvg.toFixed(1)}%
+                                    <p className={`text-xl font-bold ${cls.weeklyAvg < 70 ? 'text-red-600' : 'text-amber-600'}`}>
+                                        {timeScope === 'week' ? cls.weeklyAvg : timeScope === 'month' ? cls.monthlyAvg : cls.yearlyAvg}%
                                     </p>
                                     <div className="flex items-center justify-end gap-1 text-xs text-slate-500">
                                         {cls.trend === 'down' && <TrendingDown className="w-3 h-3 text-red-500" />}
                                         {cls.trend === 'up' && <TrendingUp className="w-3 h-3 text-emerald-500" />}
                                         {cls.trend === 'stable' && <Minus className="w-3 h-3" />}
-                                        Weekly Avg
+                                        {timeScope === 'week' ? 'Weekly' : timeScope === 'month' ? 'Monthly' : 'Yearly'}
                                     </div>
                                 </div>
-
                                 <ChevronRight className="w-5 h-5 text-slate-400" />
                             </button>
                         ))}

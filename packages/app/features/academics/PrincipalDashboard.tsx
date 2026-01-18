@@ -17,6 +17,8 @@ import { LeaveReviewModal } from './LeaveReviewModal';
 import { RiskAnalytics } from './RiskAnalytics';
 import { ApprovalsCenter } from './ApprovalsCenter';
 import { AttendanceAnalytics } from './AttendanceAnalytics';
+import { ResultsCommandCenter } from './ResultsCommandCenter';
+import { ClassroomWalkthrough } from './ClassroomWalkthrough';
 import { DemaskPIIDemo } from '../admin/DemaskPII';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -56,6 +58,8 @@ export const PrincipalDashboard: React.FC<Props> = () => {
       case 'approvals': return 'Approvals Center';
       case 'attendance': return 'Attendance Analytics';
       case 'risk': return 'Risk Monitor';
+      case 'results': return 'Results Command Center';
+      case 'classrooms': return 'Classroom Walkthrough';
       default: return "Principal's Office";
     }
   };
@@ -138,6 +142,12 @@ export const PrincipalDashboard: React.FC<Props> = () => {
 
       case 'approvals':
         return <ApprovalsCenter onBack={() => setCurrentModule('overview')} />;
+
+      case 'results':
+        return <ResultsCommandCenter onBack={() => setCurrentModule('overview')} />;
+
+      case 'classrooms':
+        return <ClassroomWalkthrough onBack={() => setCurrentModule('overview')} />;
 
       case 'overview':
       default:
