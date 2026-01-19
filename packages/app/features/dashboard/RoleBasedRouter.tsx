@@ -9,6 +9,7 @@ import { FinanceDashboard } from '../admin/FinanceDashboard';
 
 // Academics
 import { TeacherDashboard } from './TeacherDashboard';
+import { NewTeacherDashboard } from './NewTeacherDashboard';
 import { HODDashboard } from '../academics/HODDashboard';
 import { ExamCellDashboard } from '../academics/ExamCellDashboard';
 
@@ -69,7 +70,7 @@ export const RoleBasedRouter: React.FC<Props> = ({ role, school, activeModule })
     // Academic Heads
     case UserRole.HOD: return <HODDashboard />;
     case UserRole.EXAM_CELL: return <ExamCellDashboard />;
-    case UserRole.TEACHER: return <TeacherDashboard school={school} activeModule={activeModule} />;
+    case UserRole.TEACHER: return <NewTeacherDashboard />;
 
     // Operations & Admin
     case UserRole.SECURITY_HEAD: return <SecurityDashboard />;

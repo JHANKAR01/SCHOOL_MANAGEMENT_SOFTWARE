@@ -75,6 +75,9 @@ model School {
   // AUDIT RELATIONS (P1.4)
   auditLogs AuditLog[]
 
+  // TEACHER DASHBOARD (Leave Balances)
+  leaveBalances LeaveBalance[]
+
   @@schema("schoolmanagementsystem")
 }
 
@@ -101,6 +104,9 @@ model AcademicYear {
   // FINANCE RELATIONS (V2)
   financeFeeStructures FeeStructure[]
   invoices             Invoice[]
+
+  // TEACHER DASHBOARD (Leave Balances)
+  leaveBalances LeaveBalance[]
 
   @@unique([school_id, name])
   @@index([school_id])
@@ -417,6 +423,9 @@ model StaffProfile {
   completedTopics  TopicCompletion[]
   sentNudges       NudgeLog[]        @relation("SentNudges")
   receivedNudges   NudgeLog[]        @relation("ReceivedNudges")
+
+  // TEACHER DASHBOARD (Leave Balances)
+  leaveBalances    LeaveBalance[]
 
   @@unique([school_id, employee_id])
   @@index([school_id])
@@ -1260,6 +1269,29 @@ model LeaveApplication {
   @@index([user_id])     // Staff's leave history
   @@index([status])      // HR: pending approvals
   @@index([start_date])  // Leave calendar
+  @@schema("schoolmanagementsystem")
+}
+
+/// Tracks leave balances per staff member per academic year
+/// Used by Teacher Dashboard to display remaining leave quotas
+model LeaveBalance {
+  id               String    @id @default(cuid())
+  school_id        String
+  staff_profile_id String
+  academic_year_id String
+  leave_type       LeaveType
+  total_allowed    Int       // e.g., 12 sick leaves per year
+  used             Int       @default(0)
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime  @updatedAt
+
+  school        School       @relation(fields: [school_id], references: [id])
+  staff_profile StaffProfile @relation(fields: [staff_profile_id], references: [id])
+  academic_year AcademicYear @relation(fields: [academic_year_id], references: [id])
+
+  @@unique([staff_profile_id, academic_year_id, leave_type])
+  @@index([school_id])
+  @@index([staff_profile_id])
   @@schema("schoolmanagementsystem")
 }
 

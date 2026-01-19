@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
     LayoutDashboard, Building2, Database, UserCog, Sun, Moon,
     Menu, X, LogOut, Activity, ChevronDown, User, Settings,
-    Bell, Search, ChevronRight, Command, UserPlus
+    Bell, Search, ChevronRight, Command, UserPlus,
+    Users, FileText, BookOpen, Calendar, Video
 } from 'lucide-react';
 import { UserRole } from '../../../types';
 import { useTheme } from '../provider/ThemeProvider';
@@ -10,7 +11,7 @@ import { useTheme } from '../provider/ThemeProvider';
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TYPES & CONFIG
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings' | 'health' | 'flags' | 'admissions' | 'system-admin' | 'approvals' | 'attendance' | 'risk' | 'results' | 'classrooms' | 'substitutions' | 'curriculum';
+export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings' | 'health' | 'flags' | 'admissions' | 'system-admin' | 'approvals' | 'attendance' | 'risk' | 'results' | 'classrooms' | 'substitutions' | 'curriculum' | 'today' | 'marks' | 'homework' | 'classes' | 'leave' | 'live-class';
 
 interface NavigationItem {
     id: Module;
@@ -230,6 +231,16 @@ const Sidebar: React.FC<{
                 { id: 'classrooms', label: 'Classrooms', icon: Building2 },
                 { id: 'substitutions', label: 'Substitutions', icon: Activity },
                 { id: 'curriculum', label: 'Curriculum', icon: Building2 },
+            ];
+        }
+        if (role === 'TEACHER') {
+            return [
+                { id: 'today', label: 'Today', icon: LayoutDashboard },
+                { id: 'attendance', label: 'Attendance', icon: Users },
+                { id: 'marks', label: 'Marks Entry', icon: FileText },
+                { id: 'homework', label: 'Homework', icon: BookOpen },
+                { id: 'classes', label: 'My Classes', icon: Building2 },
+                { id: 'leave', label: 'Leave', icon: Calendar },
             ];
         }
         return [{ id: 'overview', label: 'Overview', icon: LayoutDashboard }];
