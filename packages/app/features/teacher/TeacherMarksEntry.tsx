@@ -209,6 +209,7 @@ const MarksGrid: React.FC<MarksGridProps> = ({ examId, examName, maxMarks, examS
                                             <input
                                                 type="number"
                                                 value={value}
+                                                disabled={!canEdit}
                                                 onChange={(e) => handleMarkChange(student.id, e.target.value)}
                                                 placeholder="-"
                                                 className={`w-20 px-3 py-2 rounded-lg border text-center font-bold text-sm

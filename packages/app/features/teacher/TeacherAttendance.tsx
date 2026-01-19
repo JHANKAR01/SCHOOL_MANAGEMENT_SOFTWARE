@@ -128,6 +128,13 @@ export const TeacherAttendance: React.FC = () => {
     // State
     const [selectedClassId, setSelectedClassId] = useState<string>('');
     const [selectedPeriod, setSelectedPeriod] = useState<number>(1);
+
+    // Auto-select first class
+    React.useEffect(() => {
+        if (!selectedClassId && classesToday.length > 0) {
+            setSelectedClassId(classesToday[0].id);
+        }
+    }, [classesToday, selectedClassId]);
     const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStatus>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);

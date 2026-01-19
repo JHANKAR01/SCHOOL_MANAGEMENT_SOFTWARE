@@ -375,6 +375,35 @@ export function useCreateHomework() {
 }
 
 /**
+ * Update existing homework
+ */
+export function useUpdateHomework() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (params: {
+            id: string;
+            title?: string;
+            description?: string;
+            subjectId?: string;
+            classId?: string;
+            dueDate?: string;
+        }) => {
+            const response = await fetch(`${API_BASE}/teacher/homework/${params.id}`, {
+                method: 'PUT',
+                headers: { ...TEMP_HEADERS },
+                body: JSON.stringify(params),
+            });
+            if (!response.ok) throw new Error('Failed to update homework');
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['teacher', 'homework'] });
+        },
+    });
+}
+
+/**
  * Copy homework to another class
  */
 export function useCopyHomework() {

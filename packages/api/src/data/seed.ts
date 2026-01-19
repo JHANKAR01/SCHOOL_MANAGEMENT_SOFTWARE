@@ -105,6 +105,9 @@ async function main() {
   console.log('\n🧹 STEP 1: Clearing existing data in FK-safe order...');
 
   // Delete in reverse FK order (child tables first)
+  console.log('   └─ Clearing AuditLog...');
+  await prisma.auditLog.deleteMany();
+
   console.log('   └─ Clearing NudgeLog...');
   await prisma.nudgeLog.deleteMany();
 
@@ -659,6 +662,44 @@ async function main() {
     skipDuplicates: true
   });
   console.log(`   ✅ ${enrollmentsResult.count} student enrollments created`);
+
+  // =========================================================================
+  // STEP 15b: AUTO-ENROLL FIX (Ensure all students are in a class)
+  // =========================================================================
+  console.log('\n🔧 STEP 15b: Auto-Enrolling Unassigned Students...');
+
+  const allSeededStudents = await prisma.student.findMany({ select: { id: true, admission_no: true, school_id: true } });
+  const allEnrollments = await prisma.studentEnrollment.findMany({ select: { student_id: true } });
+  const enrolledStudentIds = new Set(allEnrollments.map(e => e.student_id));
+
+  const unEnrolledStudents = allSeededStudents.filter(s => !enrolledStudentIds.has(s.id));
+
+  if (unEnrolledStudents.length > 0) {
+    const defaultClass = await prisma.class.findFirst();
+    const currentAY = await prisma.academicYear.findFirst({ where: { is_current: true } });
+
+    if (defaultClass && currentAY) {
+      console.log(`   └─ Enrolling ${unEnrolledStudents.length} students into ${defaultClass.grade}-${defaultClass.section}...`);
+
+      await prisma.studentEnrollment.createMany({
+        data: unEnrolledStudents.map(s => ({
+          id: `enr_auto_${s.id}`,
+          student_id: s.id,
+          class_id: defaultClass.id,
+          academic_year_id: currentAY.id,
+          roll_number: parseInt(s.admission_no || '0'),
+          status: 'ACTIVE',
+          school_id: s.school_id
+        })),
+        skipDuplicates: true
+      });
+      console.log('   ✅ Auto-enrollment complete');
+    } else {
+      console.warn('   ⚠️ Could not auto-enroll: Missing Class or Academic Year');
+    }
+  } else {
+    console.log('   ✅ All students are already enrolled');
+  }
 
   // =========================================================================
   // =========================================================================

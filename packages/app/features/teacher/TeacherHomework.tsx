@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from '../../provider/language-context';
-import { useHomework, useCreateHomework, useCopyHomework, useDeleteHomework, useMyClassesToday, TeacherClass } from '../../hooks/useTeacherData';
+import { useHomework, useCreateHomework, useUpdateHomework, useCopyHomework, useDeleteHomework, useMyClassesToday, TeacherClass } from '../../hooks/useTeacherData';
 
 // ============================================================================
 // TYPES
@@ -14,7 +14,9 @@ interface Homework {
     id: string;
     title: string;
     description: string;
+    subjectId: string;
     subjectName: string;
+    classId: string;
     className: string;
     dueDate: string;
     createdAt: string;
@@ -120,16 +122,17 @@ interface CreateFormProps {
         dueDate: string;
     }) => void;
     availableClasses: TeacherClass[];
+    initialData?: Homework;
 }
 
-const CreateHomeworkForm: React.FC<CreateFormProps> = ({ onClose, onSubmit, availableClasses }) => {
+const CreateHomeworkForm: React.FC<CreateFormProps> = ({ onClose, onSubmit, availableClasses, initialData }) => {
     const { t } = useTranslation();
     const [formData, setFormData] = useState({
-        title: '',
-        description: '',
-        subjectId: '',
-        classId: '',
-        dueDate: '',
+        title: initialData?.title || '',
+        description: initialData?.description || '',
+        subjectId: initialData?.subjectId || '',
+        classId: initialData?.classId || '',
+        dueDate: initialData?.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : '',
     });
     const [saving, setSaving] = useState(false);
 
@@ -162,7 +165,7 @@ const CreateHomeworkForm: React.FC<CreateFormProps> = ({ onClose, onSubmit, avai
                     {/* Header */}
                     <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                            {t('create_homework')}
+                            {initialData ? 'Edit Homework' : t('create_homework')}
                         </h3>
                         <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
                             <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -248,7 +251,7 @@ const CreateHomeworkForm: React.FC<CreateFormProps> = ({ onClose, onSubmit, avai
                             disabled={saving}
                             className="px-6 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50 transition"
                         >
-                            {saving ? 'Creating...' : t('create_homework')}
+                            {saving ? 'Saving...' : (initialData ? 'Update' : t('create_homework'))}
                         </button>
                     </div>
                 </form>
@@ -264,6 +267,7 @@ const CreateHomeworkForm: React.FC<CreateFormProps> = ({ onClose, onSubmit, avai
 export const TeacherHomework: React.FC = () => {
     const { t } = useTranslation();
     const [showCreateForm, setShowCreateForm] = useState(false);
+    const [editingHomework, setEditingHomework] = useState<Homework | null>(null);
     const [copyModalId, setCopyModalId] = useState<string | null>(null);
     const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'PAST'>('ALL');
 
@@ -272,17 +276,26 @@ export const TeacherHomework: React.FC = () => {
     const filterStatus = filter === 'ALL' ? undefined : filter;
     const { data: homeworks = [], isLoading } = useHomework(undefined, filterStatus);
     const createMutation = useCreateHomework();
+    const updateMutation = useUpdateHomework();
     const copyMutation = useCopyHomework();
     const deleteMutation = useDeleteHomework();
 
     const handleCreate = async (data: any) => {
-        await createMutation.mutateAsync({
-            title: data.title,
-            description: data.description,
-            subjectId: data.subjectId,
-            classId: data.classId,
-            dueDate: data.dueDate,
-        });
+        if (editingHomework) {
+            await updateMutation.mutateAsync({
+                id: editingHomework.id,
+                ...data
+            });
+        } else {
+            await createMutation.mutateAsync({
+                title: data.title,
+                description: data.description,
+                subjectId: data.subjectId,
+                classId: data.classId,
+                dueDate: data.dueDate,
+            });
+        }
+        setEditingHomework(null);
     };
 
     const handleCopy = (id: string) => {
@@ -297,8 +310,11 @@ export const TeacherHomework: React.FC = () => {
     };
 
     const handleEdit = (id: string) => {
-        console.log('[Homework] Edit:', id);
-        // Would open edit modal
+        const homeworkToEdit = homeworks.find(h => h.id === id);
+        if (homeworkToEdit) {
+            setEditingHomework(homeworkToEdit);
+            setShowCreateForm(true);
+        }
     };
 
     const handleDelete = async (id: string) => {
@@ -375,9 +391,13 @@ export const TeacherHomework: React.FC = () => {
             {/* Create Form Modal */}
             {showCreateForm && (
                 <CreateHomeworkForm
-                    onClose={() => setShowCreateForm(false)}
+                    onClose={() => {
+                        setShowCreateForm(false);
+                        setEditingHomework(null);
+                    }}
                     onSubmit={handleCreate}
                     availableClasses={classesToday}
+                    initialData={editingHomework || undefined}
                 />
             )}
 

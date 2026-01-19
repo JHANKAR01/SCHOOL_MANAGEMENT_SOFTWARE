@@ -713,7 +713,9 @@ teacherRouter.get('/homework', async (c) => {
                 id: hw.id,
                 title: hw.title,
                 description: hw.description,
+                subjectId: hw.subject_id,
                 subjectName: hw.subject?.name || '',
+                classId: hw.class_id,
                 className: getClassName(hw.class),
                 dueDate: hw.due_date.toISOString(),
                 createdAt: hw.created_at?.toISOString() || '',
@@ -753,11 +755,6 @@ teacherRouter.post('/homework', async (c) => {
 
         const body = await c.req.json();
         const { title, description, subjectId, classId, dueDate } = body;
-
-        console.log('[DEBUG] Creating Homework:', {
-            userId, schoolId,
-            classId, subjectId, title
-        });
 
         if (!title || !classId || !dueDate || !subjectId) {
             return c.json({ error: 'Missing required fields' }, 400);
@@ -840,6 +837,46 @@ teacherRouter.post('/homework/:id/copy', async (c) => {
     } catch (error) {
         console.error('[Teacher API] Error copying homework:', error);
         return c.json({ error: 'Failed to copy homework' }, 500);
+    }
+});
+
+// ============================================================================
+// PUT /teacher/homework/:id
+// Update homework
+// ============================================================================
+
+teacherRouter.put('/homework/:id', async (c) => {
+    try {
+        const userId = c.req.header('X-User-Id') || '';
+        const schoolId = c.req.header('X-School-Id') || '';
+        const homeworkId = c.req.param('id');
+
+        if (!userId || !schoolId) {
+            return c.json({ error: 'Unauthorized' }, 401);
+        }
+
+        const body = await c.req.json();
+        const { title, description, subjectId, classId, dueDate } = body;
+
+        const updated = await prisma.homework.update({
+            where: { id: homeworkId },
+            data: {
+                title,
+                description,
+                subject_id: subjectId,
+                class_id: classId,
+                due_date: dueDate ? new Date(dueDate) : undefined,
+            },
+        });
+
+        return c.json({
+            success: true,
+            message: 'Homework updated successfully',
+            homework: { id: updated.id, title: updated.title },
+        });
+    } catch (error) {
+        console.error('[Teacher API] Error updating homework:', error);
+        return c.json({ error: 'Failed to update homework' }, 500);
     }
 });
 
@@ -974,6 +1011,32 @@ teacherRouter.post('/leave', async (c) => {
                 status: 'PENDING',
             },
         });
+
+        // Update balance if exists
+        if (currentYear && staffProfile) {
+            // Calculate actual days
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const diffTime = Math.abs(end.getTime() - start.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+            const balance = await prisma.leaveBalance.findFirst({
+                where: {
+                    staff_profile_id: staffProfile.id,
+                    academic_year_id: currentYear.id,
+                    leave_type: type,
+                },
+            });
+
+            if (balance) {
+                await prisma.leaveBalance.update({
+                    where: { id: balance.id },
+                    data: {
+                        used: { increment: diffDays }
+                    }
+                });
+            }
+        }
 
         return c.json({
             success: true,
