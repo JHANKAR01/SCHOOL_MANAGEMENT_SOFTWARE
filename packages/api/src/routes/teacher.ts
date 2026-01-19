@@ -70,7 +70,7 @@ teacherRouter.get('/my-classes-today', async (c) => {
         });
 
         // Check attendance status for each class
-        const classesWithStatus = await Promise.all(
+        const timetableClasses = await Promise.all(
             timetableEntries.map(async (entry: any) => {
                 // Calculate period from start_time if not available
                 const entryPeriod = entry.period ?? 1;
@@ -95,11 +95,67 @@ teacherRouter.get('/my-classes-today', async (c) => {
                     startTime: entry.start_time || `${8 + entryPeriod}:00`,
                     endTime: entry.end_time || `${9 + entryPeriod}:00`,
                     attendanceMarked: attendanceCount > 0,
+                    isSubstitution: false,
                 };
             })
         );
 
-        return c.json(classesWithStatus);
+        // Fetch Substitutions where I am the substitute teacher
+        const startOfDay = new Date(today);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(today);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const substitutions = await prisma.substitution.findMany({
+            where: {
+                school_id: schoolId,
+                substituteTeacherId: staffProfile.id,
+                date: {
+                    gte: startOfDay,
+                    lte: endOfDay,
+                },
+            },
+            include: {
+                class: true,
+                subject: true,
+            },
+        });
+
+        const substitutionClasses = await Promise.all(
+            substitutions.map(async (sub) => {
+                const subPeriod = sub.period;
+
+                const attendanceCount = await prisma.attendance.count({
+                    where: {
+                        student_id: { in: [] },
+                        date: today,
+                        period: subPeriod,
+                    },
+                });
+
+                return {
+                    id: `sub_${sub.id}`,
+                    classId: sub.classId,
+                    className: getClassName(sub.class),
+                    grade: sub.class?.grade || '',
+                    section: sub.class?.section || '',
+                    subjectId: sub.subjectId,
+                    subjectName: sub.subject?.name || 'Unknown',
+                    period: subPeriod,
+                    startTime: `${8 + subPeriod}:00`, // Approximation if not in substitution model
+                    endTime: `${9 + subPeriod}:00`,
+                    attendanceMarked: attendanceCount > 0,
+                    isSubstitution: true,
+                };
+            })
+        );
+
+        // Combine and sort by period/start time
+        const allClasses = [...timetableClasses, ...substitutionClasses].sort((a, b) => {
+            return a.period - b.period;
+        });
+
+        return c.json(allClasses);
     } catch (error) {
         console.error('[Teacher API] Error fetching classes:', error);
         return c.json({ error: 'Failed to fetch classes' }, 500);

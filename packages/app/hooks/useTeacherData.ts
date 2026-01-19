@@ -21,6 +21,7 @@ export interface TeacherClass {
     startTime: string;
     endTime: string;
     attendanceMarked: boolean;
+    isSubstitution?: boolean;
 }
 
 export interface TeacherExam {
