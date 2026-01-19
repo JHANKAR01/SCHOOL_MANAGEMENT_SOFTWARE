@@ -44,15 +44,11 @@ export async function preCacheTeacherData(authToken?: string): Promise<PreCacheR
     let classesLoaded = 0;
     let studentsLoaded = 0;
 
+    // ✅ SECURE HEADERS - Only use Bearer token from auth
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        'X-User-Id': 'usr_staff_0068', // <--- TEMP FIX
-        'X-School-Id': 'sch_123'       // <--- TEMP FIX
+        ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
     };
-
-    if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-    }
 
     try {
         // 1. Fetch today's timetable

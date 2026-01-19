@@ -1,7 +1,26 @@
-import { Hono } from 'hono';
+import { Hono, Context } from 'hono';
 import prisma from '../db';
 
 const teacherRouter = new Hono();
+
+// ============================================================================
+// HELPER: Extract user context from authenticated request
+// ============================================================================
+
+interface UserContext {
+    id: string;
+    role: string;
+    school_id: string;
+    permissions?: string[];
+}
+
+function getUserContext(c: Context): { userId: string; schoolId: string } {
+    const user = c.get('user') as UserContext | undefined;
+    return {
+        userId: user?.id || '',
+        schoolId: user?.school_id || ''
+    };
+}
 
 // ============================================================================
 // HELPER: Get teacher's staff profile and validate access
@@ -35,9 +54,8 @@ function getClassName(cls: { grade: string; section: string } | null | undefined
 
 teacherRouter.get('/my-classes-today', async (c) => {
     try {
-        // In production, get from auth middleware
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        // Get user context from auth middleware
+        const { userId, schoolId } = getUserContext(c);
 
         if (!userId || !schoolId) {
             return c.json({ error: 'Unauthorized' }, 401);
@@ -169,8 +187,7 @@ teacherRouter.get('/my-classes-today', async (c) => {
 
 teacherRouter.get('/class/:classId/students', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
         const classId = c.req.param('classId');
 
         if (!userId || !schoolId) {
@@ -225,8 +242,7 @@ teacherRouter.get('/class/:classId/students', async (c) => {
 
 teacherRouter.post('/attendance', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
         const idempotencyKey = c.req.header('X-Idempotency-Key') || '';
 
         if (!userId || !schoolId) {
@@ -314,8 +330,7 @@ teacherRouter.post('/attendance', async (c) => {
 
 teacherRouter.get('/attendance/:classId/:date/:period', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
         const classId = c.req.param('classId');
         const dateStr = c.req.param('date');
         const period = parseInt(c.req.param('period'), 10);
@@ -370,8 +385,7 @@ teacherRouter.get('/attendance/:classId/:date/:period', async (c) => {
 
 teacherRouter.get('/my-exams', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
         const status = c.req.query('status');
 
         if (!userId || !schoolId) {
@@ -445,8 +459,7 @@ teacherRouter.get('/my-exams', async (c) => {
 
 teacherRouter.get('/leave-balances', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
 
         if (!userId || !schoolId) {
             return c.json({ error: 'Unauthorized' }, 401);
@@ -495,8 +508,7 @@ teacherRouter.get('/leave-balances', async (c) => {
 
 teacherRouter.get('/marks/:examId', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
         const examId = c.req.param('examId');
 
         if (!userId || !schoolId) {
@@ -559,8 +571,7 @@ teacherRouter.get('/marks/:examId', async (c) => {
 
 teacherRouter.post('/marks', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
 
         if (!userId || !schoolId) {
             return c.json({ error: 'Unauthorized' }, 401);
@@ -669,8 +680,7 @@ teacherRouter.post('/marks', async (c) => {
 
 teacherRouter.get('/homework', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
         const classId = c.req.query('classId');
         const status = c.req.query('status'); // 'ACTIVE' | 'PAST'
 
@@ -746,8 +756,7 @@ teacherRouter.get('/homework', async (c) => {
 
 teacherRouter.post('/homework', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
 
         if (!userId || !schoolId) {
             return c.json({ error: 'Unauthorized' }, 401);
@@ -792,8 +801,7 @@ teacherRouter.post('/homework', async (c) => {
 
 teacherRouter.post('/homework/:id/copy', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
         const homeworkId = c.req.param('id');
 
         if (!userId || !schoolId) {
@@ -847,8 +855,7 @@ teacherRouter.post('/homework/:id/copy', async (c) => {
 
 teacherRouter.put('/homework/:id', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
         const homeworkId = c.req.param('id');
 
         if (!userId || !schoolId) {
@@ -887,8 +894,7 @@ teacherRouter.put('/homework/:id', async (c) => {
 
 teacherRouter.delete('/homework/:id', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
         const homeworkId = c.req.param('id');
 
         if (!userId || !schoolId) {
@@ -922,8 +928,7 @@ teacherRouter.delete('/homework/:id', async (c) => {
 
 teacherRouter.get('/leave', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
 
         if (!userId || !schoolId) {
             return c.json({ error: 'Unauthorized' }, 401);
@@ -961,8 +966,7 @@ teacherRouter.get('/leave', async (c) => {
 
 teacherRouter.post('/leave', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
 
         if (!userId || !schoolId) {
             return c.json({ error: 'Unauthorized' }, 401);
@@ -1056,8 +1060,7 @@ teacherRouter.post('/leave', async (c) => {
 
 teacherRouter.get('/live-class/room-id', async (c) => {
     try {
-        const userId = c.req.header('X-User-Id') || '';
-        const schoolId = c.req.header('X-School-Id') || '';
+        const { userId, schoolId } = getUserContext(c);
         const classId = c.req.query('classId') || '';
         const period = c.req.query('period') || '';
 

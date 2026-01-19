@@ -58,35 +58,54 @@ export interface LeaveBalance {
 
 const API_BASE = '/api';
 
-// 👇 HARDCODED IDS FOR TESTING (Match your Postman)
-const TEMP_HEADERS = {
-    'Content-Type': 'application/json',
-    'X-User-Id': 'usr_staff_0068', // <--- The ID that worked in Postman
-    'X-School-Id': 'sch_123'       // <--- The School ID
-};
+// ============================================================================
+// AUTH HELPER - Dynamic token retrieval from storage
+// ============================================================================
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+    let token: string | null = null;
+
+    // Check if we're in a browser environment
+    if (typeof window !== 'undefined' && window.localStorage) {
+        token = localStorage.getItem('sovereign_token');
+    }
+    // For React Native, expo-secure-store would be used here:
+    // else {
+    //     const SecureStore = require('expo-secure-store');
+    //     token = await SecureStore.getItemAsync('sovereign_token');
+    // }
+
+    return {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+}
 
 async function fetchMyClassesToday(): Promise<TeacherClass[]> {
+    const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE}/teacher/my-classes-today`, {
-        headers: TEMP_HEADERS
+        headers
     });
     if (!response.ok) throw new Error('Failed to fetch classes');
     return response.json();
 }
 
 async function fetchMyExams(status?: string): Promise<TeacherExam[]> {
+    const headers = await getAuthHeaders();
     const url = status
         ? `${API_BASE}/teacher/my-exams?status=${status}`
         : `${API_BASE}/teacher/my-exams`;
     const response = await fetch(url, {
-        headers: TEMP_HEADERS
+        headers
     });
     if (!response.ok) throw new Error('Failed to fetch exams');
     return response.json();
 }
 
 async function fetchStudentsForClass(classId: string): Promise<StudentRoster[]> {
+    const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE}/teacher/class/${classId}/students`, {
-        headers: TEMP_HEADERS
+        headers
     });
     if (!response.ok) throw new Error('Failed to fetch students');
     return response.json();
@@ -97,19 +116,19 @@ async function fetchAttendanceStatus(
     date: string,
     period: number
 ): Promise<{ marked: boolean; records: StudentForAttendance[] }> {
+    const headers = await getAuthHeaders();
     const response = await fetch(
         `${API_BASE}/teacher/attendance/${classId}/${date}/${period}`,
-        {
-            headers: TEMP_HEADERS
-        }
+        { headers }
     );
     if (!response.ok) throw new Error('Failed to fetch attendance');
     return response.json();
 }
 
 async function fetchLeaveBalances(): Promise<LeaveBalance[]> {
+    const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE}/teacher/leave-balances`, {
-        headers: TEMP_HEADERS
+        headers
     });
     if (!response.ok) throw new Error('Failed to fetch leave balances');
     return response.json();
@@ -283,8 +302,9 @@ export function useMarksEntryStatus(examId: string) {
     return useQuery({
         queryKey: ['teacher', 'marks', examId],
         queryFn: async () => {
+            const headers = await getAuthHeaders();
             const response = await fetch(`${API_BASE}/teacher/marks/${examId}`, {
-                headers: TEMP_HEADERS
+                headers
             });
             if (!response.ok) throw new Error('Failed to fetch marks');
             return response.json();
@@ -306,9 +326,10 @@ export function useSaveMarks() {
             records: Array<{ studentId: string; marks: number }>;
             action: 'DRAFT' | 'SUBMIT';
         }) => {
+            const headers = await getAuthHeaders();
             const response = await fetch(`${API_BASE}/teacher/marks`, {
                 method: 'POST',
-                headers: { ...TEMP_HEADERS },
+                headers,
                 body: JSON.stringify(params),
             });
             if (!response.ok) throw new Error('Failed to save marks');
@@ -338,7 +359,8 @@ export function useHomework(classId?: string, status?: 'ACTIVE' | 'PAST') {
             if (status) params.append('status', status);
             if (params.toString()) url += `?${params.toString()}`;
 
-            const response = await fetch(url, { headers: TEMP_HEADERS });
+            const headers = await getAuthHeaders();
+            const response = await fetch(url, { headers });
             if (!response.ok) throw new Error('Failed to fetch homework');
             return response.json();
         },
@@ -360,9 +382,10 @@ export function useCreateHomework() {
             classId: string;
             dueDate: string;
         }) => {
+            const headers = await getAuthHeaders();
             const response = await fetch(`${API_BASE}/teacher/homework`, {
                 method: 'POST',
-                headers: { ...TEMP_HEADERS },
+                headers,
                 body: JSON.stringify(params),
             });
             if (!response.ok) throw new Error('Failed to create homework');
@@ -389,9 +412,10 @@ export function useUpdateHomework() {
             classId?: string;
             dueDate?: string;
         }) => {
+            const headers = await getAuthHeaders();
             const response = await fetch(`${API_BASE}/teacher/homework/${params.id}`, {
                 method: 'PUT',
-                headers: { ...TEMP_HEADERS },
+                headers,
                 body: JSON.stringify(params),
             });
             if (!response.ok) throw new Error('Failed to update homework');
@@ -411,9 +435,10 @@ export function useCopyHomework() {
 
     return useMutation({
         mutationFn: async (params: { homeworkId: string; targetClassId: string }) => {
+            const headers = await getAuthHeaders();
             const response = await fetch(`${API_BASE}/teacher/homework/${params.homeworkId}/copy`, {
                 method: 'POST',
-                headers: { ...TEMP_HEADERS },
+                headers,
                 body: JSON.stringify({ targetClassId: params.targetClassId }),
             });
             if (!response.ok) throw new Error('Failed to copy homework');
@@ -433,9 +458,10 @@ export function useDeleteHomework() {
 
     return useMutation({
         mutationFn: async (homeworkId: string) => {
+            const headers = await getAuthHeaders();
             const response = await fetch(`${API_BASE}/teacher/homework/${homeworkId}`, {
                 method: 'DELETE',
-                headers: TEMP_HEADERS
+                headers
             });
             if (!response.ok) throw new Error('Failed to delete homework');
             return response.json();
@@ -453,7 +479,8 @@ export function useLeaveHistory() {
     return useQuery({
         queryKey: ['teacher', 'leave'],
         queryFn: async () => {
-            const response = await fetch(`${API_BASE}/teacher/leave`, { headers: TEMP_HEADERS });
+            const headers = await getAuthHeaders();
+            const response = await fetch(`${API_BASE}/teacher/leave`, { headers });
             if (!response.ok) throw new Error('Failed to fetch leave history');
             return response.json();
         },
@@ -474,9 +501,10 @@ export function useApplyLeave() {
             endDate: string;
             reason: string;
         }) => {
+            const headers = await getAuthHeaders();
             const response = await fetch(`${API_BASE}/teacher/leave`, {
                 method: 'POST',
-                headers: { ...TEMP_HEADERS },
+                headers,
                 body: JSON.stringify(params),
             });
             if (!response.ok) {
@@ -499,9 +527,10 @@ export function useLiveClassRoom(classId: string, period: number) {
     return useQuery({
         queryKey: ['teacher', 'live-class', classId, period],
         queryFn: async () => {
+            const headers = await getAuthHeaders();
             const response = await fetch(
                 `${API_BASE}/teacher/live-class/room-id?classId=${classId}&period=${period}`,
-                { headers: TEMP_HEADERS }
+                { headers }
             );
             if (!response.ok) throw new Error('Failed to get room ID');
             return response.json();
