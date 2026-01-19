@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from '../../provider/language-context';
-import { useLeaveBalances, useSyncQueue } from '../../hooks/useTeacherData';
+import { useLeaveBalances, useLeaveHistory, useApplyLeave } from '../../hooks/useTeacherData';
 
 // ============================================================================
 // TYPES
@@ -241,31 +241,21 @@ const ApplyLeaveForm: React.FC<ApplyFormProps> = ({ balances, onClose, onSubmit 
 
 export const TeacherLeave: React.FC = () => {
     const { t } = useTranslation();
-    const { data: balances = [], isLoading } = useLeaveBalances();
-    const { queueOperation } = useSyncQueue();
+    const { data: balances = [], isLoading: balancesLoading } = useLeaveBalances();
+    const { data: leaveHistoryData = [], isLoading: historyLoading } = useLeaveHistory();
+    const applyLeaveMutation = useApplyLeave();
     const [showApplyForm, setShowApplyForm] = useState(false);
 
-    // Mock leave history (in production, fetch via useQuery)
-    const [leaveHistory] = useState<LeaveApplication[]>([
-        {
-            id: '1',
-            type: 'CASUAL',
-            startDate: '2026-01-25',
-            endDate: '2026-01-26',
-            reason: 'Family function',
-            status: 'APPROVED',
-            appliedAt: '2026-01-20',
-        },
-        {
-            id: '2',
-            type: 'SICK',
-            startDate: '2026-01-10',
-            endDate: '2026-01-10',
-            reason: 'Fever and cold',
-            status: 'APPROVED',
-            appliedAt: '2026-01-10',
-        },
-    ]);
+    // Map API leave history format
+    const leaveHistory: LeaveApplication[] = leaveHistoryData.map((l: any) => ({
+        id: l.id,
+        type: l.type,
+        startDate: l.startDate,
+        endDate: l.endDate,
+        reason: l.reason,
+        status: l.status,
+        appliedAt: l.appliedAt || l.created_at,
+    }));
 
     // Mock balances if API returns empty
     const displayBalances = balances.length > 0 ? balances : [
@@ -275,8 +265,15 @@ export const TeacherLeave: React.FC = () => {
     ];
 
     const handleApplyLeave = async (data: { type: LeaveType; startDate: string; endDate: string; reason: string }) => {
-        await queueOperation('LEAVE', data, `leave:apply:${Date.now()}`);
+        try {
+            await applyLeaveMutation.mutateAsync(data);
+            setShowApplyForm(false);
+        } catch (error) {
+            alert((error as Error).message);
+        }
     };
+
+    const isLoading = balancesLoading || historyLoading;
 
     if (isLoading) {
         return (

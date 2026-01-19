@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from '../../provider/language-context';
-import { useMyExams, useSyncQueue } from '../../hooks/useTeacherData';
+import { useMyExams, useSaveMarks, useMarksEntryStatus } from '../../hooks/useTeacherData';
 
 // ============================================================================
 // TYPES
@@ -98,23 +98,34 @@ interface MarksGridProps {
     examId: string;
     examName: string;
     maxMarks: number;
+    examStatus: string;
     onClose: () => void;
-    onSave: (marks: { studentId: string; marks: number }[]) => void;
 }
 
-const MarksGrid: React.FC<MarksGridProps> = ({ examId, examName, maxMarks, onClose, onSave }) => {
+const MarksGrid: React.FC<MarksGridProps> = ({ examId, examName, maxMarks, examStatus, onClose }) => {
     const { t } = useTranslation();
+    const { data, isLoading } = useMarksEntryStatus(examId);
+    const saveMarksMutation = useSaveMarks();
     const [marks, setMarks] = useState<Record<string, string>>({});
-    const [saving, setSaving] = useState(false);
+    const [initialized, setInitialized] = useState(false);
 
-    // Mock students for demo (in production, fetch from useStudentsForClass)
-    const students = [
-        { id: '1', name: 'Aarav Sharma', rollNumber: 1 },
-        { id: '2', name: 'Priya Patel', rollNumber: 2 },
-        { id: '3', name: 'Rahul Singh', rollNumber: 3 },
-        { id: '4', name: 'Ananya Gupta', rollNumber: 4 },
-        { id: '5', name: 'Vikram Reddy', rollNumber: 5 },
-    ];
+    // Get students and existing marks from API
+    const students = data?.students || [];
+    const canEdit = data?.canEdit ?? true;
+
+    // Initialize marks from API data once loaded
+    React.useEffect(() => {
+        if (data?.students && !initialized) {
+            const initialMarks: Record<string, string> = {};
+            data.students.forEach((s: any) => {
+                if (s.marks !== null) {
+                    initialMarks[s.id] = String(s.marks);
+                }
+            });
+            setMarks(initialMarks);
+            setInitialized(true);
+        }
+    }, [data, initialized]);
 
     const handleMarkChange = (studentId: string, value: string) => {
         const numValue = parseFloat(value);
@@ -123,8 +134,7 @@ const MarksGrid: React.FC<MarksGridProps> = ({ examId, examName, maxMarks, onClo
         }
     };
 
-    const handleSave = async () => {
-        setSaving(true);
+    const handleSave = async (action: 'DRAFT' | 'SUBMIT') => {
         const marksData = Object.entries(marks)
             .filter(([_, value]) => value !== '')
             .map(([studentId, value]) => ({
@@ -132,8 +142,11 @@ const MarksGrid: React.FC<MarksGridProps> = ({ examId, examName, maxMarks, onClo
                 marks: parseFloat(value),
             }));
 
-        await onSave(marksData);
-        setSaving(false);
+        await saveMarksMutation.mutateAsync({
+            examId,
+            records: marksData,
+            action,
+        });
         onClose();
     };
 
@@ -142,6 +155,14 @@ const MarksGrid: React.FC<MarksGridProps> = ({ examId, examName, maxMarks, onClo
         const num = parseFloat(value);
         return !isNaN(num) && num >= 0 && num <= maxMarks;
     };
+
+    if (isLoading) {
+        return (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -201,9 +222,9 @@ const MarksGrid: React.FC<MarksGridProps> = ({ examId, examName, maxMarks, onClo
                                         </td>
                                         <td className="py-3 text-center">
                                             <span className={`text-sm font-bold ${percentage >= 80 ? 'text-emerald-600' :
-                                                    percentage >= 60 ? 'text-blue-600' :
-                                                        percentage >= 40 ? 'text-amber-600' :
-                                                            'text-red-600'
+                                                percentage >= 60 ? 'text-blue-600' :
+                                                    percentage >= 40 ? 'text-amber-600' :
+                                                        'text-red-600'
                                                 }`}>
                                                 {value ? `${percentage}%` : '-'}
                                             </span>
@@ -223,13 +244,29 @@ const MarksGrid: React.FC<MarksGridProps> = ({ examId, examName, maxMarks, onClo
                     >
                         Cancel
                     </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="px-6 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50 transition"
-                    >
-                        {saving ? 'Saving...' : t('save_draft')}
-                    </button>
+                    {canEdit && (
+                        <>
+                            <button
+                                onClick={() => handleSave('DRAFT')}
+                                disabled={saveMarksMutation.isPending}
+                                className="px-4 py-2 rounded-xl border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 font-medium disabled:opacity-50"
+                            >
+                                {saveMarksMutation.isPending ? 'Saving...' : t('save_draft')}
+                            </button>
+                            <button
+                                onClick={() => handleSave('SUBMIT')}
+                                disabled={saveMarksMutation.isPending}
+                                className="px-6 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 disabled:opacity-50 transition"
+                            >
+                                Submit for Approval
+                            </button>
+                        </>
+                    )}
+                    {!canEdit && (
+                        <span className="px-4 py-2 text-sm text-amber-600 dark:text-amber-400">
+                            ⏳ Pending approval - read only
+                        </span>
+                    )}
                 </div>
             </div>
         </div>
@@ -251,9 +288,8 @@ export const TeacherMarksEntry: React.FC = () => {
         ? exams
         : exams.filter(e => e.status === statusFilter);
 
-    const handleSaveMarks = async (marks: { studentId: string; marks: number }[]) => {
-        console.log('[MarksEntry] Saving marks:', marks);
-        // In production, call API via useMutation
+    const handleExamSelect = (exam: Exam) => {
+        setSelectedExam(exam);
     };
 
     if (isLoading) {
@@ -316,8 +352,8 @@ export const TeacherMarksEntry: React.FC = () => {
                     examId={selectedExam.id}
                     examName={selectedExam.name}
                     maxMarks={selectedExam.maxMarks}
+                    examStatus={selectedExam.status}
                     onClose={() => setSelectedExam(null)}
-                    onSave={handleSaveMarks}
                 />
             )}
         </div>

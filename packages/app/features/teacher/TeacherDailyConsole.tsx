@@ -2,9 +2,9 @@
 // "Today" landing screen showing teacher's classes for the day
 // One-tap navigation to attendance, quick stats, sync status
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from '../../provider/language-context';
-import { useMyClassesToday, useSyncQueue } from '../../hooks/useTeacherData';
+import { useMyClassesToday, useSyncQueue, useLiveClassRoom } from '../../hooks/useTeacherData';
 
 // ============================================================================
 // CLASS CARD
@@ -109,6 +109,7 @@ export const TeacherDailyConsole: React.FC<TeacherDailyConsoleProps> = ({
     const { t } = useTranslation();
     const { data: classesToday = [], isLoading } = useMyClassesToday();
     const { status: syncStatus } = useSyncQueue();
+    const [showLiveClassModal, setShowLiveClassModal] = useState(false);
 
     // Calculate stats
     const totalClasses = classesToday.length;
@@ -136,6 +137,24 @@ export const TeacherDailyConsole: React.FC<TeacherDailyConsoleProps> = ({
         if (onNavigateToAttendance) {
             onNavigateToAttendance(classId);
         }
+    };
+
+    // Get live class room ID for current class
+    const { data: liveClassData } = useLiveClassRoom(
+        currentClass?.id || '',
+        currentClass?.period || 0
+    );
+
+    const handleStartLiveClass = () => {
+        setShowLiveClassModal(true);
+    };
+
+    const confirmStartLiveClass = () => {
+        if (liveClassData?.roomId) {
+            const jitsiUrl = `https://meet.jit.si/${liveClassData.roomId}`;
+            window.open(jitsiUrl, '_blank');
+        }
+        setShowLiveClassModal(false);
     };
 
     if (isLoading) {
@@ -193,12 +212,23 @@ export const TeacherDailyConsole: React.FC<TeacherDailyConsoleProps> = ({
                             <h3 className="text-xl font-bold mt-1">{currentClass.className}</h3>
                             <p className="text-sm opacity-80">{currentClass.subjectName}</p>
                         </div>
-                        <button
-                            onClick={() => handleClassTap(currentClass.id)}
-                            className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl font-medium transition"
-                        >
-                            Mark Attendance →
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleStartLiveClass}
+                                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-xl font-medium transition flex items-center gap-2"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                Live Class
+                            </button>
+                            <button
+                                onClick={() => handleClassTap(currentClass.id)}
+                                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl font-medium transition"
+                            >
+                                Mark Attendance →
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -227,6 +257,37 @@ export const TeacherDailyConsole: React.FC<TeacherDailyConsoleProps> = ({
                     </div>
                 )}
             </div>
+
+            {/* Live Class Confirmation Modal */}
+            {showLiveClassModal && currentClass && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 text-center">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
+                            <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Start Live Class?</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                            You are about to start a live class for <strong>{currentClass.className}</strong> - {currentClass.subjectName}.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowLiveClassModal(false)}
+                                className="flex-1 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmStartLiveClass}
+                                className="flex-1 px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition"
+                            >
+                                Start Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

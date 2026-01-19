@@ -684,6 +684,7 @@ model Timetable {
   school_id   String
   class_id    String // Now FK to Class
   day_of_week Int
+  period      Int     @default(1) // Period number (1-8)
   start_time  String
   end_time    String
   subject_id  String // Now FK to Subject (renamed from 'subject')

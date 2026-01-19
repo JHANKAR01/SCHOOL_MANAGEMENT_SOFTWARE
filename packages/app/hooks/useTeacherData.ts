@@ -271,6 +271,192 @@ export function useMarksEntryStatus(examId: string) {
     });
 }
 
+/**
+ * Save marks (draft or submit for approval)
+ */
+export function useSaveMarks() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (params: {
+            examId: string;
+            records: Array<{ studentId: string; marks: number }>;
+            action: 'DRAFT' | 'SUBMIT';
+        }) => {
+            const response = await fetch(`${API_BASE}/teacher/marks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params),
+            });
+            if (!response.ok) throw new Error('Failed to save marks');
+            return response.json();
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: ['teacher', 'marks', variables.examId],
+            });
+            queryClient.invalidateQueries({
+                queryKey: ['teacher', 'exams'],
+            });
+        },
+    });
+}
+
+/**
+ * Fetch homework list
+ */
+export function useHomework(classId?: string, status?: 'ACTIVE' | 'PAST') {
+    return useQuery({
+        queryKey: ['teacher', 'homework', classId, status],
+        queryFn: async () => {
+            let url = `${API_BASE}/teacher/homework`;
+            const params = new URLSearchParams();
+            if (classId) params.append('classId', classId);
+            if (status) params.append('status', status);
+            if (params.toString()) url += `?${params.toString()}`;
+
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to fetch homework');
+            return response.json();
+        },
+        staleTime: 5 * 60 * 1000,
+    });
+}
+
+/**
+ * Create new homework
+ */
+export function useCreateHomework() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (params: {
+            title: string;
+            description?: string;
+            subjectId?: string;
+            classId: string;
+            dueDate: string;
+        }) => {
+            const response = await fetch(`${API_BASE}/teacher/homework`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params),
+            });
+            if (!response.ok) throw new Error('Failed to create homework');
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['teacher', 'homework'] });
+        },
+    });
+}
+
+/**
+ * Copy homework to another class
+ */
+export function useCopyHomework() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (params: { homeworkId: string; targetClassId: string }) => {
+            const response = await fetch(`${API_BASE}/teacher/homework/${params.homeworkId}/copy`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetClassId: params.targetClassId }),
+            });
+            if (!response.ok) throw new Error('Failed to copy homework');
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['teacher', 'homework'] });
+        },
+    });
+}
+
+/**
+ * Delete homework
+ */
+export function useDeleteHomework() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (homeworkId: string) => {
+            const response = await fetch(`${API_BASE}/teacher/homework/${homeworkId}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) throw new Error('Failed to delete homework');
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['teacher', 'homework'] });
+        },
+    });
+}
+
+/**
+ * Fetch leave history
+ */
+export function useLeaveHistory() {
+    return useQuery({
+        queryKey: ['teacher', 'leave'],
+        queryFn: async () => {
+            const response = await fetch(`${API_BASE}/teacher/leave`);
+            if (!response.ok) throw new Error('Failed to fetch leave history');
+            return response.json();
+        },
+        staleTime: 10 * 60 * 1000,
+    });
+}
+
+/**
+ * Apply for leave
+ */
+export function useApplyLeave() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (params: {
+            type: 'SICK' | 'CASUAL' | 'EARNED';
+            startDate: string;
+            endDate: string;
+            reason: string;
+        }) => {
+            const response = await fetch(`${API_BASE}/teacher/leave`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params),
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to apply for leave');
+            }
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['teacher', 'leave'] });
+            queryClient.invalidateQueries({ queryKey: ['teacher', 'leave-balances'] });
+        },
+    });
+}
+
+/**
+ * Get live class room ID
+ */
+export function useLiveClassRoom(classId: string, period: number) {
+    return useQuery({
+        queryKey: ['teacher', 'live-class', classId, period],
+        queryFn: async () => {
+            const response = await fetch(
+                `${API_BASE}/teacher/live-class/room-id?classId=${classId}&period=${period}`
+            );
+            if (!response.ok) throw new Error('Failed to get room ID');
+            return response.json();
+        },
+        enabled: !!classId && period > 0,
+        staleTime: 30 * 60 * 1000, // Room ID valid for session
+    });
+}
+
 // ============================================================================
 // RE-EXPORT SYNC STATUS
 // ============================================================================
