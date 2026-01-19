@@ -8,13 +8,13 @@ import { useSyncQueue } from '../../hooks/useSyncQueue';
 import { useTranslation } from '../../provider/language-context';
 import { preCacheTeacherData } from '../../utils/pre-cache-service';
 
-// Import Teacher Modules (will be created in subsequent tasks)
-// import { TeacherDailyConsole } from '../teacher/TeacherDailyConsole';
-// import { TeacherAttendance } from '../teacher/TeacherAttendance';
-// import { TeacherMarksEntry } from '../teacher/TeacherMarksEntry';
-// import { TeacherHomework } from '../teacher/TeacherHomework';
-// import { TeacherClassView } from '../teacher/TeacherClassView';
-// import { TeacherLeave } from '../teacher/TeacherLeave';
+// Import Teacher Modules
+import { TeacherAttendance } from '../teacher/TeacherAttendance';
+import { TeacherDailyConsole } from '../teacher/TeacherDailyConsole';
+import { TeacherMarksEntry } from '../teacher/TeacherMarksEntry';
+import { TeacherHomework } from '../teacher/TeacherHomework';
+import { TeacherClassView } from '../teacher/TeacherClassView';
+import { TeacherLeave } from '../teacher/TeacherLeave';
 
 // ============================================================================
 // SYNC STATUS WIDGET
@@ -122,28 +122,22 @@ export const NewTeacherDashboard: React.FC = () => {
     const renderContent = () => {
         switch (currentModule) {
             case 'today':
-                // return <TeacherDailyConsole />;
-                return <PlaceholderModule name="Daily Console" />;
+                return <TeacherDailyConsole onNavigateToAttendance={() => setCurrentModule('attendance')} />;
 
             case 'attendance':
-                // return <TeacherAttendance />;
-                return <PlaceholderModule name="Attendance" />;
+                return <TeacherAttendance />;
 
             case 'marks':
-                // return <TeacherMarksEntry />;
-                return <PlaceholderModule name="Marks Entry" />;
+                return <TeacherMarksEntry />;
 
             case 'homework':
-                // return <TeacherHomework />;
-                return <PlaceholderModule name="Homework" />;
+                return <TeacherHomework />;
 
             case 'classes':
-                // return <TeacherClassView />;
-                return <PlaceholderModule name="My Classes" />;
+                return <TeacherClassView />;
 
             case 'leave':
-                // return <TeacherLeave />;
-                return <PlaceholderModule name="Leave & Substitution" />;
+                return <TeacherLeave />;
 
             default:
                 return <PlaceholderModule name="Unknown Module" />;

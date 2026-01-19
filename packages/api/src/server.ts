@@ -20,6 +20,7 @@ import { superAdminRouter } from './routes/super-admin.ts';
 import { systemAdminRouter } from './routes/system-admin.ts';
 import announcementsRouter from './routes/announcements.ts';
 import { principalRouter } from './routes/principal.ts';
+import { teacherRouter } from './routes/teacher.ts';
 
 const app = new Hono();
 
@@ -58,6 +59,7 @@ app.route('/api/super-admin', superAdminRouter);
 app.route('/api/system-admin', systemAdminRouter);  // P6: System Admin for User Access Control
 app.route('/api/announcements', announcementsRouter);
 app.route('/api/principal', principalRouter);  // Principal Dashboard Command Center
+app.route('/api/teacher', teacherRouter);  // Teacher Dashboard API
 
 // --- REAL-TIME LAYER (Socket.io) ---
 const httpServer = serve({ fetch: app.fetch, port: 3000 });
