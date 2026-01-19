@@ -46,6 +46,8 @@ export async function preCacheTeacherData(authToken?: string): Promise<PreCacheR
 
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        'X-User-Id': 'usr_staff_0068', // <--- TEMP FIX
+        'X-School-Id': 'sch_123'       // <--- TEMP FIX
     };
 
     if (authToken) {

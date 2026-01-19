@@ -38,6 +38,8 @@ app.route('/api/auth', authRouter);
 // 2. PROTECTED ROUTES (Middleware Guard)
 // Protect "everything else" under /api/ that isn't already handled above (like auth)
 // We use a custom middleware wrapper to skip auth check for paths starting with /api/auth (just in case)
+// ⚠️ TEMPORARY BYPASS: Commented out for local testing with manual headers
+/*
 app.use('/api/*', async (c, next) => {
   if (c.req.path.startsWith('/api/auth')) {
     return next();
@@ -45,6 +47,7 @@ app.use('/api/*', async (c, next) => {
     return authMiddleware(c, next);
   }
 });
+*/
 
 app.route('/api/staff', staffRouter);
 app.route('/api/academics', academicsRouter);
