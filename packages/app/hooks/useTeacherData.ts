@@ -12,6 +12,7 @@ import { useSyncQueue, generateAttendanceIdempotencyKey } from './useSyncQueue';
 
 export interface TeacherClass {
     id: string;
+    classId: string;
     className: string;
     grade: string;
     section: string;
@@ -132,7 +133,7 @@ export function useMyClassesToday() {
                 // Cache timetable for offline
                 const slots: TimetableSlot[] = data.map(c => ({
                     id: c.id,
-                    classId: c.id,
+                    classId: c.classId,
                     className: c.className,
                     subjectId: c.subjectId,
                     subjectName: c.subjectName,
@@ -149,6 +150,7 @@ export function useMyClassesToday() {
                 const cached = await storage.getTodayTimetable();
                 return cached.map(slot => ({
                     id: slot.id,
+                    classId: slot.classId,
                     className: slot.className,
                     grade: '',
                     section: '',

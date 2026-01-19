@@ -754,6 +754,11 @@ teacherRouter.post('/homework', async (c) => {
         const body = await c.req.json();
         const { title, description, subjectId, classId, dueDate } = body;
 
+        console.log('[DEBUG] Creating Homework:', {
+            userId, schoolId,
+            classId, subjectId, title
+        });
+
         if (!title || !classId || !dueDate || !subjectId) {
             return c.json({ error: 'Missing required fields' }, 400);
         }

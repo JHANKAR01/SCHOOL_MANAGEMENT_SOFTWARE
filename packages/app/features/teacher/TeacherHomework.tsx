@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from '../../provider/language-context';
-import { useHomework, useCreateHomework, useCopyHomework, useDeleteHomework, useMyClassesToday } from '../../hooks/useTeacherData';
+import { useHomework, useCreateHomework, useCopyHomework, useDeleteHomework, useMyClassesToday, TeacherClass } from '../../hooks/useTeacherData';
 
 // ============================================================================
 // TYPES
@@ -119,9 +119,10 @@ interface CreateFormProps {
         classId: string;
         dueDate: string;
     }) => void;
+    availableClasses: TeacherClass[];
 }
 
-const CreateHomeworkForm: React.FC<CreateFormProps> = ({ onClose, onSubmit }) => {
+const CreateHomeworkForm: React.FC<CreateFormProps> = ({ onClose, onSubmit, availableClasses }) => {
     const { t } = useTranslation();
     const [formData, setFormData] = useState({
         title: '',
@@ -132,17 +133,19 @@ const CreateHomeworkForm: React.FC<CreateFormProps> = ({ onClose, onSubmit }) =>
     });
     const [saving, setSaving] = useState(false);
 
-    // Mock classes/subjects (in production, fetch from context/API)
-    const classes = [
-        { id: 'c1', name: 'Class 10-A' },
-        { id: 'c2', name: 'Class 10-B' },
-        { id: 'c3', name: 'Class 9-A' },
-    ];
-    const subjects = [
-        { id: 's1', name: 'Mathematics' },
-        { id: 's2', name: 'Science' },
-        { id: 's3', name: 'English' },
-    ];
+    // Filter unique class-subject combinations from the schedule
+    // Use a Map to deduplicate (same class+subject might appear in multiple periods)
+    const classOptions = React.useMemo(() => {
+        const unique = new Map();
+        availableClasses.forEach(c => {
+            // Use classId (not timetable id) to deduplicate multiple periods
+            const key = `${c.classId}-${c.subjectId}`;
+            if (!unique.has(key)) {
+                unique.set(key, c);
+            }
+        });
+        return Array.from(unique.values());
+    }, [availableClasses]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -193,31 +196,29 @@ const CreateHomeworkForm: React.FC<CreateFormProps> = ({ onClose, onSubmit }) =>
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Class</label>
-                                <select
-                                    value={formData.classId}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, classId: e.target.value }))}
-                                    required
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
-                                >
-                                    <option value="">Select...</option>
-                                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Subject</label>
-                                <select
-                                    value={formData.subjectId}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, subjectId: e.target.value }))}
-                                    required
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
-                                >
-                                    <option value="">Select...</option>
-                                    {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                </select>
-                            </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Class & Subject</label>
+                            <select
+                                value={`${formData.classId}|${formData.subjectId}`}
+                                onChange={(e) => {
+                                    const [cId, sId] = e.target.value.split('|');
+                                    setFormData(prev => ({ ...prev, classId: cId, subjectId: sId }));
+                                }}
+                                required
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
+                            >
+                                <option value="|">Select Class & Subject...</option>
+                                {classOptions.map(c => (
+                                    <option key={`${c.classId}-${c.subjectId}`} value={`${c.classId}|${c.subjectId}`}>
+                                        {c.className} - {c.subjectName}
+                                    </option>
+                                ))}
+                            </select>
+                            {classOptions.length === 0 && (
+                                <p className="text-xs text-amber-600 mt-1">
+                                    No classes found for today.
+                                </p>
+                            )}
                         </div>
 
                         <div>
@@ -376,6 +377,7 @@ export const TeacherHomework: React.FC = () => {
                 <CreateHomeworkForm
                     onClose={() => setShowCreateForm(false)}
                     onSubmit={handleCreate}
+                    availableClasses={classesToday}
                 />
             )}
 
