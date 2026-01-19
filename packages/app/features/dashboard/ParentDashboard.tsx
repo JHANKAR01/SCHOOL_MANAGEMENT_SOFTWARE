@@ -1,16 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, Platform, ScrollView, Linking } from 'react-native';
-import { SchoolConfig, UserRole } from '../../../../types.js';
-import ParentPayments from '../../../../apps/expo/app/parent/payments.js';
-import TransportTracking from '../../../../apps/expo/app/parent/transport.js';
-import { Gradebook } from '../academics/Gradebook.js';
-import { StatCard, PageHeader, SovereignButton, SovereignBadge, SovereignInput } from '../../components/SovereignComponents.js';
+import { SchoolConfig, UserRole } from '../../../../types';
+import ParentPayments from '../../../../apps/expo/app/parent/payments';
+import TransportTracking from '../../../../apps/expo/app/parent/transport';
+import { Gradebook } from '../academics/Gradebook';
+import { StatCard, PageHeader, SovereignButton, SovereignBadge, SovereignInput } from '../../components/SovereignComponents';
 import { Row, Col } from '../../components/Layout';
 import { Wallet, Bus, FileText, CheckCircle, Bell, Video, Upload } from 'lucide-react';
-import { useInteraction } from '../../provider/InteractionContext.js';
-import { ActionModal } from '../../components/ActionModal.js';
-import { generatePDFMarksheet } from '../../../api/src/services/pdf-service.js';
+import { useInteraction } from '../../provider/InteractionContext';
+import { ActionModal } from '../../components/ActionModal';
+// Note: generatePDFMarksheet removed - using API fetch instead
 
 interface Props {
   school: SchoolConfig;
@@ -77,7 +77,14 @@ export const ParentDashboard: React.FC<Props> = ({ school, activeModule, role })
   const downloadReportCard = async () => {
     if (!student) return;
     try {
-      const url = await generatePDFMarksheet(student.id, "TERM_1_FINAL");
+      // Call API endpoint instead of direct service function
+      const res = await fetch(`/api/reports/generate?studentId=${student.id}&term=TERM_1_FINAL`);
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
+      }
+      const data = await res.json();
+      const url = data.url;
+
       if (url) {
         if (Platform.OS === 'web') {
           const link = document.createElement('a');
