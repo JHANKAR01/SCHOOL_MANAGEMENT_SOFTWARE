@@ -1506,6 +1506,7 @@ export interface DummyTimetable {
   day_of_week: number;
   start_time: string;
   end_time: string;
+  period: number; // 1-8
   subject_id: string;
   teacher_id: string | null;
 }
@@ -1515,12 +1516,12 @@ function generateTimetable(): DummyTimetable[] {
   let ttIndex = 0;
 
   const periods = [
-    { start: '08:00', end: '08:45' },
-    { start: '08:45', end: '09:30' },
-    { start: '09:45', end: '10:30' },
-    { start: '10:30', end: '11:15' },
-    { start: '11:30', end: '12:15' },
-    { start: '12:15', end: '13:00' }
+    { period: 1, start: '08:00', end: '08:45' },
+    { period: 2, start: '08:45', end: '09:30' },
+    { period: 3, start: '09:45', end: '10:30' },
+    { period: 4, start: '10:30', end: '11:15' },
+    { period: 5, start: '11:30', end: '12:15' },
+    { period: 6, start: '12:15', end: '13:00' }
   ];
 
   // Generate timetable for Class 10-A (sample)
@@ -1541,6 +1542,7 @@ function generateTimetable(): DummyTimetable[] {
         day_of_week: day,
         start_time: periods[p].start,
         end_time: periods[p].end,
+        period: periods[p].period,
         subject_id: classSubjects[subjectIndex].subject_id,
         teacher_id: teachers[teacherIndex].id
       });
@@ -1616,48 +1618,59 @@ function generateExpenses(): DummyExpense[] {
 
 export const DUMMY_EXPENSES: DummyExpense[] = generateExpenses();
 
-// --- Homework ---
-export interface DummyHomework {
-  id: string;
-  school_id: string;
+// --- Homework Templates ---
+export interface DummyHomeworkTemplate {
   title: string;
-  subject_id: string;
   description: string;
-  due_date: Date;
-  status: 'PENDING' | 'SUBMITTED' | 'GRADED';
-  class_id: string;
-  created_at: Date;
+  due_days_offset: number; // Days from today (can be negative)
+  status: HomeworkStatus;
 }
 
-function generateHomework(): DummyHomework[] {
-  const homeworks: DummyHomework[] = [];
-  const titles = ['Chapter Review Questions', 'Practice Problems Set', 'Weekly Assignment', 'Project Work', 'Case Study Analysis'];
-  const statuses: ('PENDING' | 'SUBMITTED' | 'GRADED')[] = ['PENDING', 'SUBMITTED', 'GRADED'];
-
-  const baseDate = new Date();
-  const classes = ['cls_6_A', 'cls_7_B', 'cls_8_C', 'cls_9_A', 'cls_10_B'];
-  const subjects = ['sub_math', 'sub_eng', 'sub_sci', 'sub_sst', 'sub_hin'];
-
-  for (let i = 0; i < 20; i++) {
-    const dueDate = new Date(baseDate);
-    dueDate.setDate(dueDate.getDate() + (i % 14) - 7); // Some past, some future
-
-    homeworks.push({
-      id: `hw_${(i + 1).toString().padStart(4, '0')}`,
-      school_id: SCHOOL_ID,
-      title: `${titles[i % 5]} - Week ${Math.floor(i / 5) + 1}`,
-      subject_id: subjects[i % 5],
-      description: `Complete all questions from the assigned chapter. Submit before the due date.`,
-      due_date: dueDate,
-      status: statuses[i % 3],
-      class_id: classes[i % 5],
-      created_at: new Date(dueDate.getTime() - 7 * 24 * 60 * 60 * 1000) // 1 week before due
-    });
+export const DUMMY_HOMEWORK_TEMPLATES: DummyHomeworkTemplate[] = [
+  {
+    title: 'Algebra: Linear Equations',
+    description: 'Complete Exercise 4.2 (Questions 1-10). details steps are required.',
+    due_days_offset: 2,
+    status: HomeworkStatus.PENDING
+  },
+  {
+    title: 'History: The Mughal Empire',
+    description: 'Read Chapter 5 and answer the review questions on page 45.',
+    due_days_offset: -1, // Past due
+    status: HomeworkStatus.SUBMITTED
+  },
+  {
+    title: 'Physics: Laws of Motion',
+    description: 'Prepare a chart explaining Newton\'s three laws of motion with examples.',
+    due_days_offset: 5,
+    status: HomeworkStatus.PENDING
+  },
+  {
+    title: 'English: Poem Comprehension',
+    description: 'Read the poem "The Road Not Taken" and write a summary.',
+    due_days_offset: 3,
+    status: HomeworkStatus.PENDING
+  },
+  {
+    title: 'Chemistry: Periodic Table',
+    description: 'Memorize the first 20 elements of the periodic table.',
+    due_days_offset: -5,
+    status: HomeworkStatus.GRADED
   }
-  return homeworks;
+];
+
+// --- Leave Balance Templates ---
+export interface DummyLeaveBalanceTemplate {
+  type: 'SICK' | 'CASUAL' | 'EARNED';
+  total: number;
+  used: number;
 }
 
-export const DUMMY_HOMEWORK: DummyHomework[] = generateHomework();
+export const DUMMY_LEAVE_BALANCE_TEMPLATES: DummyLeaveBalanceTemplate[] = [
+  { type: 'SICK', total: 12, used: 2 },
+  { type: 'CASUAL', total: 8, used: 1 },
+  { type: 'EARNED', total: 30, used: 0 }
+];
 
 // --- Live Classes ---
 export interface DummyLiveClass {

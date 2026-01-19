@@ -10,7 +10,8 @@ import {
   StaffStatus,
   EnrollmentStatus,
   AttendanceStatus,
-  LoanStatus
+  LoanStatus,
+  LeaveType
 } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
@@ -44,9 +45,10 @@ import {
   DUMMY_INVOICES,
   DUMMY_TIMETABLE,
   DUMMY_BUSES,
-  // NEW: Operational tables (15)
   DUMMY_EXPENSES,
-  DUMMY_HOMEWORK,
+
+  DUMMY_HOMEWORK_TEMPLATES, // UPDATED
+  DUMMY_LEAVE_BALANCE_TEMPLATES, // NEW
   DUMMY_LIVE_CLASSES,
   DUMMY_PAPERS,
   // DUMMY_SYLLABUS, // Removed Phase 5
@@ -103,6 +105,30 @@ async function main() {
   console.log('\n🧹 STEP 1: Clearing existing data in FK-safe order...');
 
   // Delete in reverse FK order (child tables first)
+  console.log('   └─ Clearing NudgeLog...');
+  await prisma.nudgeLog.deleteMany();
+
+  console.log('   └─ Clearing Substitution...');
+  await prisma.substitution.deleteMany();
+
+  console.log('   └─ Clearing Timetable...');
+  await prisma.timetable.deleteMany();
+
+  console.log('   └─ Clearing Homework...');
+  await prisma.homework.deleteMany();
+
+  console.log('   └─ Clearing LiveClass...');
+  await prisma.liveClass.deleteMany();
+
+  console.log('   └─ Clearing Paper...');
+  await prisma.paper.deleteMany();
+
+  console.log('   └─ Clearing TopicCompletion...');
+  await prisma.topicCompletion.deleteMany();
+
+  console.log('   └─ Clearing SyllabusTopic...');
+  await prisma.syllabusTopic.deleteMany();
+
   console.log('   └─ Clearing PaymentTransaction...');
   await prisma.paymentTransaction.deleteMany();
 
@@ -151,6 +177,9 @@ async function main() {
   console.log('   └─ Clearing LeaveApplication...');
   await prisma.leaveApplication.deleteMany();
 
+  console.log('   └─ Clearing LeaveBalance...');
+  await prisma.leaveBalance.deleteMany();
+
   console.log('   └─ Clearing Inquiry...');
   await prisma.inquiry.deleteMany();
 
@@ -193,29 +222,7 @@ async function main() {
   console.log('   └─ Clearing StaffProfile...');
   await prisma.staffProfile.deleteMany();
 
-  console.log('   └─ Clearing Substitution...');
-  await prisma.substitution.deleteMany();
 
-  console.log('   └─ Clearing Timetable...');
-  await prisma.timetable.deleteMany();
-
-  console.log('   └─ Clearing Homework...');
-  await prisma.homework.deleteMany();
-
-  console.log('   └─ Clearing LiveClass...');
-  await prisma.liveClass.deleteMany();
-
-  console.log('   └─ Clearing Paper...');
-  await prisma.paper.deleteMany();
-
-  console.log('   └─ Clearing TopicCompletion...');
-  await prisma.topicCompletion.deleteMany();
-
-  console.log('   └─ Clearing SyllabusTopic...');
-  await prisma.syllabusTopic.deleteMany();
-
-  console.log('   └─ Clearing NudgeLog...');
-  await prisma.nudgeLog.deleteMany();
 
 
 
@@ -392,7 +399,33 @@ async function main() {
   });
 
   DUMMY_STAFF_PROFILES.forEach(p => staffProfileIdMap.set(p.user_id, p.id));
+  DUMMY_STAFF_PROFILES.forEach(p => staffProfileIdMap.set(p.user_id, p.id));
   console.log(`   ✅ ${staffProfilesResult.count} staff profiles created`);
+
+  // =========================================================================
+  // STEP 6b: SEED LEAVE BALANCES
+  // =========================================================================
+  console.log('\n🍃 STEP 6b: Seeding Leave Balances...');
+
+  const leaveBalanceData = [];
+  for (const profile of DUMMY_STAFF_PROFILES) {
+    for (const template of DUMMY_LEAVE_BALANCE_TEMPLATES) {
+      leaveBalanceData.push({
+        staff_profile_id: profile.id,
+        school_id: SCHOOL_ID,
+        academic_year_id: ACADEMIC_YEAR_2025_ID,
+        leave_type: template.type,
+        total_allowed: template.total,
+        used: template.used
+      });
+    }
+  }
+
+  const leaveBalanceResult = await prisma.leaveBalance.createMany({
+    data: leaveBalanceData,
+    skipDuplicates: true
+  });
+  console.log(`   ✅ ${leaveBalanceResult.count} leave balance records created`);
 
   // =========================================================================
   // STEP 7: SEED STAFF FINANCIALS
@@ -1047,6 +1080,7 @@ async function main() {
         day_of_week: tt.day_of_week,
         start_time: tt.start_time,
         end_time: tt.end_time,
+        period: tt.period, // ADDED
         subject_id: tt.subject_id,
         teacher_id: tt.teacher_id
       }
@@ -1085,23 +1119,40 @@ async function main() {
   // =========================================================================
   // STEP 29: SEED HOMEWORK
   // =========================================================================
-  console.log('\n📝 STEP 29: Seeding Homework...');
+  console.log('\n📝 STEP 29: Seeding Homework (Dynamic)...');
 
-  const homeworkResult = await prisma.homework.createMany({
-    data: DUMMY_HOMEWORK.map(hw => ({
-      id: hw.id,
-      school_id: hw.school_id,
-      title: hw.title,
-      subject_id: hw.subject_id,
-      description: hw.description,
-      due_date: hw.due_date,
-      status: hw.status,
-      class_id: hw.class_id,
-      created_at: hw.created_at
-    })),
-    skipDuplicates: true
-  });
-  console.log(`   ✅ ${homeworkResult.count} homework assignments created`);
+  // Find a teacher to assign homework to (e.g., the first Maths teacher or just a generic one)
+  // We'll use the 'Teacher' created in DUMMY_STAFF_USERS or just pick one with StaffClass assignments
+  const activeClasses = DUMMY_CLASSES.slice(0, 5); // Pick first 5 classes
+  let homeworkCount = 0;
+
+  for (const cls of activeClasses) {
+    // Find a subject for this class (pick the first one)
+    const classSubject = DUMMY_CLASS_SUBJECTS.find(cs => cs.class_id === cls.id);
+    if (!classSubject) continue;
+
+    for (const template of DUMMY_HOMEWORK_TEMPLATES) {
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + template.due_days_offset);
+
+      await prisma.homework.create({
+        data: {
+          id: `hw_dyn_${homeworkCount + 1}`,
+          school_id: SCHOOL_ID,
+          class_id: cls.id,
+          subject_id: classSubject.subject_id,
+          title: template.title,
+          description: template.description,
+          due_date: dueDate,
+          status: template.status,
+          created_at: new Date(dueDate.getTime() - 7 * 24 * 60 * 60 * 1000) // 1 week before
+        } as any
+      });
+      homeworkCount++;
+    }
+  }
+
+  console.log(`   ✅ ${homeworkCount} homework assignments created`);
 
   // =========================================================================
   // STEP 30: SEED LIVE CLASSES
@@ -1447,7 +1498,7 @@ async function main() {
   console.log(`   ├─ ${resultsResult.count} Results`);
   console.log(`   ├─ ${resultMarksResult.count} Result Marks`);
   console.log(`   ├─ ${attendanceResult.count} Attendance Records`);
-  console.log(`   ├─ ${homeworkResult.count} Homework Assignments`);
+  console.log(`   ├─ ${homeworkCount} Homework Assignments`);
   console.log(`   ├─ ${liveClassResult.count} Live Classes`);
   console.log(`   ├─ ${papersResult.count} Exam Papers`);
   console.log(`   ├─ ${syllabusTopicsResult.count} Syllabus Topics`);
