@@ -1,0 +1,256 @@
+/**
+ * TEMPLATE: Hono API Route
+ * 
+ * Copy this template when creating new API routes in server/src/routes/
+ * Remember to register the route in server/src/server.ts
+ * 
+ * Location: server/src/routes/{domain}.ts
+ */
+
+import { Hono } from 'hono';
+import prisma from '../db';
+import { authMiddleware, requireRole } from '../middleware/auth';
+import { UserRole } from '../../../packages/types';
+import { z } from 'zod';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type Variables = {
+    user: {
+        id: string;
+        role: UserRole;
+        school_id: string;
+    };
+};
+
+// Validation schema
+const createItemSchema = z.object({
+    name: z.string().min(1, 'Name is required'),
+    description: z.string().optional(),
+    quantity: z.number().int().positive().optional().default(0),
+});
+
+const updateItemSchema = createItemSchema.partial();
+
+// ============================================================================
+// ROUTER
+// ============================================================================
+
+const domainRouter = new Hono<{ Variables: Variables }>();
+
+// Apply authentication to all routes
+domainRouter.use('*', authMiddleware);
+
+// ============================================================================
+// GET /api/domain/items - List all items
+// ============================================================================
+domainRouter.get('/items',
+    requireRole([UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL]),
+    async (c) => {
+        try {
+            const user = c.get('user');
+
+            const items = await prisma.item.findMany({
+                where: { school_id: user.school_id },
+                orderBy: { created_at: 'desc' },
+            });
+
+            return c.json({ success: true, data: items });
+
+        } catch (error) {
+            console.error('Error fetching items:', error);
+            return c.json({
+                success: false,
+                error: 'Failed to fetch items',
+                code: 'INTERNAL_ERROR'
+            }, 500);
+        }
+    }
+);
+
+// ============================================================================
+// GET /api/domain/items/:id - Get single item
+// ============================================================================
+domainRouter.get('/items/:id',
+    requireRole([UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL]),
+    async (c) => {
+        try {
+            const { id } = c.req.param();
+            const user = c.get('user');
+
+            const item = await prisma.item.findUnique({
+                where: {
+                    id,
+                    school_id: user.school_id  // RLS
+                },
+            });
+
+            if (!item) {
+                return c.json({
+                    success: false,
+                    error: 'Item not found',
+                    code: 'NOT_FOUND'
+                }, 404);
+            }
+
+            return c.json({ success: true, data: item });
+
+        } catch (error) {
+            console.error('Error fetching item:', error);
+            return c.json({
+                success: false,
+                error: 'Failed to fetch item',
+                code: 'INTERNAL_ERROR'
+            }, 500);
+        }
+    }
+);
+
+// ============================================================================
+// POST /api/domain/items - Create new item
+// ============================================================================
+domainRouter.post('/items',
+    requireRole([UserRole.SCHOOL_ADMIN]),
+    async (c) => {
+        try {
+            const user = c.get('user');
+            const body = await c.req.json();
+
+            // Validate input
+            const validated = createItemSchema.parse(body);
+
+            const item = await prisma.item.create({
+                data: {
+                    ...validated,
+                    school_id: user.school_id,
+                },
+            });
+
+            return c.json({ success: true, data: item }, 201);
+
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return c.json({
+                    success: false,
+                    error: 'Validation failed',
+                    code: 'VALIDATION_ERROR',
+                    details: error.errors
+                }, 400);
+            }
+
+            console.error('Error creating item:', error);
+            return c.json({
+                success: false,
+                error: 'Failed to create item',
+                code: 'INTERNAL_ERROR'
+            }, 500);
+        }
+    }
+);
+
+// ============================================================================
+// PATCH /api/domain/items/:id - Update item
+// ============================================================================
+domainRouter.patch('/items/:id',
+    requireRole([UserRole.SCHOOL_ADMIN]),
+    async (c) => {
+        try {
+            const { id } = c.req.param();
+            const user = c.get('user');
+            const body = await c.req.json();
+
+            // Validate input
+            const validated = updateItemSchema.parse(body);
+
+            // Check item exists and belongs to school
+            const existing = await prisma.item.findUnique({
+                where: { id, school_id: user.school_id }
+            });
+
+            if (!existing) {
+                return c.json({
+                    success: false,
+                    error: 'Item not found',
+                    code: 'NOT_FOUND'
+                }, 404);
+            }
+
+            const item = await prisma.item.update({
+                where: { id },
+                data: validated,
+            });
+
+            return c.json({ success: true, data: item });
+
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return c.json({
+                    success: false,
+                    error: 'Validation failed',
+                    code: 'VALIDATION_ERROR',
+                    details: error.errors
+                }, 400);
+            }
+
+            console.error('Error updating item:', error);
+            return c.json({
+                success: false,
+                error: 'Failed to update item',
+                code: 'INTERNAL_ERROR'
+            }, 500);
+        }
+    }
+);
+
+// ============================================================================
+// DELETE /api/domain/items/:id - Delete item
+// ============================================================================
+domainRouter.delete('/items/:id',
+    requireRole([UserRole.SCHOOL_ADMIN]),
+    async (c) => {
+        try {
+            const { id } = c.req.param();
+            const user = c.get('user');
+
+            // Check item exists and belongs to school
+            const existing = await prisma.item.findUnique({
+                where: { id, school_id: user.school_id }
+            });
+
+            if (!existing) {
+                return c.json({
+                    success: false,
+                    error: 'Item not found',
+                    code: 'NOT_FOUND'
+                }, 404);
+            }
+
+            await prisma.item.delete({ where: { id } });
+
+            return c.json({ success: true });
+
+        } catch (error) {
+            console.error('Error deleting item:', error);
+            return c.json({
+                success: false,
+                error: 'Failed to delete item',
+                code: 'INTERNAL_ERROR'
+            }, 500);
+        }
+    }
+);
+
+export { domainRouter };
+
+// ============================================================================
+// REGISTRATION (add to server/src/server.ts)
+// ============================================================================
+
+/*
+import { domainRouter } from './routes/domain';
+
+// Add to routes section:
+app.route('/api/domain', domainRouter);
+*/

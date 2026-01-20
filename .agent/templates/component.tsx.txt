@@ -1,0 +1,88 @@
+/**
+ * TEMPLATE: React Component (Cross-Platform)
+ * 
+ * Copy this template when creating new shared components in packages/app/
+ * This works on both Web (via React Native Web) and Mobile (Expo)
+ * 
+ * Location: packages/app/components/{ComponentName}.tsx
+ */
+
+import React from 'react';
+import { View, Text, Pressable } from 'react-native';
+// Icons - always use lucide-react
+import { ChevronRight } from 'lucide-react';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface ComponentNameProps {
+    /** Required prop description */
+    title: string;
+    /** Optional prop description */
+    subtitle?: string;
+    /** Callback when pressed */
+    onPress?: () => void;
+    /** Children elements */
+    children?: React.ReactNode;
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
+export const ComponentName: React.FC<ComponentNameProps> = ({
+    title,
+    subtitle,
+    onPress,
+    children,
+}) => {
+    return (
+        <Pressable
+            onPress={onPress}
+            disabled={!onPress}
+            className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700"
+        >
+            {/* Header */}
+            <View className="flex-row items-center justify-between">
+                <View className="flex-1">
+                    <Text className="text-base font-semibold text-slate-900 dark:text-white">
+                        {title}
+                    </Text>
+                    {subtitle && (
+                        <Text className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                            {subtitle}
+                        </Text>
+                    )}
+                </View>
+
+                {onPress && (
+                    <ChevronRight className="w-5 h-5 text-slate-400" />
+                )}
+            </View>
+
+            {/* Content */}
+            {children && (
+                <View className="mt-4">
+                    {children}
+                </View>
+            )}
+        </Pressable>
+    );
+};
+
+// ============================================================================
+// USAGE EXAMPLE
+// ============================================================================
+
+/*
+import { ComponentName } from '../../components/ComponentName';
+
+<ComponentName
+  title="Example Card"
+  subtitle="This is a subtitle"
+  onPress={() => console.log('Pressed!')}
+>
+  <Text>Child content here</Text>
+</ComponentName>
+*/

@@ -1,0 +1,154 @@
+// ============================================================================
+// TEMPLATE: Prisma Model
+// 
+// Copy this template when adding new tables to server/prisma/schema.prisma
+// Follow the naming conventions and always include multi-tenancy fields
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// BASIC MODEL TEMPLATE
+// ----------------------------------------------------------------------------
+
+model DomainItem {
+  // Primary key
+  id          String   @id @default(cuid())
+  
+  // Multi-tenancy (REQUIRED)
+  school_id   String
+  
+  // Core fields
+  name        String
+  description String?  // Optional
+  quantity    Int      @default(0)
+  status      DomainStatus @default(ACTIVE)
+  
+  // Metadata
+  metadata    Json?    @default("{}")
+  
+  // Timestamps
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @updatedAt
+  
+  // Relations
+  school      School   @relation(fields: [school_id], references: [id])
+  created_by  User?    @relation("DomainItemCreator", fields: [created_by_id], references: [id])
+  created_by_id String?
+  
+  // Indexes (REQUIRED for multi-tenancy performance)
+  @@index([school_id])
+  @@index([school_id, status])
+  
+  // Schema tag (REQUIRED)
+  @@schema("schoolmanagementsystem")
+}
+
+// ----------------------------------------------------------------------------
+// ENUM TEMPLATE
+// ----------------------------------------------------------------------------
+
+enum DomainStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+  
+  @@schema("schoolmanagementsystem")
+}
+
+// ----------------------------------------------------------------------------
+// RELATION EXAMPLES
+// ----------------------------------------------------------------------------
+
+// One-to-Many: School has many Items
+// In School model, add:
+//   domainItems  DomainItem[]
+
+// One-to-One: User has one Profile
+model Profile {
+  id      String @id @default(cuid())
+  user_id String @unique  // Note: @unique for one-to-one
+  user    User   @relation(fields: [user_id], references: [id])
+  
+  @@schema("schoolmanagementsystem")
+}
+
+// Many-to-Many: Students enrolled in Subjects
+model StudentSubject {
+  student_id String
+  subject_id String
+  
+  student    Student @relation(fields: [student_id], references: [id])
+  subject    Subject @relation(fields: [subject_id], references: [id])
+  
+  // Additional fields on the join table
+  enrolled_at DateTime @default(now())
+  
+  @@id([student_id, subject_id])
+  @@schema("schoolmanagementsystem")
+}
+
+// ----------------------------------------------------------------------------
+// FIELD TYPE REFERENCE
+// ----------------------------------------------------------------------------
+
+// STRING TYPES
+// name        String              // Required
+// name        String?             // Optional
+// code        String   @unique    // Unique
+
+// NUMBER TYPES
+// count       Int      @default(0)
+// amount      Float
+// bigNumber   BigInt
+
+// BOOLEAN
+// is_active   Boolean  @default(true)
+
+// DATE/TIME
+// date        DateTime @db.Date                    // Date only
+// time        DateTime @db.Time                    // Time only
+// timestamp   DateTime @default(now()) @db.Timestamptz(6)
+// updated_at  DateTime @updatedAt                  // Auto-update
+
+// ENUM
+// status      StatusEnum @default(PENDING)
+
+// JSON
+// settings    Json     @default("{}")
+
+// ARRAY (PostgreSQL only)
+// tags        String[]
+
+// ----------------------------------------------------------------------------
+// CHECKLIST AFTER ADDING MODEL
+// ----------------------------------------------------------------------------
+
+/*
+After adding a new model:
+
+1. [ ] school_id field included
+2. [ ] @@index([school_id]) added
+3. [ ] @@schema("schoolmanagementsystem") added
+4. [ ] Relation added to School model (if applicable)
+5. [ ] Enum defined (if using enums)
+6. [ ] Run: npx prisma db push
+7. [ ] Add seed data (if needed)
+8. [ ] Add TypeScript types to packages/types/
+*/
+
+// ----------------------------------------------------------------------------
+// MIGRATION COMMANDS
+// ----------------------------------------------------------------------------
+
+/*
+# Push schema changes (development)
+npx prisma db push
+
+# Reset database and re-push (WARNING: deletes data)
+npx prisma db push --force-reset
+
+# Generate Prisma client
+npx prisma generate
+
+# Open Prisma Studio
+npx prisma studio
+*/

@@ -6,7 +6,7 @@ npm run dev
 
 
 START BACKEND  - 
-npx tsx packages/api/src/server.ts
+npx tsx server/src/server.ts
 
 
 

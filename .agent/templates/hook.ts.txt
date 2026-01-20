@@ -1,0 +1,229 @@
+/**
+ * TEMPLATE: React Query Hook
+ * 
+ * Copy this template when creating new data-fetching hooks in packages/hooks/
+ * Remember to re-export from packages/hooks/index.ts
+ * 
+ * Location: packages/hooks/use{Domain}.ts
+ */
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import client from '../api/client';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface DomainItem {
+    id: string;
+    name: string;
+    description?: string;
+    quantity: number;
+    created_at: string;
+}
+
+type CreateItemInput = Omit<DomainItem, 'id' | 'created_at'>;
+type UpdateItemInput = Partial<CreateItemInput>;
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const QUERY_OPTIONS = {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    refetchOnWindowFocus: false,
+};
+
+// ============================================================================
+// QUERY HOOKS
+// ============================================================================
+
+/**
+ * Fetch all items for the current school
+ */
+export const useDomainItems = () => {
+    return useQuery<DomainItem[]>({
+        queryKey: ['domain-items'],
+        queryFn: async () => {
+            const response = await client.get('/domain/items');
+            if (!response.data.success) {
+                throw new Error(response.data.error);
+            }
+            return response.data.data;
+        },
+        initialData: [],
+        ...QUERY_OPTIONS,
+    });
+};
+
+/**
+ * Fetch a single item by ID
+ */
+export const useDomainItem = (id: string | null) => {
+    return useQuery<DomainItem>({
+        queryKey: ['domain-item', id],
+        queryFn: async () => {
+            const response = await client.get(`/domain/items/${id}`);
+            if (!response.data.success) {
+                throw new Error(response.data.error);
+            }
+            return response.data.data;
+        },
+        enabled: !!id, // Only run query if id is provided
+        ...QUERY_OPTIONS,
+    });
+};
+
+// ============================================================================
+// MUTATION HOOKS
+// ============================================================================
+
+/**
+ * Create a new item
+ */
+export const useCreateDomainItem = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (data: CreateItemInput) => {
+            const response = await client.post('/domain/items', data);
+            if (!response.data.success) {
+                throw new Error(response.data.error);
+            }
+            return response.data.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['domain-items'] });
+        },
+    });
+};
+
+/**
+ * Update an existing item
+ */
+export const useUpdateDomainItem = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ id, data }: { id: string; data: UpdateItemInput }) => {
+            const response = await client.patch(`/domain/items/${id}`, data);
+            if (!response.data.success) {
+                throw new Error(response.data.error);
+            }
+            return response.data.data;
+        },
+        onSuccess: (_, { id }) => {
+            queryClient.invalidateQueries({ queryKey: ['domain-items'] });
+            queryClient.invalidateQueries({ queryKey: ['domain-item', id] });
+        },
+    });
+};
+
+/**
+ * Delete an item
+ */
+export const useDeleteDomainItem = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const response = await client.delete(`/domain/items/${id}`);
+            if (!response.data.success) {
+                throw new Error(response.data.error);
+            }
+            return response.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['domain-items'] });
+        },
+    });
+};
+
+// ============================================================================
+// COMBINED HOOK (Optional - for convenience)
+// ============================================================================
+
+/**
+ * Combined hook with all domain operations
+ * Use this for components that need multiple operations
+ */
+export const useDomain = () => {
+    const { data: items = [], isLoading, error, refetch } = useDomainItems();
+
+    const createMutation = useCreateDomainItem();
+    const updateMutation = useUpdateDomainItem();
+    const deleteMutation = useDeleteDomainItem();
+
+    return {
+        // Data
+        items,
+        isLoading,
+        error,
+        refetch,
+
+        // Actions
+        createItem: (data: CreateItemInput) => createMutation.mutateAsync(data),
+        updateItem: (id: string, data: UpdateItemInput) =>
+            updateMutation.mutateAsync({ id, data }),
+        deleteItem: (id: string) => deleteMutation.mutateAsync(id),
+
+        // Mutation states
+        isCreating: createMutation.isPending,
+        isUpdating: updateMutation.isPending,
+        isDeleting: deleteMutation.isPending,
+    };
+};
+
+// ============================================================================
+// USAGE EXAMPLES
+// ============================================================================
+
+/*
+// In a component:
+
+import { useDomain } from '../../hooks/useDomain';
+
+function DomainList() {
+  const { items, isLoading, createItem, deleteItem } = useDomain();
+
+  if (isLoading) return <Loader />;
+
+  const handleCreate = async () => {
+    try {
+      await createItem({ name: 'New Item', quantity: 10 });
+      toast.success('Item created!');
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  return (
+    <View>
+      {items.map(item => (
+        <ItemCard
+          key={item.id}
+          item={item}
+          onDelete={() => deleteItem(item.id)}
+        />
+      ))}
+      <Button onPress={handleCreate}>Add Item</Button>
+    </View>
+  );
+}
+*/
+
+// ============================================================================
+// RE-EXPORT (add to packages/hooks/index.ts)
+// ============================================================================
+
+/*
+export { 
+  useDomainItems, 
+  useDomainItem, 
+  useCreateDomainItem,
+  useUpdateDomainItem,
+  useDeleteDomainItem,
+  useDomain 
+} from './useDomain';
+*/
