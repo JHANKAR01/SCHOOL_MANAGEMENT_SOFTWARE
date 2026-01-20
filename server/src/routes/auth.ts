@@ -1,4 +1,4 @@
-// packages/api/src/routes/auth.ts
+// server/src/routes/auth.ts
 import { Hono } from 'hono';
 import { sign } from 'hono/jwt';
 import prisma from '../db.ts';

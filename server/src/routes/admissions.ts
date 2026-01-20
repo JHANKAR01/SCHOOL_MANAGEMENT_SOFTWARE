@@ -1,9 +1,9 @@
-// packages/api/src/routes/admissions.ts
+// server/src/routes/admissions.ts
 // P3.1: Admissions Module - Complete Refactor
 import { Hono } from 'hono';
 import prisma from '../db';
 import { authMiddleware, requireRole } from '../middleware/auth';
-import { UserRole } from '../../../../types';
+import { UserRole } from '../../../packages/types';
 
 type Variables = {
   user: {

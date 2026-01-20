@@ -1,8 +1,8 @@
 
 import { Context, Next } from 'hono';
 import { verify } from 'hono/jwt';
-import { UserRole } from '../../../../types';
-import { Permission } from '../../../../types/permissions';
+import { UserRole } from '../../../packages/types';
+import { Permission } from '../../../packages/types/permissions';
 
 import prisma from '../db';
 

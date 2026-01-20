@@ -1,4 +1,4 @@
-// packages/api/src/routes/reports.ts
+// server/src/routes/reports.ts
 // Report generation API endpoints
 
 import { Hono } from 'hono';

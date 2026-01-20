@@ -1,15 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import LoginScreen from './apps/expo/app/login';
-import SuperAdminDashboard from './apps/next/pages/super-admin/dashboard';
-import { SchoolConfig, UserRole, User, AuthResponse } from './types';
+import LoginScreen from './apps/mobile/app/login';
+import SuperAdminDashboard from './apps/web/pages/super-admin/dashboard';
+import { SchoolConfig, UserRole, User, AuthResponse } from './packages/types';
 import { RoleBasedRouter } from './packages/app/features/dashboard/RoleBasedRouter';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar } from './packages/app/components/Sidebar';
 import { LanguageProvider, useTranslation } from './packages/app/provider/language-context';
 import { InteractionProvider } from './packages/app/provider/InteractionContext';
 import { ThemeProvider } from './packages/app/provider/ThemeProvider';
-import { useLowDataMode } from './packages/app/hooks/useLowDataMode';
-import SchoolAdminDashboard from './apps/next/pages/school-admin/dashboard';
+import { useLowDataMode } from './packages/hooks/useLowDataMode';
+import SchoolAdminDashboard from './apps/web/pages/school-admin/dashboard';
 import { PrincipalDashboard } from './packages/app/features/academics/PrincipalDashboard';
 import { NewTeacherDashboard } from './packages/app/features/dashboard/NewTeacherDashboard';
 import { View, Text, TouchableOpacity, SafeAreaView, Platform, ScrollView, StatusBar } from 'react-native';

@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Platform, ScrollView, Linking } from 'react-native';
 import { SchoolConfig, UserRole } from '../../../../types';
-import ParentPayments from '../../../../apps/expo/app/parent/payments';
-import TransportTracking from '../../../../apps/expo/app/parent/transport';
+import ParentPayments from '../../../../apps/mobile/app/parent/payments';
+import TransportTracking from '../../../../apps/mobile/app/parent/transport';
 import { Gradebook } from '../academics/Gradebook';
 import { StatCard, PageHeader, SovereignButton, SovereignBadge, SovereignInput } from '../../components/SovereignComponents';
 import { Row, Col } from '../../components/Layout';

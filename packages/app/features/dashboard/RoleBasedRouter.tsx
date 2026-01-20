@@ -32,7 +32,7 @@ import { ParentDashboard } from './ParentDashboard';
 import { StudentDashboard } from './StudentDashboard';
 
 // Import the new page component
-import SchoolAdminDashboardPage from '../../../../apps/next/pages/school-admin/dashboard';
+import SchoolAdminDashboardPage from '../../../../apps/web/pages/school-admin/dashboard';
 
 interface Props {
   role: UserRole;

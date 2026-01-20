@@ -1,5 +1,5 @@
 
-import { AuditLog } from '../../../../types';
+import { AuditLog } from '../../../packages/types';
 import { SovereignDB } from '../db';
 
 /**
@@ -8,7 +8,7 @@ import { SovereignDB } from '../db';
  * Adheres to "Sovereignty Pillar 2".
  */
 export class AuditLogger {
-  
+
   /**
    * Logs a high-stakes transaction.
    * @param db - RLS-aware Prisma Client (to ensure log is tied to tenant)
@@ -21,7 +21,7 @@ export class AuditLogger {
    */
   static async log(
     db: any,
-    action: AuditLog['action'], 
+    action: AuditLog['action'],
     actor: { id: string, school_id: string },
     details: string,
     entity: AuditLog['entity'],
@@ -52,12 +52,12 @@ export class AuditLogger {
     // 3. Immutable Write
     // Note: The 'auditLog' table should have a DB Trigger preventing updates/deletes.
     try {
-        await db.auditLog.create({ data: logEntry });
-    } catch(e) {
-        console.error("CRITICAL: AUDIT LOG FAILED. Transaction should rollback.", e);
-        throw new Error("Audit Log Failure"); // Force transaction rollback
+      await db.auditLog.create({ data: logEntry });
+    } catch (e) {
+      console.error("CRITICAL: AUDIT LOG FAILED. Transaction should rollback.", e);
+      throw new Error("Audit Log Failure"); // Force transaction rollback
     }
-    
+
     return logEntry;
   }
 }

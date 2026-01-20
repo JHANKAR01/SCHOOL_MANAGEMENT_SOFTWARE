@@ -1,10 +1,10 @@
-// packages/api/src/routes/system-admin.ts
+// server/src/routes/system-admin.ts
 // P6.1: System Admin Module - User Access Control & Audit Logs
 import { Hono } from 'hono';
 import prisma from '../db';
 import { authMiddleware, requireRole, requirePermission } from '../middleware/auth';
-import { UserRole } from '../../../../types';
-import { PERMISSIONS } from '../../../../types/permissions';
+import { UserRole } from '../../../packages/types';
+import { PERMISSIONS } from '../../../packages/types/permissions';
 import bcrypt from 'bcryptjs';
 
 type Variables = {

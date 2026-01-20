@@ -1,6 +1,6 @@
 
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { StudentResult } from '../../../../types';
+import { StudentResult } from '../../../packages/types';
 import { Buffer } from 'buffer';
 
 /**
@@ -9,12 +9,12 @@ import { Buffer } from 'buffer';
  */
 export async function generatePDFMarksheet(studentId: string, examId: string): Promise<string> {
   console.log(`[PDF Engine] Rendering marksheet for ${studentId}...`);
-  
+
   try {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595.28, 841.89]); // A4 Size
     const { width, height } = page.getSize();
-    
+
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const fontReg = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontMono = await pdfDoc.embedFont(StandardFonts.Courier);
@@ -23,7 +23,7 @@ export async function generatePDFMarksheet(studentId: string, examId: string): P
     page.drawText('SOVEREIGN ACADEMY', {
       x: 50, y: height - 50, size: 24, font: fontBold, color: rgb(0.2, 0.2, 0.8)
     });
-    
+
     page.drawText('Excellence in Education | Affiliated to CBSE', {
       x: 50, y: height - 75, size: 10, font: fontReg, color: rgb(0.5, 0.5, 0.5)
     });
@@ -60,7 +60,7 @@ export async function generatePDFMarksheet(studentId: string, examId: string): P
       page.drawText(sub.name, { x: 50, y: yPos + 8, size: 10, font: fontReg });
       page.drawText(sub.marks.toString(), { x: 300, y: yPos + 8, size: 10, font: fontReg });
       page.drawText(sub.grade, { x: 450, y: yPos + 8, size: 10, font: fontBold });
-      
+
       // Line
       page.drawLine({ start: { x: 40, y: yPos }, end: { x: width - 40, y: yPos }, color: rgb(0.9, 0.9, 0.9), thickness: 1 });
       yPos -= 25;

@@ -1,5 +1,5 @@
 
-// packages/api/src/services/notification-service.ts
+// server/src/services/notification-service.ts
 
 import 'dotenv/config';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';

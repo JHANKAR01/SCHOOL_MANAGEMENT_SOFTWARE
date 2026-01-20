@@ -1,4 +1,4 @@
-// packages/api/src/server.ts
+// server/src/server.ts
 import 'dotenv/config'; // Load .env before anything else
 
 import { serve } from '@hono/node-server';

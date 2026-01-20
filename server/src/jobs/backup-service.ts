@@ -1,4 +1,4 @@
-import { SchoolConfig } from '../../../../types';
+import { SchoolConfig } from '../../../packages/types';
 
 /**
  * Sovereign Backup Service
@@ -26,7 +26,7 @@ export async function generateSchoolBackup(schoolId: string, schoolAdminEmail: s
   // In Node.js, we would use `archiver` and `crypto` modules.
   console.log(`[Backup Job] Compressing data...`);
   await new Promise(r => setTimeout(r, 500));
-  
+
   console.log(`[Backup Job] Encrypting archive with School Admin Key...`);
   // Mock encryption string generation
   const encryptedBlob = `ENC_AES256_${btoa(JSON.stringify(backupData)).slice(0, 50)}...`;
@@ -36,7 +36,7 @@ export async function generateSchoolBackup(schoolId: string, schoolAdminEmail: s
 
   // 5. Send Notification (Mock)
   console.log(`[Backup Job] Emailing secure link to ${schoolAdminEmail}: ${downloadLink}`);
-  
+
   return {
     success: true,
     size: '1.2MB',

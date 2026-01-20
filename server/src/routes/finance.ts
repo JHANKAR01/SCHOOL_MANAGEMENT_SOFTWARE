@@ -2,8 +2,8 @@
 import { Hono } from 'hono';
 import prisma from '../db';
 import { authMiddleware, requireRole, requirePermission } from '../middleware/auth';
-import { UserRole } from '../../../../types';
-import { PERMISSIONS } from '../../../../types/permissions';
+import { UserRole } from '../../../packages/types';
+import { PERMISSIONS } from '../../../packages/types/permissions';
 
 type Variables = {
   user: {

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { sign } from 'hono/jwt';
 import { authMiddleware } from '../middleware/auth';
-import { UserRole } from '../../../../types';
+import { UserRole } from '../../../packages/types';
 
 type Variables = {
   user: {
@@ -59,7 +59,7 @@ jitsiRouter.get('/token', async (c) => {
   // Sign using RS256 (Required by Jitsi SaaS/Self-Hosted)
   // Note: Hono's sign() supports HS256 by default. For RS256, usually 'jsonwebtoken' lib is used in Node.
   // Here we assume the standardized Jitsi format.
-  
+
   // For the purpose of this Hono implementation without external heavy crypto libs:
   // We mock the signature format if Jitsi uses standard JWT.
   const token = await sign(payload, JITSI_PRIVATE_KEY, 'HS256'); // Switched to HS256 for Hono compat, Jitsi usually needs RS256

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { generateUPILink } from '../../../../packages/api/src/upi-engine';
+import { generateUPILink } from '../../../../server/src/upi-engine';
 import { useInteraction } from '../../../../packages/app/provider/InteractionContext';
 
 const SCHOOL_VPA = "greenwood.high@oksbi";
@@ -7,11 +7,11 @@ const SCHOOL_NAME = "Greenwood High School";
 
 export default function ParentPayments() {
   const { invoices } = useInteraction();
-  
+
   // Find pending invoice for the mock student 'std_1'
   // In a real app, this would filter by the logged-in user's student ID
   const pendingInvoice = invoices.find(inv => inv.studentId === 'std_1' && inv.status === 'PENDING');
-  
+
   const [utr, setUtr] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -67,10 +67,10 @@ export default function ParentPayments() {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Submission Received</h2>
           <p className="text-gray-600 mb-6">
             We have received UTR <span className="font-mono font-bold">{utr}</span> for Invoice #{pendingInvoice.id}.
-            <br/>
+            <br />
             Receipt will be generated after reconciliation (approx. 24hrs).
           </p>
-          <button 
+          <button
             onClick={() => setSubmitted(false)}
             className="text-indigo-600 font-semibold hover:underline"
           >
@@ -101,9 +101,9 @@ export default function ParentPayments() {
               <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold text-sm">1</div>
               <h3 className="font-bold text-gray-800">Make Payment</h3>
             </div>
-            
+
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 text-center">
-              <button 
+              <button
                 onClick={handlePayClick}
                 className="w-full bg-indigo-600 text-white py-3.5 rounded-lg font-bold shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition-all active:scale-[0.98]"
               >
@@ -117,7 +117,7 @@ export default function ParentPayments() {
 
           {/* Step 2: Verify */}
           <div className="border-t border-gray-100 pt-8">
-             <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold text-sm">2</div>
               <h3 className="font-bold text-gray-800">Confirm Payment</h3>
             </div>
@@ -125,21 +125,21 @@ export default function ParentPayments() {
             <form onSubmit={handleSubmitUTR} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">
-                    12-Digit UTR / Transaction ID
+                  12-Digit UTR / Transaction ID
                 </label>
-                <input 
-                    type="text" 
-                    placeholder="e.g. 324512345678"
-                    maxLength={12}
-                    minLength={12}
-                    pattern="\d*"
-                    value={utr}
-                    onChange={(e) => setUtr(e.target.value.replace(/\D/g,''))}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 font-mono text-lg tracking-widest focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
-                    required
+                <input
+                  type="text"
+                  placeholder="e.g. 324512345678"
+                  maxLength={12}
+                  minLength={12}
+                  pattern="\d*"
+                  value={utr}
+                  onChange={(e) => setUtr(e.target.value.replace(/\D/g, ''))}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 font-mono text-lg tracking-widest focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
+                  required
                 />
               </div>
-              
+
               <button
                 type="submit"
                 disabled={submitting || utr.length !== 12}

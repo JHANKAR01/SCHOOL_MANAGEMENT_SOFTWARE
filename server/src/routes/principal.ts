@@ -1,9 +1,9 @@
-// packages/api/src/routes/principal.ts
+// server/src/routes/principal.ts
 // Principal Dashboard API - Aggregated stats and approval actions
 import { Hono } from 'hono';
 import prisma from '../db';
 import { authMiddleware, requireRole } from '../middleware/auth';
-import { UserRole } from '../../../../types';
+import { UserRole } from '../../../packages/types';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TYPES
