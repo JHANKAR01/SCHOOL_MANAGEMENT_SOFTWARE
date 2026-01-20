@@ -8,7 +8,6 @@ import { VicePrincipalDashboard } from '../academics/VicePrincipalDashboard';
 import { FinanceDashboard } from '../admin/FinanceDashboard';
 
 // Academics
-import { TeacherDashboard } from './TeacherDashboard';
 import { NewTeacherDashboard } from './NewTeacherDashboard';
 import { HODDashboard } from '../academics/HODDashboard';
 import { ExamCellDashboard } from '../academics/ExamCellDashboard';
