@@ -3,7 +3,25 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SovereignButton, SovereignBadge } from '../../components/SovereignComponents';
 import { Download, Calculator, Send, FileText, Loader2, AlertCircle } from 'lucide-react';
-import { generatePDFMarksheet } from '../../../api/src/services/pdf-service';
+
+// PDF generation via API (not direct server import)
+const API_BASE = typeof window !== 'undefined'
+  ? (window as any).__API_URL__ || 'http://localhost:3001'
+  : 'http://localhost:3001';
+
+async function generatePDFMarksheet(studentId: string, examId: string): Promise<string | null> {
+  try {
+    const token = localStorage.getItem('authToken');
+    const res = await fetch(`${API_BASE}/api/academics/marksheet/${studentId}/${examId}/pdf`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  } catch {
+    return null;
+  }
+}
 
 // ============================================================================
 // TYPES - Properly typed API response (NO 'any')
@@ -55,10 +73,7 @@ interface ClassesResponse {
 // API FUNCTIONS
 // ============================================================================
 
-// Get API base URL - works in both Vite and other environments
-const API_BASE = typeof window !== 'undefined'
-  ? (window as any).__API_URL__ || 'http://localhost:3001'
-  : 'http://localhost:3001';
+// API_BASE defined above with generatePDFMarksheet
 
 async function fetchGradebook(classId: string, examId: string): Promise<GradebookResponse> {
   const token = localStorage.getItem('authToken');

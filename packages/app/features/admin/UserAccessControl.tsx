@@ -5,7 +5,7 @@ import { NebulaCard } from '../../components/nebula/NebulaCard';
 import { NebulaButton } from '../../components/nebula/NebulaButton';
 import { NebulaInput } from '../../components/nebula/NebulaInput';
 import { useTheme } from '../../provider/ThemeProvider';
-import { PERMISSIONS } from '../../../../types/permissions';
+import { Permission } from '../../../types/permissions';
 
 interface User {
     id: string;
@@ -402,7 +402,7 @@ export const UserAccessControl: React.FC = () => {
                             <div>
                                 <label className="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">Permissions</label>
                                 <div className="flex flex-wrap gap-2">
-                                    {Object.values(PERMISSIONS).slice(0, 8).map(perm => (
+                                    {Object.values(Permission).slice(0, 8).map((perm: string) => (
                                         <button
                                             key={perm}
                                             onClick={() => togglePermission(perm)}

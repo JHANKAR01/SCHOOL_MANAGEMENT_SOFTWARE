@@ -8,7 +8,7 @@ import { Gradebook } from '../academics/Gradebook';
 import { StatCard, PageHeader, SovereignButton, SovereignBadge, SovereignInput } from '../../components/SovereignComponents';
 import { Row, Col } from '../../components/Layout';
 import { Wallet, Bus, FileText, CheckCircle, Bell, Video, Upload } from 'lucide-react';
-import { useInteraction } from '../../provider/InteractionContext';
+import { useAcademics } from '../../hooks/useAcademics';
 import { ActionModal } from '../../components/ActionModal';
 // Note: generatePDFMarksheet removed - using API fetch instead
 
@@ -24,10 +24,16 @@ export const ParentDashboard: React.FC<Props> = ({ school, activeModule, role })
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Interaction Context
-  const { liveClasses, homeworks, submitHomework } = useInteraction();
+  // useAcademics hook provides liveClasses and homeworks
+  const { liveClasses, homeworks } = useAcademics();
   const [submissionModalOpen, setSubmissionModalOpen] = useState(false);
   const [selectedHw, setSelectedHw] = useState<string | null>(null);
+
+  // Stub for homework submission (would be API call in prod)
+  const submitHomework = async (hwId: string, submission: { file?: string }) => {
+    console.log('Submitting homework:', hwId, submission);
+    // TODO: Implement API call for homework submission
+  };
 
   const activeLiveSubjects = Object.entries(liveClasses).filter(([_, isActive]) => isActive).map(([sub]) => sub);
   const isStudent = role === UserRole.STUDENT;
@@ -67,7 +73,7 @@ export const ParentDashboard: React.FC<Props> = ({ school, activeModule, role })
 
   const handleSubmitHw = () => {
     if (selectedHw) {
-      submitHomework(selectedHw);
+      submitHomework(selectedHw, {});
       setSubmissionModalOpen(false);
       setSelectedHw(null);
       alert("Assignment Submitted Successfully!");

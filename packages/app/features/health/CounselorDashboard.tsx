@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { SovereignTable, PageHeader, StatCard, SovereignBadge } from '../../components/SovereignComponents';
 import { Row, Col } from '../../components/Layout';
 import { HeartPulse, Brain, UserPlus } from 'lucide-react';
-import { DUMMY_STUDENTS } from '../../../api/src/data/dummy-data';
 
 interface CounselorNote {
   id: number | string;
@@ -26,7 +25,7 @@ export const CounselorDashboard = () => {
       ];
       return mockCounseling.map(c => ({
         ...c,
-        student: DUMMY_STUDENTS.find(s => s.id === c.student_id)?.name || c.student_id
+        student: `Student ${c.student_id.replace('std_', '')}` // Use ID as fallback
       }));
     }
   });
