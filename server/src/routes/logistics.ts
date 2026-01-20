@@ -37,7 +37,7 @@ logisticsRouter.post('/return-book', requireRole([UserRole.LIBRARIAN]), async (c
 
   await prisma.book.update({
     where: { isbn: bookId, school_id: user.school_id }, // Composite check if possible, but ISBN is ID. Add strict check if needed.
-    data: { status: 'AVAILABLE', issuedTo: null }
+    data: { status: 'AVAILABLE' }
   });
 
   return c.json({ success: true, fine: 0 });
@@ -53,7 +53,7 @@ logisticsRouter.get('/buses', requireRole([UserRole.FLEET_MANAGER, UserRole.PRIN
   return c.json(buses.map(b => ({
     ...b,
     number: b.plateNumber,
-    route: b.routeId,
+    route: b.route_id,
     driver: b.driverName,
     status: 'ON_ROUTE' // TODO: Add status to DB Schema
   })));
@@ -65,7 +65,7 @@ logisticsRouter.post('/assign-route', requireRole([UserRole.FLEET_MANAGER]), asy
 
   await prisma.bus.update({
     where: { id: busId }, // Add school_id check in findFirst if needed
-    data: { routeId: routeId }
+    data: { route_id: routeId }
   });
 
   return c.json({ success: true, message: "Route Assigned" });

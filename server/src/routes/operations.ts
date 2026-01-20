@@ -130,24 +130,31 @@ operationsRouter.get('/settings', requireRole([UserRole.PRINCIPAL, UserRole.SCHO
   const settings = await prisma.systemSettings.findFirst({
     where: { school_id: user.school_id }
   });
-  return c.json(settings || { lockdown_mode: false });
+  // Return lockdown status using locked_roles array (if it contains 'ALL', system is in lockdown)
+  const isLockdown = settings?.locked_roles?.includes('ALL') ?? false;
+  return c.json({ ...settings, lockdown_mode: isLockdown });
 });
 
 operationsRouter.post('/settings/toggle-lockdown', requireRole([UserRole.PRINCIPAL, UserRole.SCHOOL_ADMIN]), async (c) => {
   const user = c.get('user');
   const { enabled } = await c.req.json();
 
+  // Use locked_roles array: push 'ALL' for lockdown, remove for unlock
   const settings = await prisma.systemSettings.upsert({
     where: { school_id: user.school_id },
-    update: { lockdown_mode: enabled },
+    update: {
+      locked_roles: enabled ? ['ALL'] : [],
+      updated_at: new Date()
+    },
     create: {
       school_id: user.school_id,
-      lockdown_mode: enabled,
-      low_data_mode: false // Default
+      locked_roles: enabled ? ['ALL'] : [],
+      low_data_mode: false
     }
   });
 
-  return c.json({ success: true, lockdown_mode: settings.lockdown_mode });
+  const isLockdown = settings.locked_roles?.includes('ALL') ?? false;
+  return c.json({ success: true, lockdown_mode: isLockdown });
 });
 
 operationsRouter.post('/broadcast-alert', requireRole([UserRole.SECURITY_HEAD]), async (c) => {

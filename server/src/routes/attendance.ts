@@ -39,7 +39,7 @@ attendanceRouter.get('/', requireRole([UserRole.TEACHER, UserRole.PRINCIPAL, Use
 
   const records = await prisma.attendance.findMany({
     where: query,
-    include: { student: { select: { name: true, roll: true, class: true } } },
+    include: { student: { select: { name: true } } },
     orderBy: { date: 'desc' }
   });
 

@@ -26,3 +26,6 @@ export type {
     MedicalLog,
     AuditLog
 } from './operations';
+
+// Permissions
+export { Permission, PERMISSIONS, hasPermission } from './permissions';

@@ -1,6 +1,6 @@
 
 import { AuditLog } from '../../../packages/types';
-import { SovereignDB } from '../db';
+// DB client is passed as parameter to log() method
 
 /**
  * Sovereign Audit Logger (Immutable)

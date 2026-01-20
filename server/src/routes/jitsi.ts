@@ -32,7 +32,7 @@ jitsiRouter.get('/token', async (c) => {
   if (!room) return c.json({ error: "Room name required" }, 400);
 
   // Logic: Only Teachers/Admins are moderators
-  const isModerator = [UserRole.TEACHER, UserRole.SCHOOL_ADMIN].includes(user.role);
+  const isModerator = ([UserRole.TEACHER, UserRole.SCHOOL_ADMIN] as UserRole[]).includes(user.role);
 
   const payload = {
     context: {
