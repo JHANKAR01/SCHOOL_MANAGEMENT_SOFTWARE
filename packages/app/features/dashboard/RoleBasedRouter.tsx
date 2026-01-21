@@ -1,4 +1,5 @@
 import React from 'react';
+import { View, Text } from 'react-native';
 import { UserRole, SchoolConfig } from '../../../../types';
 
 // Management
@@ -32,7 +33,13 @@ import { ParentDashboard } from './ParentDashboard';
 import { StudentDashboard } from './StudentDashboard';
 
 // Import the new page component
-import SchoolAdminDashboardPage from '../../../../apps/web/pages/school-admin/dashboard';
+// Placeholder for School Admin Dashboard until it is moved to shared
+const SchoolAdminDashboardPlaceholder = () => (
+  <View className="flex-1 items-center justify-center bg-white dark:bg-slate-900">
+    <Text className="text-xl font-bold text-slate-900 dark:text-white">School Admin Dashboard</Text>
+    <Text className="text-slate-500 mt-2">Coming soon to mobile...</Text>
+  </View>
+);
 
 interface Props {
   role: UserRole;
@@ -50,7 +57,7 @@ export const RoleBasedRouter: React.FC<Props> = ({ role, school, activeModule })
       return <StaffManagement />;
 
     case UserRole.SCHOOL_ADMIN:
-      return <SchoolAdminDashboardPage />;
+      return <SchoolAdminDashboardPlaceholder />;
 
     case UserRole.PRINCIPAL:
       // PRINCIPAL: Oversight/Audit - can access Finance if module selected
@@ -95,9 +102,11 @@ export const RoleBasedRouter: React.FC<Props> = ({ role, school, activeModule })
 
     // Fallback for unmapped roles
     default: return (
-      <div className="flex items-center justify-center h-full text-red-500 font-bold">
-        Configuration Error: Role {role} has no assigned dashboard.
-      </div>
+      <View className="flex-1 items-center justify-center bg-white dark:bg-slate-900">
+        <Text className="text-red-500 font-bold">
+          Configuration Error: Role {role} has no assigned dashboard.
+        </Text>
+      </View>
     );
   }
 };
