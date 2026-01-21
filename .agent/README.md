@@ -16,6 +16,17 @@ This folder contains rules, workflows, and templates for AI-assisted development
 
 ---
 
+## 👑 Priority Hierarchy
+
+1. **User Instructions** (Top Priority)
+2. **Project Rules**
+3. **Project Workflows**
+4. **Project Context**
+5. **Templates**
+6. **External Skills** (Lowest Priority)
+
+---
+
 ## 📋 Quick Reference
 
 ### Before Starting ANY Task
