@@ -23,7 +23,6 @@ This folder contains rules, workflows, and templates for AI-assisted development
 3. **Project Workflows**
 4. **Project Context**
 5. **Templates**
-6. **External Skills** (Lowest Priority)
 
 ---
 
@@ -109,6 +108,9 @@ Always scan `rules/common-pitfalls.md` before making changes.
 
 ## 🔄 Keeping This Updated
 
+## 🔄 Keeping This Updated
+
 - Update `current-status.md` when starting major work
 - Add to `common-pitfalls.md` when discovering new issues
+- Review `agent.md` for behavioral updates
 - Review before each development session

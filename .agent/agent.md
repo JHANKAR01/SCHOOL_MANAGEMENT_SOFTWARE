@@ -17,7 +17,6 @@ When instructions conflict, follow this order of authority (Highest to Lowest):
 3. **Project Workflows** (`.agent/workflows/*.md`)
 4. **Project Context** (`.agent/context/*.md`)
 5. **Detailed Templates** (`.agent/templates/*.txt`)
-6. **External Skills** (`.agent/external-skills/`) ← LOWEST PRIORITY
 
 ## 🧠 Before Writing ANY Code
 
@@ -160,7 +159,8 @@ Stop immediately if you see:
 
 When starting a new session, read in this order:
 
-1. `.agent/README.md` - Project overview
-2. `.agent/rules/common-pitfalls.md` - Known issues
-3. `.agent/context/current-status.md` - What's in progress
-4. Relevant workflow file for the task
+1. `.agent/agent.md` - Primary Behavior & Rules (THIS FILE)
+2. `.agent/README.md` - Project Overview
+3. `.agent/rules/common-pitfalls.md` - Known Issues
+4. `.agent/context/current-status.md` - Status & Logic
+5. Relevant workflow file
