@@ -7,8 +7,11 @@ import { Permission } from '../../../packages/types/permissions';
 import prisma from '../db';
 
 // Extend Hono Context via Generics or simply cast usage below.
-// Hardcoded for consistency during debugging
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_do_not_use_in_prod';
+// JWT Secret - MUST be set in environment, no fallback allowed
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('FATAL: JWT_SECRET environment variable must be set and at least 32 characters');
+}
 
 /**
  * JWT Authentication Middleware
@@ -63,7 +66,7 @@ export const authMiddleware = async (c: Context, next: Next) => {
     await next();
   } catch (e) {
     console.error('[AUTH_MIDDLEWARE_ERROR]', e); // Log the specific verify error
-    return c.json({ error: 'Unauthorized: Invalid Token', details: String(e) }, 401);
+    return c.json({ error: 'Unauthorized: Invalid Token' }, 401);
   }
 };
 

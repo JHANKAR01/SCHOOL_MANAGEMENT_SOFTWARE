@@ -207,6 +207,7 @@ model User {
   role          UserRole
   department    String?
   school_id     String
+  is_active     Boolean  @default(true)  // Soft delete flag
   permissions   String[] @default([])  // Granular: ["MANAGE_HR", "COLLECT_FEES"]
   created_at    DateTime @default(now()) @db.Timestamptz(6)
   updated_at    DateTime @updatedAt

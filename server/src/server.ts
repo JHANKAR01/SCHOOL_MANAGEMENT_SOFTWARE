@@ -25,8 +25,31 @@ import { reportsRouter } from './routes/reports.ts';
 
 const app = new Hono();
 
-// Global Middleware
-app.use('*', cors());
+// CORS Configuration - Restrict to allowed origins
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(',') || [
+  'http://localhost:5173',  // Vite dev server
+  'http://localhost:3000',  // Alternative dev
+];
+
+app.use('*', cors({
+  origin: (origin) => {
+    // Allow requests with no origin (mobile apps, Postman, server-to-server)
+    if (!origin) return '*';
+    return ALLOWED_ORIGINS.includes(origin) ? origin : '';
+  },
+  credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// Security Headers Middleware
+app.use('*', async (c, next) => {
+  await next();
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('X-Frame-Options', 'DENY');
+  c.header('X-XSS-Protection', '1; mode=block');
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+});
 
 // Health Check
 app.get('/health', (c) => c.json({ status: 'OK', uptime: (process as any).uptime() }));
@@ -66,7 +89,7 @@ app.route('/api/reports', reportsRouter);  // Report generation API
 // --- REAL-TIME LAYER (Socket.io) ---
 const httpServer = serve({ fetch: app.fetch, port: 3000 });
 const io = new Server(httpServer, {
-  cors: { origin: "*", methods: ["GET", "POST"] }
+  cors: { origin: ALLOWED_ORIGINS, methods: ["GET", "POST"] }
 });
 
 io.on('connection', (socket) => {

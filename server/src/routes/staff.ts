@@ -1,8 +1,10 @@
 
 import { Hono } from 'hono';
+import bcrypt from 'bcryptjs';
 import prisma from '../db';
 import { authMiddleware, requireRole } from '../middleware/auth';
 import { UserRole } from '../../../packages/types';
+import { sanitizeString, normalizeEmail, isValidEmail, isValidPassword } from '../utils/validation';
 
 type Variables = {
   user: {
@@ -18,14 +20,15 @@ staffRouter.use('*', authMiddleware);
 // Only Admin/Super Admin/Principal can view all staff
 staffRouter.use('*', requireRole([UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN, UserRole.PRINCIPAL, UserRole.VICE_PRINCIPAL]));
 
-// GET Staff List
+// GET Staff List (only active users)
 staffRouter.get('/', async (c) => {
   const user = c.get('user');
 
   const staff = await prisma.user.findMany({
     where: {
       school_id: user.school_id,
-      role: { not: UserRole.STUDENT }
+      role: { not: UserRole.STUDENT },
+      is_active: true  // Only show active staff
     },
     select: {
       id: true,
@@ -44,37 +47,58 @@ staffRouter.get('/', async (c) => {
 // POST Create Staff
 staffRouter.post('/', async (c) => {
   const user = c.get('user');
-  const { name, email, phone, role, department, password } = await c.req.json();
+  const body = await c.req.json();
 
-  // Basic validation
-  if (!email || !password || !name) {
-    return c.json({ error: "Missing required fields" }, 400);
+  // Sanitize and normalize inputs
+  const name = sanitizeString(body.name || '').trim();
+  const email = normalizeEmail(body.email || '');
+  const phone = body.phone?.replace(/\D/g, '') || null;
+  const role = body.role;
+  const department = sanitizeString(body.department || '').trim();
+  const password = body.password;
+
+  // Validate required fields
+  if (!name || !email || !password) {
+    return c.json({ error: "Missing required fields: name, email, password" }, 400);
   }
 
-  // Create User
-  // Note: Password hashing should happen here. For now storing as is or dummy hash if we don't have bcrypt imported yet in this file.
-  // Ideally import bcrypt and hash it.
+  // Validate email format
+  if (!isValidEmail(email)) {
+    return c.json({ error: "Invalid email format" }, 400);
+  }
 
+  // Validate password strength
+  const passwordCheck = isValidPassword(password);
+  if (!passwordCheck.valid) {
+    return c.json({ error: passwordCheck.error }, 400);
+  }
+
+  // Create User with hashed password
   try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     const newUser = await prisma.user.create({
       data: {
         school_id: user.school_id,
         name: name,
         email: email,
         phone: phone,
-        password_hash: password, // TODO: Hash this!
+        password_hash: hashedPassword,
         role: role as UserRole,
-        department: department
+        department: department || null
       }
     });
 
-    return c.json(newUser);
+    // Don't return password_hash in response
+    const { password_hash, ...safeUser } = newUser as any;
+    return c.json(safeUser);
   } catch (e: any) {
+    console.error('[STAFF] Create error:', e.message);
     return c.json({ error: "Failed to create staff. Email might be duplicate." }, 400);
   }
 });
 
-// DELETE Terminate Staff (Revoke Access)
+// DELETE Terminate Staff (Soft Delete - Revoke Access)
 staffRouter.delete('/:id', async (c) => {
   const user = c.get('user');
   const targetId = c.req.param('id');
@@ -88,16 +112,19 @@ staffRouter.delete('/:id', async (c) => {
     return c.json({ error: "User not found" }, 404);
   }
 
-  // We don't have 'is_active' column in schema currently.
-  // Using Prisma DELETE for now, or we should add is_active to schema.
-  // Prompt instruction: "Refactor... to use Prisma to get real users... filtered by school_id".
-  // I will just use delete for now as 'is_active' is missing from my Introspected schema.
+  // Prevent self-deactivation
+  if (targetUser.id === user.id) {
+    return c.json({ error: "Cannot deactivate your own account" }, 400);
+  }
 
-  await prisma.user.delete({
-    where: { id: targetId }
+  // Soft delete - set is_active to false instead of deleting
+  await prisma.user.update({
+    where: { id: targetId },
+    data: { is_active: false }
   });
 
-  return c.json({ success: true });
+  console.info(`[STAFF] User deactivated: ${targetUser.email} by ${user.id}`);
+  return c.json({ success: true, message: 'Staff member deactivated' });
 });
 
 export { staffRouter };
