@@ -26,8 +26,8 @@ export const StudentHomework = () => {
     }
 
     // Filter logic
-    const filteredHomework = data?.homework.filter(hw => {
-        if (filter === 'pending') return hw.status === 'PENDING';
+    const filteredHomework = data?.filter(hw => {
+        if (filter === 'pending') return hw.status === 'PENDING' || hw.status === 'overdue'; // Show overdue in pending or separate? Code below handles 'overdue' status but filter state usually maps simplified.
         if (filter === 'submitted') return hw.status === 'SUBMITTED';
         if (filter === 'graded') return hw.status === 'GRADED';
         return true;
@@ -45,8 +45,8 @@ export const StudentHomework = () => {
                             key={f}
                             onPress={() => setFilter(f)}
                             className={`px-4 py-2 rounded-full border ${filter === f
-                                    ? 'bg-indigo-600 border-indigo-600'
-                                    : 'bg-white border-gray-200'
+                                ? 'bg-indigo-600 border-indigo-600'
+                                : 'bg-white border-gray-200'
                                 }`}
                         >
                             <Text className={`font-medium ${filter === f ? 'text-white' : 'text-gray-600'}`}>

@@ -57,19 +57,26 @@ export const InteractionProvider: React.FC<{
   children: React.ReactNode;
   isAuthenticated: boolean;
   role?: UserRole;
-}> = ({ children, isAuthenticated }) => {
+}> = ({ children, isAuthenticated, role }) => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     console.log(`[InteractionContext] Auth: ${isAuthenticated}`);
   }, [isAuthenticated]);
 
+  // Only fetch settings if user has permission (prevents 403 for Students/Parents)
+  const canViewSettings = role && (
+    (PERMISSIONS.OPERATIONS as UserRole[]).includes(role) ||
+    (PERMISSIONS.IT_SYSTEMS as UserRole[]).includes(role) ||
+    role === UserRole.SUPER_ADMIN
+  );
+
   // Global Settings Query
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => (await client.get('/operations/settings')).data,
     initialData: { lockdown_mode: false },
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!canViewSettings,
     staleTime: 5 * 60 * 1000,
     retry: false,
     refetchOnWindowFocus: false
