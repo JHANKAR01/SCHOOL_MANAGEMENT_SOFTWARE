@@ -17,3 +17,4 @@ export * from './usePrincipalStats';
 export * from './useSyncQueue';
 export * from './useTeacherData';
 export * from './useTransport';
+export * from './useStudentData';  // Student Dashboard hooks

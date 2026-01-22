@@ -22,6 +22,7 @@ import announcementsRouter from './routes/announcements.ts';
 import { principalRouter } from './routes/principal.ts';
 import { teacherRouter } from './routes/teacher.ts';
 import { reportsRouter } from './routes/reports.ts';
+import { studentRouter } from './routes/student.ts';  // Student Dashboard API
 
 const app = new Hono();
 
@@ -85,6 +86,7 @@ app.route('/api/announcements', announcementsRouter);
 app.route('/api/principal', principalRouter);  // Principal Dashboard Command Center
 app.route('/api/teacher', teacherRouter);  // Teacher Dashboard API
 app.route('/api/reports', reportsRouter);  // Report generation API
+app.route('/api/student', studentRouter);  // Student Dashboard API
 
 // --- REAL-TIME LAYER (Socket.io) ---
 const httpServer = serve({ fetch: app.fetch, port: 3000 });

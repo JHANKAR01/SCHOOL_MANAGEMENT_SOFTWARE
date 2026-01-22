@@ -1,50 +1,75 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+// packages/app/features/student/StudentDashboard.tsx
+import React, { useState } from 'react';
+import { View, Text } from 'react-native';
+import { DashboardShell, Module } from '../../components/DashboardShell';
+import { useStudentProfile } from '../../../hooks/useStudentData';
+import { StudentMyDay } from '../student/StudentMyDay';
+import { StudentTimetable } from '../student/StudentTimetable';
+import { StudentHomework } from '../student/StudentHomework';
+import { StudentAttendance } from '../student/StudentAttendance';
+import { StudentResults } from '../student/StudentResults';
+import { StudentLiveClasses } from '../student/StudentLiveClasses';
+import { StudentNotifications } from '../student/StudentNotifications';
+import { StudentProfile } from '../student/StudentProfile';
 
-interface Props {
-    school: any; // Type as needed
-    activeModule: string;
-    role: string;
-}
+export const StudentDashboard = () => {
+    const [currentModule, setCurrentModule] = useState<Module>('today');
 
-export const StudentDashboard: React.FC<Props> = ({ role }) => {
+    // Fetch basic student info for the shell header
+    const { data: profile } = useStudentProfile();
+
+    const getTitle = () => {
+        switch (currentModule) {
+            case 'today': return 'My Day';
+            case 'timetable': return 'Weekly Timetable';
+            case 'homework': return 'Homework & Assignments';
+            case 'attendance': return 'Attendance & Leave';
+            case 'results': return 'Results & Reports';
+            case 'live-class': return 'Live Classes';
+            case 'notifications': return 'Notifications';
+            case 'profile': return 'My Profile';
+            default: return 'Student Dashboard';
+        }
+    };
+
+    const renderContent = () => {
+        switch (currentModule) {
+            case 'today':
+                return <StudentMyDay />;
+            case 'timetable':
+                return <StudentTimetable />;
+            case 'homework':
+                return <StudentHomework />;
+            case 'attendance':
+                return <StudentAttendance />;
+            case 'results':
+                return <StudentResults />;
+            case 'live-class':
+                return <StudentLiveClasses />;
+            case 'notifications':
+                return <StudentNotifications />;
+            case 'profile':
+                return <StudentProfile />;
+            default:
+                return <StudentMyDay />;
+        }
+    };
+
     return (
-        <View style={styles.container}>
-            <View style={styles.card}>
-                <Text style={styles.title}>Welcome, {role.charAt(0) + role.slice(1).toLowerCase()}</Text>
-                <Text style={styles.subtitle}>Your dashboard is under construction 🚧</Text>
-            </View>
-        </View>
+        <DashboardShell
+            role="STUDENT"
+            title={getTitle()}
+            activeModule={currentModule}
+            onModuleChange={setCurrentModule}
+            user={profile ? {
+                name: `${profile.first_name} ${profile.last_name}`,
+                email: profile.admission_number,
+                avatar: profile.profile_picture_url || undefined
+            } : undefined}
+        >
+            {renderContent()}
+        </DashboardShell>
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f5f5f5',
-        padding: 20,
-    },
-    card: {
-        backgroundColor: 'white',
-        padding: 40,
-        borderRadius: 16,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4, // Android shadow
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 8,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#666',
-    },
-});
+export default StudentDashboard;

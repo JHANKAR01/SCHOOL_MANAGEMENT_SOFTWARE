@@ -11,7 +11,7 @@ import { useTheme } from '../provider/ThemeProvider';
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TYPES & CONFIG
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings' | 'health' | 'flags' | 'admissions' | 'system-admin' | 'approvals' | 'attendance' | 'risk' | 'results' | 'classrooms' | 'substitutions' | 'curriculum' | 'today' | 'marks' | 'homework' | 'classes' | 'leave' | 'live-class';
+export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings' | 'health' | 'flags' | 'admissions' | 'system-admin' | 'approvals' | 'attendance' | 'risk' | 'results' | 'classrooms' | 'substitutions' | 'curriculum' | 'today' | 'marks' | 'homework' | 'classes' | 'leave' | 'live-class' | 'timetable' | 'profile' | 'notifications';
 
 interface NavigationItem {
     id: Module;
@@ -241,6 +241,18 @@ const Sidebar: React.FC<{
                 { id: 'homework', label: 'Homework', icon: BookOpen },
                 { id: 'classes', label: 'My Classes', icon: Building2 },
                 { id: 'leave', label: 'Leave', icon: Calendar },
+            ];
+        }
+        if (role === 'STUDENT') {
+            return [
+                { id: 'today', label: 'My Day', icon: LayoutDashboard },
+                { id: 'timetable', label: 'Timetable', icon: Calendar },
+                { id: 'homework', label: 'Homework', icon: BookOpen },
+                { id: 'attendance', label: 'Attendance', icon: Users },
+                { id: 'results', label: 'Results', icon: FileText },
+                { id: 'live-class', label: 'Live Classes', icon: Video },
+                { id: 'notifications', label: 'Notifications', icon: Bell },
+                { id: 'profile', label: 'Profile', icon: User },
             ];
         }
         return [{ id: 'overview', label: 'Overview', icon: LayoutDashboard }];

@@ -325,6 +325,10 @@ model Student {
   Visitor      Visitor[]
   bookLoans    BookLoan[]
   sourceInquiry Inquiry?  // Link back to the Inquiry that created this student
+  
+  // NEW: Student Dashboard Relations
+  homeworkSubmissions HomeworkSubmission[]
+  leaveApplications   LeaveApplication[]
 
   @@unique([school_id, admission_no])
   @@index([school_id])
@@ -718,12 +722,44 @@ model Homework {
   class   Class   @relation(fields: [class_id], references: [id])
   subject Subject @relation(fields: [subject_id], references: [id])
   School  School  @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  // Student submissions
+  submissions HomeworkSubmission[]
 
   @@index([school_id])
   @@index([class_id])
   @@index([subject_id])
   @@index([status])      // Teacher: grading queue
   @@index([due_date])    // Students: upcoming assignments
+  @@schema("schoolmanagementsystem")
+}
+
+/// Student homework submissions
+model HomeworkSubmission {
+  id            String    @id @default(cuid())
+  homework_id   String
+  student_id    String
+  school_id     String
+  
+  // Submission content
+  submission_text   String?
+  submission_url    String?   // File URL if uploaded
+  submitted_at      DateTime  @default(now()) @db.Timestamptz(6)
+  is_late           Boolean   @default(false)
+  
+  // Teacher grading
+  grade             String?
+  feedback          String?
+  graded_at         DateTime? @db.Timestamptz(6)
+  graded_by         String?   // User ID of grading teacher
+  
+  homework  Homework @relation(fields: [homework_id], references: [id], onDelete: Cascade)
+  student   Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+  @@unique([homework_id, student_id])  // One submission per student per homework
+  @@index([school_id])
+  @@index([student_id])
+  @@index([homework_id])
   @@schema("schoolmanagementsystem")
 }
 
@@ -1257,7 +1293,8 @@ model Inquiry {
 model LeaveApplication {
   id         String       @id
   school_id  String
-  user_id    String
+  user_id    String?      // For staff leave (nullable for student-only requests)
+  student_id String?      // For student leave requests
   type       LeaveType
   start_date DateTime     @db.Timestamptz(6)
   end_date   DateTime     @db.Timestamptz(6)
@@ -1265,10 +1302,12 @@ model LeaveApplication {
   status     LeaveStatus? @default(PENDING)
   created_at DateTime?    @default(now()) @db.Timestamptz(6)
   School     School       @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  User       User         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  User       User?        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Student    Student?     @relation(fields: [student_id], references: [id], onDelete: SetNull)
 
   @@index([school_id])
   @@index([user_id])     // Staff's leave history
+  @@index([student_id])  // Student's leave history
   @@index([status])      // HR: pending approvals
   @@index([start_date])  // Leave calendar
   @@schema("schoolmanagementsystem")
