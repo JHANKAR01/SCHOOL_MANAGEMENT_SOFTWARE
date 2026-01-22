@@ -105,6 +105,9 @@ async function main() {
   console.log('\n🧹 STEP 1: Clearing existing data in FK-safe order...');
 
   // Delete in reverse FK order (child tables first)
+  console.log('   └─ Clearing HomeworkSubmission...');
+  try { await prisma.homeworkSubmission.deleteMany(); } catch (e) { } // Safely ignore if table doesn't exist yet
+
   console.log('   └─ Clearing AuditLog...');
   await prisma.auditLog.deleteMany();
 
@@ -846,22 +849,95 @@ async function main() {
     data: resultMarkData,
     skipDuplicates: true
   });
-  console.log(`   ✅ ${resultMarksResult.count} result marks created`);
+
+  // DYNAMIC: Ensure Student 1 has results for Exam 1 (Mid-Term)
+  const student1 = DUMMY_STUDENTS[0];
+  const exam1 = DUMMY_EXAMS[0];
+
+  // Check if result exists
+  let student1Result = await prisma.result.findFirst({
+    where: { student_id: student1.id, exam_id: exam1.id }
+  });
+
+  if (!student1Result) {
+    student1Result = await prisma.result.create({
+      data: {
+        id: 'res_dyn_s1_e1',
+        school_id: SCHOOL_ID,
+        exam_id: exam1.id,
+        student_id: student1.id,
+        total_percentage: 85.5,
+        grade: 'A',
+        remarks: 'Excellent work',
+        status: 'PUBLISHED',
+        approved_at: new Date()
+      }
+    });
+  }
+
+  // Ensure marks for 5 subjects
+  const subjects = DUMMY_SUBJECTS.slice(0, 5);
+  let marksAdded = 0;
+
+  for (const subject of subjects) {
+    const existingMark = await prisma.resultMark.findFirst({
+      where: { result_id: student1Result.id, subject_id: subject.id }
+    });
+
+    if (!existingMark) {
+      await prisma.resultMark.create({
+        data: {
+          school_id: SCHOOL_ID,
+          result_id: student1Result.id,
+          subject_id: subject.id,
+          marks_obtained: 80 + Math.floor(Math.random() * 20), // 80-100
+          max_marks: 100,
+          grade: 'A',
+        }
+      });
+      marksAdded++;
+    }
+  }
+
+  console.log(`   ✅ ${resultMarksResult.count} result marks created (+ ${marksAdded} dynamic marks for ${student1.name})`);
 
   // =========================================================================
-  // STEP 22: SEED ATTENDANCE
+  // STEP 22: SEED ATTENDANCE (DYNAMIC - LAST 14 DAYS)
   // =========================================================================
-  console.log('\n📋 STEP 22: Seeding Attendance...');
+  console.log('\n📋 STEP 22: Seeding Attendance (Dynamic - Last 14 Days)...');
 
-  const attendanceData = DUMMY_ATTENDANCE.map(att => ({
-    student_id: att.student_id,
-    date: att.date,
-    status: att.status,
-    period: att.period,
-    synced: att.synced,
-    school_id: att.school_id,
-    marked_by: att.marked_by
-  }));
+  const attendanceData: any[] = [];
+  const today = new Date();
+
+  // Get all students
+  const attendanceStudents = await prisma.student.findMany({
+    select: { id: true, school_id: true }
+  });
+
+  for (let i = 14; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+
+    // Skip weekends (Sunday=0, Saturday=6)
+    if (d.getDay() === 0 || d.getDay() === 6) continue;
+
+    for (const student of attendanceStudents) {
+      // 90% Present, 5% Absent, 5% Late
+      const rand = Math.random();
+      let status: AttendanceStatus = 'PRESENT';
+      if (rand > 0.95) status = 'ABSENT';
+      else if (rand > 0.90) status = 'LATE';
+
+      attendanceData.push({
+        student_id: student.id,
+        date: d,
+        status: status,
+        period: 0, // Daily Summary
+        synced: true,
+        school_id: student.school_id,
+      });
+    }
+  }
 
   const attendanceResult = await prisma.attendance.createMany({
     data: attendanceData,
@@ -1158,27 +1234,33 @@ async function main() {
   console.log(`   ✅ ${expensesResult.count} expenses created`);
 
   // =========================================================================
-  // STEP 29: SEED HOMEWORK
+  // STEP 29: SEED HOMEWORK (DYNAMIC)
   // =========================================================================
-  console.log('\n📝 STEP 29: Seeding Homework (Dynamic)...');
+  console.log('\n📝 STEP 29: Seeding Homework & Submissions (Dynamic)...');
 
-  // Find a teacher to assign homework to (e.g., the first Maths teacher or just a generic one)
-  // We'll use the 'Teacher' created in DUMMY_STAFF_USERS or just pick one with StaffClass assignments
-  const activeClasses = DUMMY_CLASSES.slice(0, 5); // Pick first 5 classes
+  const activeClasses = DUMMY_CLASSES.slice(0, 5);
   let homeworkCount = 0;
+  let submissionCount = 0;
 
   for (const cls of activeClasses) {
-    // Find a subject for this class (pick the first one)
     const classSubject = DUMMY_CLASS_SUBJECTS.find(cs => cs.class_id === cls.id);
     if (!classSubject) continue;
+
+    // Get students in this class for submissions
+    const classStudents = await prisma.studentEnrollment.findMany({
+      where: { class_id: cls.id },
+      include: { student: true }
+    });
 
     for (const template of DUMMY_HOMEWORK_TEMPLATES) {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + template.due_days_offset);
 
+      const hwId = `hw_dyn_${homeworkCount + 1}`;
+
       await prisma.homework.create({
         data: {
-          id: `hw_dyn_${homeworkCount + 1}`,
+          id: hwId,
           school_id: SCHOOL_ID,
           class_id: cls.id,
           subject_id: classSubject.subject_id,
@@ -1186,34 +1268,78 @@ async function main() {
           description: template.description,
           due_date: dueDate,
           status: template.status,
-          created_at: new Date(dueDate.getTime() - 7 * 24 * 60 * 60 * 1000) // 1 week before
+          created_at: new Date(dueDate.getTime() - 7 * 24 * 60 * 60 * 1000)
         } as any
       });
       homeworkCount++;
+
+      // CREATE SUBMISSIONS
+      for (const enr of classStudents) {
+        // 70% chance to have submitted
+        if (Math.random() > 0.3) {
+          const isLate = Math.random() > 0.8;
+          const isGraded = Math.random() > 0.4; // 60% chance it's already graded
+
+          await prisma.homeworkSubmission.create({
+            data: {
+              homework_id: hwId,
+              student_id: enr.student_id,
+              school_id: SCHOOL_ID,
+              submission_text: "Here is my assignment work.",
+              submitted_at: new Date(), // Just now
+              is_late: isLate,
+              grade: isGraded ? (Math.random() > 0.5 ? "A" : "B") : null,
+              feedback: isGraded ? "Good work!" : null,
+              graded_by: isGraded ? cls.class_teacher_id : null
+            }
+          });
+          submissionCount++;
+        }
+      }
     }
   }
-
-  console.log(`   ✅ ${homeworkCount} homework assignments created`);
+  console.log(`   ✅ ${homeworkCount} homeworks & ${submissionCount} submissions created`);
 
   // =========================================================================
-  // STEP 30: SEED LIVE CLASSES
+  // STEP 30: SEED LIVE CLASSES (DYNAMIC TIME)
   // =========================================================================
   console.log('\n📹 STEP 30: Seeding Live Classes...');
 
-  const liveClassResult = await prisma.liveClass.createMany({
-    data: DUMMY_LIVE_CLASSES.map(lc => ({
-      id: lc.id,
-      school_id: lc.school_id,
-      subject_id: lc.subject_id,
-      class_id: lc.class_id,
-      teacher_id: lc.teacher_id,
-      meeting_link: lc.meeting_link,
-      is_active: lc.is_active,
-      start_time: lc.start_time
-    })),
-    skipDuplicates: true
-  });
-  console.log(`   ✅ ${liveClassResult.count} live classes created`);
+  // 1. Active Class Now
+  try {
+    await prisma.liveClass.create({
+      data: {
+        id: 'live_now_1',
+        school_id: SCHOOL_ID,
+        subject_id: 'SUB-MATH',
+        class_id: 'CLS-10A',
+        teacher_id: 'usr_staff_1',
+        meeting_link: 'https://meet.google.com/abc-defg-hij',
+        is_active: true,
+        start_time: new Date()
+      }
+    });
+  } catch (e) { console.log('   ⚠️ Could not create active live class (FK check failed?)'); }
+
+  // 2. Upcoming Class (+2 hours)
+  const upcoming = new Date();
+  upcoming.setHours(upcoming.getHours() + 2);
+
+  try {
+    await prisma.liveClass.create({
+      data: {
+        id: 'live_soon_1',
+        school_id: SCHOOL_ID,
+        subject_id: 'SUB-ENG',
+        class_id: 'CLS-10A',
+        teacher_id: 'usr_staff_1',
+        meeting_link: 'https://meet.google.com/xyz-uvw-qi',
+        is_active: false,
+        start_time: upcoming
+      }
+    });
+  } catch (e) { }
+  console.log(`   ✅ Live classes created (Dynamic)`);
 
   // =========================================================================
   // STEP 31: SEED PAPERS
@@ -1540,7 +1666,7 @@ async function main() {
   console.log(`   ├─ ${resultMarksResult.count} Result Marks`);
   console.log(`   ├─ ${attendanceResult.count} Attendance Records`);
   console.log(`   ├─ ${homeworkCount} Homework Assignments`);
-  console.log(`   ├─ ${liveClassResult.count} Live Classes`);
+  console.log(`   ├─ Live Classes (Dynamic)`);
   console.log(`   ├─ ${papersResult.count} Exam Papers`);
   console.log(`   ├─ ${syllabusTopicsResult.count} Syllabus Topics`);
   console.log(`   └─ ${topicCompletionsResult.count} Topic Completions`);
