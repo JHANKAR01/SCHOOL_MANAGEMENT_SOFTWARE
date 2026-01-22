@@ -34,17 +34,15 @@ export const StudentAttendance = () => {
         );
     }
 
-    const { stats, logs } = data || { stats: { total: 0, present: 0, absent: 0, late: 0, percentage: 0 }, logs: [] };
-
-    // Placeholder data for heat map or calendar view logic
-    // For now we list recent logs
+    const { summary, records } = data || { summary: { total: 0, present: 0, absent: 0, late: 0, percentage: 0 }, records: [] };
+    const percentage = summary?.percentage || 0;
 
     return (
         <View className="flex-1 bg-gray-50">
             <View className="px-4 pt-4 bg-white border-b border-gray-200 pb-4">
                 <View className="flex-row justify-between items-center mb-4">
-                    <PageHeader title={t('attendance')} subtitle={`${stats.percentage}% Attendance Rate`} />
-                    <SovereignButton variant="outline" className="flex-row gap-2">
+                    <PageHeader title={t('attendance')} subtitle={`${percentage}% Attendance Rate`} />
+                    <SovereignButton variant="secondary" className="flex-row gap-2">
                         <Plus className="w-4 h-4" />
                         <Text>Apply Leave</Text>
                     </SovereignButton>
@@ -54,19 +52,19 @@ export const StudentAttendance = () => {
                 <View className="flex-row gap-3">
                     <StatCard
                         label="Present"
-                        value={stats.present}
+                        value={summary?.present || 0}
                         color="bg-emerald-100 text-emerald-900"
                         icon={UserCheck}
                     />
                     <StatCard
                         label="Absent"
-                        value={stats.absent}
+                        value={summary?.absent || 0}
                         color="bg-rose-100 text-rose-900"
                         icon={UserX}
                     />
                     <StatCard
                         label="Late"
-                        value={stats.late}
+                        value={summary?.late || 0}
                         color="bg-amber-100 text-amber-900"
                         icon={Clock}
                     />
@@ -79,40 +77,40 @@ export const StudentAttendance = () => {
                 </View>
 
                 <View className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                    {logs.length === 0 ? (
+                    {records.length === 0 ? (
                         <View className="p-8 items-center">
                             <Text className="text-gray-400">No attendance records found.</Text>
                         </View>
                     ) : (
-                        logs.map((log, index) => (
+                        records.map((record, index) => (
                             <View
-                                key={log.id}
-                                className={`p-4 flex-row items-center justify-between ${index !== logs.length - 1 ? 'border-b border-gray-100' : ''
+                                key={`${record.date}-${record.period}`}
+                                className={`p-4 flex-row items-center justify-between ${index !== records.length - 1 ? 'border-b border-gray-100' : ''
                                     }`}
                             >
                                 <View className="flex-row items-center gap-4">
-                                    <View className={`w-10 h-10 rounded-full flex items-center justify-center ${log.status === 'PRESENT' ? 'bg-emerald-100' :
-                                            log.status === 'ABSENT' ? 'bg-rose-100' : 'bg-amber-100'
+                                    <View className={`w-10 h-10 rounded-full flex items-center justify-center ${record.status === 'PRESENT' ? 'bg-emerald-100' :
+                                        record.status === 'ABSENT' ? 'bg-rose-100' : 'bg-amber-100'
                                         }`}>
-                                        <Text className={`font-bold ${log.status === 'PRESENT' ? 'text-emerald-700' :
-                                                log.status === 'ABSENT' ? 'text-rose-700' : 'text-amber-700'
+                                        <Text className={`font-bold ${record.status === 'PRESENT' ? 'text-emerald-700' :
+                                            record.status === 'ABSENT' ? 'text-rose-700' : 'text-amber-700'
                                             }`}>
-                                            {new Date(log.date).getDate()}
+                                            {new Date(record.date).getDate()}
                                         </Text>
                                     </View>
                                     <View>
                                         <Text className="font-medium text-gray-900">
-                                            {new Date(log.date).toLocaleDateString(undefined, { weekday: 'long', month: 'short' })}
+                                            {new Date(record.date).toLocaleDateString(undefined, { weekday: 'long', month: 'short' })}
                                         </Text>
                                         <Text className="text-xs text-gray-500">
-                                            {log.remarks || 'Regular Day'}
+                                            Period: {record.period === 0 ? 'All Day' : record.period}
                                         </Text>
                                     </View>
                                 </View>
-                                <View className={`px-3 py-1 rounded-full ${log.status === 'PRESENT' ? 'bg-emerald-50 text-emerald-700' :
-                                        log.status === 'ABSENT' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
+                                <View className={`px-3 py-1 rounded-full ${record.status === 'PRESENT' ? 'bg-emerald-50 text-emerald-700' :
+                                    record.status === 'ABSENT' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
                                     }`}>
-                                    <Text className="text-xs font-bold">{log.status}</Text>
+                                    <Text className="text-xs font-bold">{record.status}</Text>
                                 </View>
                             </View>
                         ))
