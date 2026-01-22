@@ -12,6 +12,7 @@ import { useLowDataMode } from './packages/hooks/useLowDataMode';
 import SchoolAdminDashboard from './apps/web/pages/school-admin/dashboard';
 import { PrincipalDashboard } from './packages/app/features/academics/PrincipalDashboard';
 import { NewTeacherDashboard } from './packages/app/features/dashboard/NewTeacherDashboard';
+import { StudentDashboard } from './packages/app/features/dashboard/StudentDashboard';
 import { View, Text, TouchableOpacity, SafeAreaView, Platform, ScrollView, StatusBar } from 'react-native';
 import { Menu, LogOut, Zap, Shield } from 'lucide-react';
 import * as SecureStore from 'expo-secure-store';
@@ -266,6 +267,17 @@ const App: React.FC = () => {
                 return (
                   <div className="relative">
                     <NewTeacherDashboard />
+                  </div>
+                );
+              }
+            }
+
+            // 1.8 Student View (Web Only - StudentDashboard has its own DashboardShell)
+            if (currentUser?.role === UserRole.STUDENT) {
+              if (Platform.OS === 'web') {
+                return (
+                  <div className="relative">
+                    <StudentDashboard />
                   </div>
                 );
               }
