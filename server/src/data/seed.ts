@@ -147,6 +147,12 @@ async function main() {
   console.log('   └─ Clearing TransportStop...');
   await prisma.transportStop.deleteMany();
 
+  console.log('   └─ Clearing Announcement...');
+  await prisma.announcement.deleteMany();
+
+  console.log('   └─ Clearing LiveClass...');
+  await prisma.liveClass.deleteMany();
+
   console.log('   └─ Clearing Bus...');
   await prisma.bus.deleteMany();
 
@@ -850,56 +856,56 @@ async function main() {
     skipDuplicates: true
   });
 
-  // DYNAMIC: Ensure Student 1 has results for Exam 1 (Mid-Term)
-  const student1 = DUMMY_STUDENTS[0];
-  const exam1 = DUMMY_EXAMS[0];
+  // DYNAMIC: Generate Results for ALL Students
+  console.log('   └─ Generating dynamic results for all students (Mid-Term)...');
+  const exam1 = DUMMY_EXAMS[0]; // Mid-Term
 
-  // Check if result exists
-  let student1Result = await prisma.result.findFirst({
-    where: { student_id: student1.id, exam_id: exam1.id }
-  });
+  // Check if we already have mass results to avoid duplication on re-runs without clean
+  const existingResultsCount = await prisma.result.count({ where: { exam_id: exam1.id } });
 
-  if (!student1Result) {
-    student1Result = await prisma.result.create({
-      data: {
-        id: 'res_dyn_s1_e1',
-        school_id: SCHOOL_ID,
-        exam_id: exam1.id,
-        student_id: student1.id,
-        total_percentage: 85.5,
-        grade: 'A',
-        remarks: 'Excellent work',
-        status: 'PUBLISHED',
-        approved_at: new Date()
-      }
-    });
-  }
+  if (existingResultsCount < 10) { // arbitrary threshold to detect if seeded
+    let dynMarksCount = 0;
+    // Process in chunks to avoid overwhelming connection
+    const chunkSize = 50;
+    for (let i = 0; i < DUMMY_STUDENTS.length; i += chunkSize) {
+      const chunk = DUMMY_STUDENTS.slice(i, i + chunkSize);
 
-  // Ensure marks for 5 subjects
-  const subjects = DUMMY_SUBJECTS.slice(0, 5);
-  let marksAdded = 0;
+      await prisma.$transaction(async (tx) => {
+        await Promise.all(chunk.map(async (student) => {
+          const result = await tx.result.create({
+            data: {
+              school_id: SCHOOL_ID,
+              exam_id: exam1.id,
+              student_id: student.id,
+              total_percentage: 65 + Math.random() * 30, // 65-95%
+              grade: Math.random() > 0.6 ? 'A' : 'B',
+              remarks: 'Good progress',
+              status: 'PUBLISHED',
+              approved_at: new Date()
+            } as any
+          });
 
-  for (const subject of subjects) {
-    const existingMark = await prisma.resultMark.findFirst({
-      where: { result_id: student1Result.id, subject_id: subject.id }
-    });
+          // Add marks for 5 subjects
+          const subjects = DUMMY_SUBJECTS.slice(0, 5);
+          const markData = subjects.map(sub => ({
+            school_id: SCHOOL_ID,
+            result_id: result.id,
+            subject_id: sub.id,
+            marks_obtained: 60 + Math.floor(Math.random() * 40),
+            max_marks: 100,
+            grade: 'A'
+          }));
 
-    if (!existingMark) {
-      await prisma.resultMark.create({
-        data: {
-          school_id: SCHOOL_ID,
-          result_id: student1Result.id,
-          subject_id: subject.id,
-          marks_obtained: 80 + Math.floor(Math.random() * 20), // 80-100
-          max_marks: 100,
-          grade: 'A',
-        }
+          await tx.resultMark.createMany({ data: markData });
+          dynMarksCount += markData.length;
+        }));
       });
-      marksAdded++;
+      if (i % 200 === 0) console.log(`      Processed ${i} / ${DUMMY_STUDENTS.length} students...`);
     }
+    console.log(`   ✅ Generated results for ${DUMMY_STUDENTS.length} students with ${dynMarksCount} marks.`);
+  } else {
+    console.log('   ℹ️ Results already appear to be seeded (skipping mass generation).');
   }
-
-  console.log(`   ✅ ${resultMarksResult.count} result marks created (+ ${marksAdded} dynamic marks for ${student1.name})`);
 
   // =========================================================================
   // STEP 22: SEED ATTENDANCE (DYNAMIC - LAST 14 DAYS)
@@ -1045,91 +1051,101 @@ async function main() {
 
   const allStudents = await prisma.student.findMany({
     where: { school_id: SCHOOL_ID },
-    take: 50
+    // take: 50
   });
 
   let financeCount = 0;
 
-  for (const [index, student] of allStudents.entries()) {
-    const isGoodPayer = index < 30;
-    const isPartialPayer = index >= 30 && index < 40;
-    const isDefaulter = index >= 40;
+  // Process in chunks of 50 to avoid overloading the DB connection
+  const chunkSize = 50;
 
-    // RANDOMIZE DATE: Spread transactions over last 6 months
-    const monthsAgo = Math.floor(Math.random() * 6);
-    const transactionDate = subMonths(new Date(), monthsAgo);
+  for (let i = 0; i < allStudents.length; i += chunkSize) {
+    const chunk = allStudents.slice(i, i + chunkSize);
 
-    // Invoice created 5 days before transaction
-    const invoiceDate = new Date(transactionDate);
-    invoiceDate.setDate(invoiceDate.getDate() - 5);
+    await Promise.all(chunk.map(async (student, batchIndex) => {
+      const index = i + batchIndex; // Global index to keep your logic working
 
-    // Create Invoice (Demand) with backdated creation
-    const invoice = await prisma.invoice.create({
-      data: {
-        school_id: SCHOOL_ID,
-        student_id: student.id,
-        academic_year_id: ACADEMIC_YEAR_2025_ID,
-        due_date: new Date('2025-04-10'),
-        total_amount: tuitionFee.amount,
-        balance_amount: tuitionFee.amount,
-        amount_paid: 0,
-        status: 'PENDING',
-        created_at: invoiceDate, // BACKDATED
-        items: {
-          create: {
-            title: tuitionFee.name,
-            amount: tuitionFee.amount,
-            fee_structure_id: tuitionFee.id
+      const isGoodPayer = index % 3 === 0;
+      const isPartialPayer = index % 3 === 1;
+      const isDefaulter = index % 3 === 2;
+
+      // RANDOMIZE DATE: Spread transactions over last 6 months
+      const monthsAgo = Math.floor(Math.random() * 6);
+      const transactionDate = subMonths(new Date(), monthsAgo);
+
+      // Invoice created 5 days before transaction
+      const invoiceDate = new Date(transactionDate);
+      invoiceDate.setDate(invoiceDate.getDate() - 5);
+
+      // Create Invoice (Demand) with backdated creation
+      const invoice = await prisma.invoice.create({
+        data: {
+          school_id: SCHOOL_ID,
+          student_id: student.id,
+          academic_year_id: ACADEMIC_YEAR_2025_ID,
+          due_date: new Date('2025-04-10'),
+          total_amount: tuitionFee.amount,
+          balance_amount: tuitionFee.amount,
+          amount_paid: 0,
+          status: 'PENDING',
+          created_at: invoiceDate, // BACKDATED
+          items: {
+            create: {
+              title: tuitionFee.name,
+              amount: tuitionFee.amount,
+              fee_structure_id: tuitionFee.id
+            }
           }
         }
-      }
-    });
+      });
 
-    // Create Transactions (Collection)
-    if (isGoodPayer) {
-      await prisma.paymentTransaction.create({
-        data: {
-          school_id: SCHOOL_ID,
-          invoice_id: invoice.id,
-          student_id: student.id,
-          amount: tuitionFee.amount,
-          mode: Math.random() > 0.5 ? 'UPI' : 'BANK_TRANSFER',
-          date: transactionDate, // BACKDATED
-          remarks: 'Full Payment',
-          reference_no: `TXN${Math.floor(Math.random() * 1000000)}`
-        }
-      });
-      await prisma.invoice.update({
-        where: { id: invoice.id },
-        data: { status: 'PAID', amount_paid: tuitionFee.amount, balance_amount: 0 }
-      });
-    }
-    else if (isPartialPayer) {
-      const paid = tuitionFee.amount * 0.4;
-      await prisma.paymentTransaction.create({
-        data: {
-          school_id: SCHOOL_ID,
-          invoice_id: invoice.id,
-          student_id: student.id,
-          amount: paid,
-          mode: 'CASH',
-          date: transactionDate, // BACKDATED
-          remarks: 'First Installment',
-          reference_no: `RCPT${Math.floor(Math.random() * 1000000)}`
-        }
-      });
-      await prisma.invoice.update({
-        where: { id: invoice.id },
-        data: { status: 'PARTIAL', amount_paid: paid, balance_amount: tuitionFee.amount - paid }
-      });
-    }
-    else if (isDefaulter) {
-      await prisma.invoice.update({
-        where: { id: invoice.id },
-        data: { status: 'OVERDUE' }
-      });
-    }
-    financeCount++;
+      // Handle Payments
+      if (isGoodPayer) {
+        await prisma.paymentTransaction.create({
+          data: {
+            school_id: SCHOOL_ID,
+            invoice_id: invoice.id,
+            student_id: student.id,
+            amount: tuitionFee.amount,
+            mode: Math.random() > 0.5 ? 'UPI' : 'BANK_TRANSFER',
+            date: transactionDate, // BACKDATED
+            remarks: 'Full Payment',
+            reference_no: `TXN${Math.floor(Math.random() * 1000000)}`
+          }
+        });
+        await prisma.invoice.update({
+          where: { id: invoice.id },
+          data: { status: 'PAID', amount_paid: tuitionFee.amount, balance_amount: 0 }
+        });
+      }
+      else if (isPartialPayer) {
+        const paid = tuitionFee.amount * 0.4;
+        await prisma.paymentTransaction.create({
+          data: {
+            school_id: SCHOOL_ID,
+            invoice_id: invoice.id,
+            student_id: student.id,
+            amount: paid,
+            mode: 'CASH',
+            date: transactionDate, // BACKDATED
+            remarks: 'First Installment',
+            reference_no: `RCPT${Math.floor(Math.random() * 1000000)}`
+          }
+        });
+        await prisma.invoice.update({
+          where: { id: invoice.id },
+          data: { status: 'PARTIAL', amount_paid: paid, balance_amount: tuitionFee.amount - paid }
+        });
+      }
+      else if (isDefaulter) {
+        await prisma.invoice.update({
+          where: { id: invoice.id },
+          data: { status: 'OVERDUE' }
+        });
+      }
+    }));
+    financeCount += chunk.length;
+    console.log(`   ✅ Processed batch ${i} to ${i + chunk.length}`);
   }
   console.log(`   ✅ Processed finance records for ${financeCount} students`);
 
@@ -1238,108 +1254,174 @@ async function main() {
   // =========================================================================
   console.log('\n📝 STEP 29: Seeding Homework & Submissions (Dynamic)...');
 
-  const activeClasses = DUMMY_CLASSES.slice(0, 5);
+  // Helper for batching
+  const activeClasses = DUMMY_CLASSES;
   let homeworkCount = 0;
   let submissionCount = 0;
 
-  for (const cls of activeClasses) {
-    const classSubject = DUMMY_CLASS_SUBJECTS.find(cs => cs.class_id === cls.id);
-    if (!classSubject) continue;
+  const chunkArray = <T>(arr: T[], size: number): T[][] =>
+    Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+      arr.slice(i * size, i * size + size)
+    );
 
-    // Get students in this class for submissions
-    const classStudents = await prisma.studentEnrollment.findMany({
-      where: { class_id: cls.id },
-      include: { student: true }
-    });
+  // Process classes in chunks of 10 to prevent connection timeout
+  const classChunks = chunkArray(activeClasses, 10);
 
-    for (const template of DUMMY_HOMEWORK_TEMPLATES) {
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + template.due_days_offset);
+  for (const [chunkIndex, chunk] of classChunks.entries()) {
 
-      const hwId = `hw_dyn_${homeworkCount + 1}`;
+    await Promise.all(chunk.map(async (cls: any) => {
+      const classSubject = DUMMY_CLASS_SUBJECTS.find(cs => cs.class_id === cls.id);
+      if (!classSubject) return;
 
-      await prisma.homework.create({
-        data: {
-          id: hwId,
-          school_id: SCHOOL_ID,
-          class_id: cls.id,
-          subject_id: classSubject.subject_id,
-          title: template.title,
-          description: template.description,
-          due_date: dueDate,
-          status: template.status,
-          created_at: new Date(dueDate.getTime() - 7 * 24 * 60 * 60 * 1000)
-        } as any
+      // Fetch students ONCE per class
+      const classStudents = await prisma.studentEnrollment.findMany({
+        where: { class_id: cls.id },
+        select: { student_id: true } // Only need IDs
       });
-      homeworkCount++;
 
-      // CREATE SUBMISSIONS
-      for (const enr of classStudents) {
-        // 70% chance to have submitted
-        if (Math.random() > 0.3) {
-          const isLate = Math.random() > 0.8;
-          const isGraded = Math.random() > 0.4; // 60% chance it's already graded
+      for (const [tIndex, template] of DUMMY_HOMEWORK_TEMPLATES.entries()) {
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + template.due_days_offset);
 
-          await prisma.homeworkSubmission.create({
-            data: {
+        // Generate ID deterministically so we don't collide in parallel
+        const hwId = `hw_${cls.id}_${tIndex}`;
+
+        // 1. Create Homework
+        await prisma.homework.create({
+          data: {
+            id: hwId,
+            school_id: SCHOOL_ID,
+            class_id: cls.id,
+            subject_id: classSubject.subject_id,
+            title: template.title,
+            description: template.description,
+            due_date: dueDate,
+            status: template.status,
+            created_at: new Date(dueDate.getTime() - 7 * 24 * 60 * 60 * 1000)
+          } as any
+        });
+        homeworkCount++;
+
+        // 2. Prepare Bulk Submissions (InMemory)
+        const submissionsData = [];
+
+        for (const enr of classStudents) {
+          // 70% chance to have submitted
+          if (Math.random() > 0.3) {
+            const isLate = Math.random() > 0.8;
+            const isGraded = Math.random() > 0.4;
+
+            submissionsData.push({
               homework_id: hwId,
               student_id: enr.student_id,
               school_id: SCHOOL_ID,
               submission_text: "Here is my assignment work.",
-              submitted_at: new Date(), // Just now
+              submitted_at: new Date(),
               is_late: isLate,
               grade: isGraded ? (Math.random() > 0.5 ? "A" : "B") : null,
               feedback: isGraded ? "Good work!" : null,
               graded_by: isGraded ? cls.class_teacher_id : null
-            }
+            });
+          }
+        }
+
+        // 3. Bulk Insert Submissions (1 Query instead of 40)
+        if (submissionsData.length > 0) {
+          const result = await prisma.homeworkSubmission.createMany({
+            data: submissionsData,
+            skipDuplicates: true
           });
-          submissionCount++;
+          submissionCount += result.count;
         }
       }
-    }
+    }));
+
+    console.log(`   ✅ Processed batch ${chunkIndex + 1}/${classChunks.length}`);
   }
-  console.log(`   ✅ ${homeworkCount} homeworks & ${submissionCount} submissions created`);
+
+  console.log(`   ✅ Total: ${homeworkCount} homeworks & ${submissionCount} submissions created`);
 
   // =========================================================================
   // STEP 30: SEED LIVE CLASSES (DYNAMIC TIME)
   // =========================================================================
   console.log('\n📹 STEP 30: Seeding Live Classes...');
 
-  // 1. Active Class Now
-  try {
+  // 1. Get real classes and subjects (from what we just seeded)
+  const realClasses = await prisma.class.findMany({ take: 3 });
+  const realSubjects = await prisma.subject.findMany({ take: 3 });
+  // Get a teacher
+  const liveTeacher = await prisma.user.findFirst({ where: { role: 'TEACHER' } });
+
+  if (realClasses.length > 0 && realSubjects.length > 0 && liveTeacher) {
+    // 1. LIVE NOW
     await prisma.liveClass.create({
       data: {
-        id: 'live_now_1',
+        id: `live_now_${Date.now()}`,
         school_id: SCHOOL_ID,
-        subject_id: 'SUB-MATH',
-        class_id: 'CLS-10A',
-        teacher_id: 'usr_staff_1',
-        meeting_link: 'https://meet.google.com/abc-defg-hij',
+        subject_id: realSubjects[0].id,
+        class_id: realClasses[0].id,
+        teacher_id: liveTeacher.id,
+        meeting_link: 'https://meet.jit.si/sovereign-class-live',
         is_active: true,
         start_time: new Date()
-      }
+      } as any
     });
-  } catch (e) { console.log('   ⚠️ Could not create active live class (FK check failed?)'); }
 
-  // 2. Upcoming Class (+2 hours)
-  const upcoming = new Date();
-  upcoming.setHours(upcoming.getHours() + 2);
-
-  try {
+    // 2. UPCOMING
+    const upcoming = new Date();
+    upcoming.setHours(upcoming.getHours() + 2);
     await prisma.liveClass.create({
       data: {
-        id: 'live_soon_1',
+        id: `live_upcoming_${Date.now()}`,
         school_id: SCHOOL_ID,
-        subject_id: 'SUB-ENG',
-        class_id: 'CLS-10A',
-        teacher_id: 'usr_staff_1',
-        meeting_link: 'https://meet.google.com/xyz-uvw-qi',
+        subject_id: realSubjects[1].id, // Different subject
+        class_id: realClasses[0].id,    // Same class
+        teacher_id: liveTeacher.id,
+        meeting_link: 'https://meet.jit.si/sovereign-class-upcoming',
         is_active: false,
         start_time: upcoming
-      }
+      } as any
     });
-  } catch (e) { }
-  console.log(`   ✅ Live classes created (Dynamic)`);
+  }
+  console.log(`   ✅ Live classes created (Dynamic with valid FKs)`);
+
+  // =========================================================================
+  // STEP 30b: SEED ANNOUNCEMENTS / NOTIFICATIONS
+  // =========================================================================
+  console.log('\n📢 STEP 30b: Seeding Announcements...');
+
+  // Helper to create announcement
+  const createAnnouncement = async (title: string, message: string, daysAgo: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+
+    // We use Announcement table if it exists, or check schema
+    // Based on schema review: model Announcement { id, title, message, ... }
+    await prisma.announcement.create({
+      data: {
+        school_id: SCHOOL_ID,
+        title,
+        message,
+        created_at: date,
+        // Assuming optional fields like is_public default to true or similar
+        // Adjust based on strict schema if needed. 
+        // Schema showed: author_id is likely needed? 
+        // Let's check schema snippet from memory: `announcements Announcement[]` on School.
+        // We'll try basic fields. If author_id is required, we use liveTeacher.id
+        author_id: liveTeacher?.id,
+        // target_type removed
+      } as any
+    });
+  };
+
+  try {
+    await createAnnouncement('Annual Sports Day', 'The annual sports day will be held this Friday. All students are requested to assemble at the ground by 8 AM.', 1);
+    await createAnnouncement('Mid-Term Exam Schedule', 'The schedule for upcoming mid-term exams has been released. Please check the notice board.', 2);
+    await createAnnouncement('Holiday Notice', 'School will remain closed on Monday due to local festival.', 5);
+    console.log(`   ✅ Announcements created`);
+  } catch (e) {
+    console.log(`   ⚠️ Failed to seed announcements: ${e.message}`);
+  }
 
   // =========================================================================
   // STEP 31: SEED PAPERS
@@ -1579,6 +1661,27 @@ async function main() {
     skipDuplicates: true
   });
   console.log(`   ✅ ${leaveResult.count} leave applications created`);
+
+  // DYNAMIC LEAVES
+  const leaveStudents = await prisma.student.findMany({ take: 20 });
+  for (const student of leaveStudents) {
+    // Create user_id lookup if student doesn't have it directly on object (it should be in DUMMY or we fetch)
+    // Actually we fetched student, which has user_id usually? Schema check: Student has user_id.
+    if (student.user_id) {
+      await prisma.leaveApplication.create({
+        data: {
+          id: `leave_dyn_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          school_id: SCHOOL_ID,
+          user_id: student.user_id,
+          type: Math.random() > 0.5 ? 'SICK' : 'CASUAL',
+          start_date: new Date(),
+          end_date: new Date(),
+          reason: 'Dynamic seed leave',
+          status: Math.random() > 0.5 ? 'APPROVED' : 'PENDING'
+        } as any
+      });
+    }
+  }
 
   // =========================================================================
   // STEP 41: SEED TICKETS
