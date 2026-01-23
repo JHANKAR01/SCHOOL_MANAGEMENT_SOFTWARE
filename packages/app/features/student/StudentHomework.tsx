@@ -13,7 +13,7 @@ export const StudentHomework = () => {
 
     if (isLoading) {
         return (
-            <View className="flex-1 p-4 bg-gray-50">
+            <View className="flex-1 p-4 bg-gray-50 dark:bg-slate-900">
                 <PageHeader title={t('homework')} subtitle="Assignments & Projects" />
                 <View className="flex-row gap-4 mb-6">
                     <SovereignSkeleton className="h-10 w-24 rounded-full" />
@@ -25,17 +25,17 @@ export const StudentHomework = () => {
         );
     }
 
-    // Filter logic
+    // Filter logic - use lowercase to match API response
     const filteredHomework = data?.filter(hw => {
-        if (filter === 'pending') return hw.status === 'PENDING' || hw.status === 'overdue'; // Show overdue in pending or separate? Code below handles 'overdue' status but filter state usually maps simplified.
-        if (filter === 'submitted') return hw.status === 'SUBMITTED';
-        if (filter === 'graded') return hw.status === 'GRADED';
+        if (filter === 'pending') return hw.status === 'pending' || hw.status === 'overdue';
+        if (filter === 'submitted') return hw.status === 'submitted';
+        if (filter === 'graded') return hw.status === 'graded';
         return true;
     }) || [];
 
     return (
-        <View className="flex-1 bg-gray-50">
-            <View className="px-4 pt-4 bg-white border-b border-gray-200">
+        <View className="flex-1 bg-gray-50 dark:bg-slate-900">
+            <View className="px-4 pt-4 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700">
                 <PageHeader title={t('homework')} subtitle="Assignments & Projects" />
 
                 {/* Filter Tabs */}
@@ -46,10 +46,10 @@ export const StudentHomework = () => {
                             onPress={() => setFilter(f)}
                             className={`px-4 py-2 rounded-full border ${filter === f
                                 ? 'bg-indigo-600 border-indigo-600'
-                                : 'bg-white border-gray-200'
+                                : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-gray-600'
                                 }`}
                         >
-                            <Text className={`font-medium ${filter === f ? 'text-white' : 'text-gray-600'}`}>
+                            <Text className={`font-medium ${filter === f ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}>
                                 {f.charAt(0).toUpperCase() + f.slice(1)}
                             </Text>
                         </TouchableOpacity>
@@ -60,49 +60,51 @@ export const StudentHomework = () => {
             <ScrollView className="flex-1 p-4">
                 {filteredHomework.length === 0 ? (
                     <View className="items-center justify-center py-20">
-                        <BookOpen className="w-16 h-16 text-gray-300 mb-4" />
-                        <Text className="text-gray-500 font-medium">No {filter} homework found</Text>
+                        <BookOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
+                        <Text className="text-gray-500 dark:text-gray-400 font-medium">No {filter} homework found</Text>
                     </View>
                 ) : (
                     <View className="space-y-4 pb-8">
                         {filteredHomework.map((hw) => (
-                            <View key={hw.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                            <View key={hw.id} className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                                 <View className="flex-row justify-between items-start mb-3">
                                     <View>
-                                        <Text className="text-lg font-bold text-gray-900">{hw.title}</Text>
-                                        <Text className="text-sm text-indigo-600 font-medium">{hw.subject}</Text>
+                                        <Text className="text-lg font-bold text-gray-900 dark:text-white">{hw.title}</Text>
+                                        <Text className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">{hw.subject}</Text>
                                     </View>
                                     <SovereignBadge
-                                        label={hw.status}
-                                        variant={
-                                            hw.status === 'PENDING' ? 'warning' :
-                                                hw.status === 'SUBMITTED' ? 'info' : 'success'
+                                        status={
+                                            hw.status === 'pending' ? 'warning' :
+                                                hw.status === 'submitted' ? 'info' :
+                                                    hw.status === 'graded' ? 'success' : 'error'
                                         }
-                                    />
+                                    >
+                                        {hw.status}
+                                    </SovereignBadge>
                                 </View>
 
-                                <Text className="text-gray-600 mb-4 line-clamp-2">{hw.description}</Text>
+                                <Text className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-2">{hw.description}</Text>
 
-                                <View className="flex-row justify-between items-center border-t border-gray-100 pt-4">
+                                <View className="flex-row justify-between items-center border-t border-gray-100 dark:border-gray-700 pt-4">
                                     <View className="flex-row items-center gap-4">
                                         <View className="flex-row items-center gap-1.5">
-                                            <Clock className="w-4 h-4 text-gray-400" />
-                                            <Text className="text-xs text-gray-500">
+                                            <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                            <Text className="text-xs text-gray-500 dark:text-gray-400">
                                                 Due: {new Date(hw.due_date).toLocaleDateString()}
                                             </Text>
                                         </View>
-                                        {hw.grade && (
+                                        {hw.submission?.grade && (
                                             <View className="flex-row items-center gap-1.5">
-                                                <FileText className="w-4 h-4 text-gray-400" />
-                                                <Text className="text-xs font-bold text-gray-700">
-                                                    Grade: {hw.grade}
+                                                <FileText className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                                <Text className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                                    Grade: {hw.submission.grade}
                                                 </Text>
                                             </View>
                                         )}
                                     </View>
 
-                                    {hw.status === 'PENDING' && (
-                                        <SovereignButton variant="primary" size="sm" className="flex-row gap-2">
+                                    {hw.status === 'pending' && (
+                                        <SovereignButton variant="primary" className="flex-row gap-2">
                                             <Upload className="w-4 h-4 text-white" />
                                             <Text className="text-white font-medium">Submit</Text>
                                         </SovereignButton>
