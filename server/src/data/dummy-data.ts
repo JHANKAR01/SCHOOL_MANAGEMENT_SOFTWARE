@@ -25,6 +25,8 @@ import {
   SyllabusStatus,
   TicketPriority,
   TicketStatus,
+  PaymentMode,
+  TransactionStatus,
 } from '@prisma/client';
 
 // ============================================================================
@@ -1474,8 +1476,9 @@ function generateInvoices(): DummyInvoice[] {
       status = InvoiceStatus.PAID;
       utr = `UPI${(1000000000 + i).toString()}`;
     } else if (i % 3 === 1) {
-      status = InvoiceStatus.PAID;
-      utr = `NEFT${(2000000000 + i).toString()}`;
+      status = InvoiceStatus.PARTIAL; // Changed to PARTIAL for variety
+    } else if (i % 3 === 2) {
+      status = InvoiceStatus.OVERDUE; // Changed to OVERDUE for variety
     } else {
       status = InvoiceStatus.PENDING;
     }
@@ -1497,6 +1500,47 @@ function generateInvoices(): DummyInvoice[] {
 }
 
 export const DUMMY_INVOICES: DummyInvoice[] = generateInvoices();
+
+// --- Payment Transactions ---
+export interface DummyPaymentTransaction {
+  id: string;
+  invoice_id: string;
+  student_id: string;
+  amount: number;
+  mode: PaymentMode;
+  date: Date;
+  reference_no: string;
+  status: TransactionStatus;
+  school_id: string;
+}
+
+function generatePaymentTransactions(): DummyPaymentTransaction[] {
+  const transactions: DummyPaymentTransaction[] = [];
+  let txnIndex = 0;
+
+  for (const invoice of DUMMY_INVOICES) {
+    if (invoice.status === InvoiceStatus.PAID || invoice.status === InvoiceStatus.PARTIAL) {
+      txnIndex++;
+      const amount = invoice.status === InvoiceStatus.PAID ? invoice.base_amount - invoice.discount_amount : 5000;
+
+      transactions.push({
+        id: `txn_${txnIndex.toString().padStart(4, '0')}`,
+        invoice_id: invoice.id,
+        student_id: invoice.student_id,
+        amount: amount,
+        mode: PaymentMode.UPI,
+        date: new Date('2025-04-10'),
+        reference_no: invoice.utr || `TXN${Date.now()}${txnIndex}`,
+        status: TransactionStatus.VERIFIED,
+        school_id: SCHOOL_ID
+      });
+    }
+  }
+
+  return transactions;
+}
+
+export const DUMMY_PAYMENT_TRANSACTIONS: DummyPaymentTransaction[] = generatePaymentTransactions();
 
 // --- Timetable (Sample) ---
 export interface DummyTimetable {

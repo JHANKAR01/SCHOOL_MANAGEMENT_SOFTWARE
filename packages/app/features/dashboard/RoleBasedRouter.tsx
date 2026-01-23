@@ -29,7 +29,7 @@ import { LibraryManagement } from '../library/LibraryManagement';
 import { HostelWarden } from '../hostel/HostelWarden';
 
 // Users
-import { ParentDashboard } from './ParentDashboard';
+import { NewParentDashboard } from './NewParentDashboard';
 import { StudentDashboard } from './StudentDashboard';
 
 // Import the new page component
@@ -95,10 +95,10 @@ export const RoleBasedRouter: React.FC<Props> = ({ role, school, activeModule })
 
     // End Users
     case UserRole.PARENT:
-      return <ParentDashboard school={school} activeModule={activeModule} role={role} />;
+      return <NewParentDashboard school={school} activeModule={activeModule} role={role} />;
 
     case UserRole.STUDENT:
-      return <StudentDashboard school={school} activeModule={activeModule} role={role} />;
+      return <StudentDashboard />;
 
     // Fallback for unmapped roles
     default: return (

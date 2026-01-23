@@ -46,6 +46,7 @@ import {
   DUMMY_TIMETABLE,
   DUMMY_BUSES,
   DUMMY_EXPENSES,
+  DUMMY_PAYMENT_TRANSACTIONS, // NEW
 
   DUMMY_HOMEWORK_TEMPLATES, // UPDATED
   DUMMY_LEAVE_BALANCE_TEMPLATES, // NEW
@@ -1110,7 +1111,8 @@ async function main() {
             mode: Math.random() > 0.5 ? 'UPI' : 'BANK_TRANSFER',
             date: transactionDate, // BACKDATED
             remarks: 'Full Payment',
-            reference_no: `TXN${Math.floor(Math.random() * 1000000)}`
+            reference_no: `TXN${Math.floor(Math.random() * 1000000)}`,
+            status: 'VERIFIED'
           }
         });
         await prisma.invoice.update({
@@ -1129,7 +1131,8 @@ async function main() {
             mode: 'CASH',
             date: transactionDate, // BACKDATED
             remarks: 'First Installment',
-            reference_no: `RCPT${Math.floor(Math.random() * 1000000)}`
+            reference_no: `RCPT${Math.floor(Math.random() * 1000000)}`,
+            status: 'VERIFIED'
           }
         });
         await prisma.invoice.update({

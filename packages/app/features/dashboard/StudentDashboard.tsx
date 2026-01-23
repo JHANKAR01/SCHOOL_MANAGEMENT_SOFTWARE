@@ -62,9 +62,9 @@ export const StudentDashboard = () => {
             activeModule={currentModule}
             onModuleChange={setCurrentModule}
             user={profile ? {
-                name: `${profile.first_name} ${profile.last_name}`,
-                email: profile.admission_number,
-                avatar: profile.profile_picture_url || undefined
+                name: profile.name,
+                email: profile.admission_no,
+                avatar: profile.photo_url || undefined
             } : undefined}
         >
             {renderContent()}

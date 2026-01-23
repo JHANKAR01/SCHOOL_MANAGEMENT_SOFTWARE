@@ -18,3 +18,4 @@ export * from './useSyncQueue';
 export * from './useTeacherData';
 export * from './useTransport';
 export * from './useStudentData';  // Student Dashboard hooks
+export * from './useParentData';   // Parent Dashboard hooks

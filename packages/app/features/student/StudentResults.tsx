@@ -40,9 +40,9 @@ export const StudentResults = () => {
 
                                 <View className="flex-row justify-between items-start mb-4 relative z-10">
                                     <View>
-                                        <Text className="text-lg font-bold text-gray-900 dark:text-white">{result.exam_name}</Text>
+                                        <Text className="text-lg font-bold text-gray-900 dark:text-white">{result.exam.name}</Text>
                                         <Text className="text-sm text-gray-500 dark:text-gray-400">
-                                            Published on {new Date(result.published_at).toLocaleDateString()}
+                                            Published on {new Date(result.exam.date).toLocaleDateString()}
                                         </Text>
                                     </View>
                                     <View className="bg-indigo-100 dark:bg-indigo-900/40 px-3 py-1 rounded-full">
@@ -54,13 +54,15 @@ export const StudentResults = () => {
                                     <View>
                                         <Text className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Percentage</Text>
                                         <View className="flex-row items-end gap-1">
-                                            <Text className="text-2xl font-bold text-gray-800 dark:text-white">{result.percentage}%</Text>
+                                            <Text className="text-2xl font-bold text-gray-800 dark:text-white">{result.total_percentage}%</Text>
                                             <TrendingUp className="w-4 h-4 text-emerald-500 mb-1.5" />
                                         </View>
                                     </View>
                                     <View>
                                         <Text className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Total Marks</Text>
-                                        <Text className="text-2xl font-bold text-gray-800 dark:text-white">{result.total_marks}</Text>
+                                        <Text className="text-2xl font-bold text-gray-800 dark:text-white">
+                                            {result.subjects.reduce((acc, sub) => acc + sub.marks_obtained, 0)}
+                                        </Text>
                                     </View>
                                 </View>
 

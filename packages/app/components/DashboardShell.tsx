@@ -3,7 +3,7 @@ import {
     LayoutDashboard, Building2, Database, UserCog, Sun, Moon,
     Menu, X, LogOut, Activity, ChevronDown, User, Settings,
     Bell, Search, ChevronRight, Command, UserPlus,
-    Users, FileText, BookOpen, Calendar, Video
+    Users, FileText, BookOpen, Calendar, Video, Wallet
 } from 'lucide-react';
 import { UserRole } from '../../../types';
 import { useTheme } from '../provider/ThemeProvider';
@@ -11,7 +11,7 @@ import { useTheme } from '../provider/ThemeProvider';
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TYPES & CONFIG
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings' | 'health' | 'flags' | 'admissions' | 'system-admin' | 'approvals' | 'attendance' | 'risk' | 'results' | 'classrooms' | 'substitutions' | 'curriculum' | 'today' | 'marks' | 'homework' | 'classes' | 'leave' | 'live-class' | 'timetable' | 'profile' | 'notifications';
+export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings' | 'health' | 'flags' | 'admissions' | 'system-admin' | 'approvals' | 'attendance' | 'risk' | 'results' | 'classrooms' | 'substitutions' | 'curriculum' | 'today' | 'marks' | 'homework' | 'classes' | 'leave' | 'live-class' | 'timetable' | 'profile' | 'notifications' | 'children' | 'fees';
 
 interface NavigationItem {
     id: Module;
@@ -251,6 +251,17 @@ const Sidebar: React.FC<{
                 { id: 'attendance', label: 'Attendance', icon: Users },
                 { id: 'results', label: 'Results', icon: FileText },
                 { id: 'live-class', label: 'Live Classes', icon: Video },
+                { id: 'notifications', label: 'Notifications', icon: Bell },
+                { id: 'profile', label: 'Profile', icon: User },
+            ];
+        }
+        if (role === 'PARENT') {
+            return [
+                { id: 'children', label: 'My Children', icon: Users },
+                { id: 'fees', label: 'Fees & Payments', icon: Wallet },
+                { id: 'results', label: 'Results', icon: FileText },
+                { id: 'timetable', label: 'Timetable', icon: Calendar },
+                { id: 'attendance', label: 'Attendance', icon: Calendar },
                 { id: 'notifications', label: 'Notifications', icon: Bell },
                 { id: 'profile', label: 'Profile', icon: User },
             ];

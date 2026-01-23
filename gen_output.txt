@@ -1,0 +1,19 @@
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from server\prisma\schema.prisma.
+warn Preview feature "driverAdapters" is deprecated. The functionality can be used without specifying it as a preview feature.
+warn Preview feature "multiSchema" is deprecated. The functionality can be used without specifying it as a preview feature.
+Error: Prisma schema validation - (get-dmmf wasm)
+Error code: P1012
+[1;91merror[0m: [1mError validating field `school` in model `Notification`: The relation field `school` on model `Notification` is missing an opposite relation field on the model `School`. Either run `prisma format` or add it manually.[0m
+  [1;94m-->[0m  [4mserver\prisma\schema.prisma:1433[0m
+[1;94m   | [0m
+[1;94m1432 | [0m
+[1;94m1433 | [0m  [1;91mschool      School   @relation(fields: [school_id], references: [id])[0m
+[1;94m1434 | [0m  user        User     @relation(fields: [user_id], references: [id])
+[1;94m   | [0m
+
+Validation Error Count: 1
+[Context: getDmmf]
+
+Prisma CLI Version : 7.2.0

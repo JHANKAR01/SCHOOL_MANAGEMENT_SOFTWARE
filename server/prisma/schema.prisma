@@ -75,6 +75,9 @@ model School {
   // AUDIT RELATIONS (P1.4)
   auditLogs AuditLog[]
 
+  // NOTIFICATION RELATIONS
+  notifications Notification[]
+
   // TEACHER DASHBOARD (Leave Balances)
   leaveBalances LeaveBalance[]
 
@@ -212,6 +215,10 @@ model User {
   created_at    DateTime @default(now()) @db.Timestamptz(6)
   updated_at    DateTime @updatedAt
 
+  // PARENT DASHBOARD: Terms acceptance and push notifications
+  terms_accepted_at DateTime? @db.Timestamptz(6)  // null = must accept terms
+  fcm_token         String?                       // Firebase Cloud Messaging token
+
   // Existing relations
   documents                                             IdentityDocument[]
   LeaveApplication                                      LeaveApplication[]
@@ -231,7 +238,13 @@ model User {
   createdAnnouncements Announcement[]
   auditLogs        AuditLog[]
 
+  // PARENT DASHBOARD: Payment verification relation
+  verifiedTransactions PaymentTransaction[] @relation("TransactionVerifier")
+  requestedLeaves      LeaveApplication[]   @relation("LeaveRequester")
+  notifications        Notification[]
+
   @@index([school_id])
+  @@index([phone])  // For parent-student auto-linking
   @@schema("schoolmanagementsystem")
 }
 
@@ -535,6 +548,10 @@ model ParentProfile {
   // Emergency
   is_emergency_contact Boolean @default(true)
 
+  // Preferences (Phase 6 & 21)
+  language_preference String  @default("en")
+  notification_prefs  Json    @default("{}")
+
   created_at DateTime @default(now()) @db.Timestamptz(6)
   updated_at DateTime @updatedAt
 
@@ -554,6 +571,9 @@ model ParentStudent {
   is_primary  Boolean @default(false)
   can_pickup  Boolean @default(true) // Authorized for pickup
   has_custody Boolean @default(true) // Legal custody
+
+  // PARENT DASHBOARD: Extended permissions for pickup delegates, notification prefs
+  permissions_json Json? @default("{}")  // { "pickup_delegates": [...], "notification_prefs": {...} }
 
   parent  User    @relation(fields: [parent_id], references: [id], onDelete: Cascade)
   student Student @relation(fields: [student_id], references: [id], onDelete: Cascade)
@@ -1070,25 +1090,34 @@ model InvoiceItem {
 }
 
 model PaymentTransaction {
-  id               String        @id @default(cuid())
+  id               String            @id @default(cuid())
   invoice_id       String
   school_id        String
-  student_id       String?       // Denormalized for speed
+  student_id       String?           // Denormalized for speed
   
   amount           Float
   mode             PaymentMode
-  date             DateTime      @default(now()) @db.Timestamptz(6)
-  reference_no     String?       // UTR / Cheque No
+  date             DateTime          @default(now()) @db.Timestamptz(6)
+  reference_no     String?           // UTR / Cheque No
   remarks          String?
+  
+  // PARENT DASHBOARD: UTR verification workflow
+  status           TransactionStatus @default(PENDING)
+  proof_url        String?           // Screenshot URL uploaded by parent
+  verification_note String?          // Reason for rejection if any
+  verified_by      String?           // User ID of accountant who verified
+  verified_at      DateTime?         @db.Timestamptz(6)
   
   invoice          Invoice       @relation(fields: [invoice_id], references: [id])
   school           School        @relation(fields: [school_id], references: [id])
+  verifier         User?         @relation("TransactionVerifier", fields: [verified_by], references: [id])
 
   created_at       DateTime      @default(now()) @db.Timestamptz(6)
 
   @@index([invoice_id])
   @@index([school_id])
   @@index([date])                // For "Daily Collection Report"
+  @@index([status])              // For "Pending Verification" queue
   @@schema("schoolmanagementsystem")
 }
 
@@ -1301,9 +1330,15 @@ model LeaveApplication {
   reason     String?
   status     LeaveStatus? @default(PENDING)
   created_at DateTime?    @default(now()) @db.Timestamptz(6)
+
+  // PARENT DASHBOARD: Parent-submitted leave requests
+  requested_by   String?  // Parent user_id if parent-submitted
+  attachment_url String?  // Optional supporting document
+
   School     School       @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   User       User?        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   Student    Student?     @relation(fields: [student_id], references: [id], onDelete: SetNull)
+  Requester  User?        @relation("LeaveRequester", fields: [requested_by], references: [id])
 
   @@index([school_id])
   @@index([user_id])     // Staff's leave history
@@ -1384,6 +1419,24 @@ model Announcement {
   School       School    @relation(fields: [school_id], references: [id], onDelete: Cascade)
   author       User      @relation(fields: [author_id], references: [id])
   
+  @@index([school_id])
+  @@schema("schoolmanagementsystem")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  school_id   String
+  user_id     String
+  title       String
+  message     String
+  is_read     Boolean  @default(false)
+  type        String   @default("GENERAL") // "ANNOUNCEMENT", "ALERT", "EXAM", "FEE"
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  school      School   @relation(fields: [school_id], references: [id])
+  user        User     @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
   @@index([school_id])
   @@schema("schoolmanagementsystem")
 }
@@ -1494,6 +1547,16 @@ enum PaymentMode {
   BANK_TRANSFER
   CHEQUE
   DEMAND_DRAFT
+
+  @@schema("schoolmanagementsystem")
+}
+
+/// PARENT DASHBOARD: Transaction verification status for UTR workflow
+enum TransactionStatus {
+  PENDING           // Parent submitted UTR, awaiting verification
+  UNDER_REVIEW      // Accountant is reviewing
+  VERIFIED          // Payment confirmed
+  REJECTED          // Payment rejected (invalid UTR, amount mismatch)
 
   @@schema("schoolmanagementsystem")
 }
