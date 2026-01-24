@@ -15,6 +15,7 @@ import { PrincipalDashboard } from './packages/app/features/academics/PrincipalD
 import { VicePrincipalDashboard } from './packages/app/features/academics/VicePrincipalDashboard';
 import { NewTeacherDashboard } from './packages/app/features/dashboard/NewTeacherDashboard';
 import { NewParentDashboard } from './packages/app/features/dashboard/NewParentDashboard';
+import { NewReceptionDashboard } from './packages/app/features/dashboard/NewReceptionDashboard';
 import { StudentDashboard } from './packages/app/features/dashboard/StudentDashboard';
 import { View, Text, TouchableOpacity, SafeAreaView, Platform, ScrollView, StatusBar } from 'react-native';
 import { Menu, LogOut, Zap, Shield } from 'lucide-react';
@@ -320,6 +321,17 @@ const App: React.FC = () => {
                           activeModule="children"
                           role={UserRole.PARENT}
                         />
+                      </div>
+                    );
+                  }
+                }
+
+                // 1.10 Receptionist View (Web Only - NewReceptionDashboard has its own DashboardShell)
+                if (currentUser?.role === UserRole.RECEPTIONIST) {
+                  if (Platform.OS === 'web') {
+                    return (
+                      <div className="relative">
+                        <NewReceptionDashboard />
                       </div>
                     );
                   }

@@ -245,6 +245,7 @@ model User {
   reportedIncidents    StudentIncident[]
   requestedApprovals   ApprovalRequest[]    @relation("RequestedApprovals")
   decidedApprovals     ApprovalRequest[]    @relation("DecidedApprovals")
+  hostedVisitors       Visitor[]            @relation("VisitorHost")
 
   @@index([school_id])
   @@index([phone])  // For parent-student auto-linking
@@ -1255,13 +1256,37 @@ model Visitor {
   school_id  String
   name       String
   student_id String?
-  purpose    String
+  purpose    String         // "Parent Meeting", "Vendor Delivery", "Interview"
   status     VisitorStatus? @default(WAITING)
   time       DateTime?      @default(now()) @db.Timestamptz(6)
+  
+  // NEW FIELDS (Receptionist Dashboard)
+  phone        String?   @db.VarChar(20)
+  email        String?
+  vehicle_no   String?   @db.VarChar(20)
+  
+  // ID Verification
+  id_type      String?   // "AADHAAR", "PAN", "DL"
+  id_masked    String?   // "XXXX-1234"
+  photo_url    String?   // S3 URL
+  
+  // Logistics
+  host_user_id String?   // Link to Staff (User)
+  expected_out DateTime? @db.Timestamptz(6)
+  exit_time    DateTime? @db.Timestamptz(6) // Actual exit
+  
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime  @updatedAt
+
   School     School         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   Student    Student?       @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  host       User?          @relation("VisitorHost", fields: [host_user_id], references: [id])
 
   @@index([school_id])
+  @@index([phone])
+  @@index([vehicle_no])
+  @@index([host_user_id])
+  @@index([status])
   @@schema("schoolmanagementsystem")
 }
 

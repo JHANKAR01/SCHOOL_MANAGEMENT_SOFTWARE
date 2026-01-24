@@ -10,10 +10,15 @@ import client from '../api/client';
 export interface Visitor {
     id: number;
     name: string;
-    student?: string;
+    student_id?: string;
     purpose: string;
     time: string;
     status: 'WAITING' | 'APPROVED' | 'COMPLETED';
+    phone?: string;
+    vehicle_no?: string;
+    host_user_id?: string;
+    photo_url?: string;
+    visit_duration?: string;
 }
 
 export interface Ticket {

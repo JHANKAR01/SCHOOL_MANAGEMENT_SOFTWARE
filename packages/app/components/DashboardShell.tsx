@@ -11,7 +11,7 @@ import { useTheme } from '../provider/ThemeProvider';
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TYPES & CONFIG
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings' | 'health' | 'flags' | 'admissions' | 'system-admin' | 'approvals' | 'attendance' | 'risk' | 'results' | 'classrooms' | 'substitutions' | 'curriculum' | 'today' | 'marks' | 'homework' | 'classes' | 'leave' | 'live-class' | 'timetable' | 'profile' | 'notifications' | 'children' | 'fees';
+export type Module = 'command' | 'tenants' | 'explorer' | 'ghost' | 'overview' | 'academics' | 'staff' | 'students' | 'finance' | 'settings' | 'health' | 'flags' | 'admissions' | 'system-admin' | 'approvals' | 'attendance' | 'risk' | 'results' | 'classrooms' | 'substitutions' | 'curriculum' | 'today' | 'marks' | 'homework' | 'classes' | 'leave' | 'live-class' | 'timetable' | 'profile' | 'notifications' | 'children' | 'fees' | 'dashboard' | 'visitors' | 'parcels';
 
 interface NavigationItem {
     id: Module;
@@ -264,6 +264,14 @@ const Sidebar: React.FC<{
                 { id: 'attendance', label: 'Attendance', icon: Calendar },
                 { id: 'notifications', label: 'Notifications', icon: Bell },
                 { id: 'profile', label: 'Profile', icon: User },
+            ];
+        }
+        if (role === 'RECEPTIONIST') {
+            return [
+                { id: 'dashboard', label: 'Console', icon: LayoutDashboard },
+                { id: 'visitors', label: 'Visitor Log', icon: Users },
+                { id: 'parcels', label: 'Parcels', icon: Wallet }, // Using Wallet icon for now as Package icon might need import
+                { id: 'settings', label: 'Settings', icon: Settings },
             ];
         }
         return [{ id: 'overview', label: 'Overview', icon: LayoutDashboard }];

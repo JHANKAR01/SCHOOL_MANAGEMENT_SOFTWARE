@@ -17,6 +17,7 @@ import { ExamCellDashboard } from '../academics/ExamCellDashboard';
 import { SecurityDashboard } from '../admin/SecurityDashboard';
 import { EstateDashboard } from '../admin/EstateDashboard';
 import { ReceptionDashboard } from '../admin/ReceptionDashboard';
+import { NewReceptionDashboard } from './NewReceptionDashboard';
 import { InventoryDashboard } from '../inventory/InventoryDashboard';
 import { InfirmaryDashboard } from '../health/InfirmaryDashboard';
 import { AdmissionsDashboard } from '../admissions/AdmissionsDashboard';
@@ -81,7 +82,7 @@ export const RoleBasedRouter: React.FC<Props> = ({ role, school, activeModule })
     // Operations & Admin
     case UserRole.SECURITY_HEAD: return <SecurityDashboard />;
     case UserRole.ESTATE_MANAGER: return <EstateDashboard />;
-    case UserRole.RECEPTIONIST: return <ReceptionDashboard />;
+    case UserRole.RECEPTIONIST: return <NewReceptionDashboard />;
     case UserRole.ADMISSIONS_OFFICER: return <AdmissionsDashboard />;
     case UserRole.INVENTORY_MANAGER: return <InventoryDashboard />;
     case UserRole.NURSE: return <InfirmaryDashboard />;
