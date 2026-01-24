@@ -5,7 +5,7 @@
 import React, { useState, ReactNode } from 'react';
 import { View, Text, Pressable, ScrollView, SafeAreaView, StyleSheet } from 'react-native';
 import { Menu, X, Home, Users, BookOpen, Settings, LogOut } from 'lucide-react';
-import { useAuth } from '../provider/AuthProvider';
+import { useAuth } from '../provider/auth-context';
 import { useTheme } from '../provider/ThemeProvider';
 
 interface DashboardShellProps {
@@ -95,7 +95,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({ children, role }
                     {/* Logout */}
                     <View style={styles.logoutSection}>
                         <Text style={[styles.userName, { color: textColor }]}>
-                            {currentUser?.email || 'User'}
+                            {currentUser?.name || 'User'}
                         </Text>
                         <Pressable onPress={handleLogout} style={styles.logoutButton}>
                             <LogOut size={18} color="#ef4444" />

@@ -242,6 +242,9 @@ model User {
   verifiedTransactions PaymentTransaction[] @relation("TransactionVerifier")
   requestedLeaves      LeaveApplication[]   @relation("LeaveRequester")
   notifications        Notification[]
+  reportedIncidents    StudentIncident[]
+  requestedApprovals   ApprovalRequest[]    @relation("RequestedApprovals")
+  decidedApprovals     ApprovalRequest[]    @relation("DecidedApprovals")
 
   @@index([school_id])
   @@index([phone])  // For parent-student auto-linking
@@ -342,6 +345,7 @@ model Student {
   // NEW: Student Dashboard Relations
   homeworkSubmissions HomeworkSubmission[]
   leaveApplications   LeaveApplication[]
+  incidents           StudentIncident[]
 
   @@unique([school_id, admission_no])
   @@index([school_id])
@@ -632,21 +636,22 @@ model Attendance {
 // ACADEMIC - EXAMS & RESULTS (NORMALIZED)
 // ============================================================================
 
+
 model Exam {
-  id         String    @id
-  school_id  String
-  name       String
-  type       ExamType? @default(INTERNAL)
-  start_date DateTime  @db.Timestamptz(6)
-  end_date   DateTime  @db.Timestamptz(6)
-  created_at DateTime? @default(now()) @db.Timestamptz(6)
-  School     School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  results    Result[]
+  id                  String    @id
+  school_id           String
+  name                String
+  type                ExamType? @default(INTERNAL)
+  start_date          DateTime  @db.Timestamptz(6)
+  end_date            DateTime  @db.Timestamptz(6)
+  submission_deadline DateTime? @db.Timestamptz(6)
+  created_at          DateTime? @default(now()) @db.Timestamptz(6)
+  School              School    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  results             Result[]
 
   @@index([school_id])
   @@schema("schoolmanagementsystem")
 }
-
 /// Result header - subject_marks JSON removed, now uses ResultMark table
 model Result {
   id               String    @id
@@ -1711,6 +1716,25 @@ enum SyllabusStatus {
   @@schema("schoolmanagementsystem")
 }
 
+
+
+enum IncidentSeverity {
+  MINOR
+  MAJOR
+  CRITICAL
+
+  @@schema("schoolmanagementsystem")
+}
+
+enum IncidentStatus {
+  REPORTED
+  UNDER_REVIEW
+  RESOLVED
+  ESCALATED
+
+  @@schema("schoolmanagementsystem")
+}
+
 // ============================================================================
 // AUDIT LOG (P1.4)
 // ============================================================================
@@ -1723,6 +1747,8 @@ model AuditLog {
   target_type String?  // "Student", "Invoice", "User"
   target_id   String?
   metadata    Json?    @default("{}")
+  old_value   Json?
+  new_value   Json?
   ip_address  String?
   created_at  DateTime @default(now()) @db.Timestamptz(6)
 
@@ -1733,5 +1759,63 @@ model AuditLog {
   @@index([user_id])
   @@index([created_at])
   @@index([action])
+  @@schema("schoolmanagementsystem")
+}
+
+// ============================================================================
+// VP DASHBOARD & OPERATIONS
+// ============================================================================
+
+model StudentIncident {
+  id              String   @id @default(uuid())
+  student_id      String
+  school_id       String
+  reported_by_id  String   // Teacher/Staff
+  severity        IncidentSeverity // MINOR, MAJOR, CRITICAL
+  description     String
+  confidential_notes String? // Protected via field-level access
+  status          IncidentStatus // REPORTED, UNDER_REVIEW, RESOLVED, ESCALATED
+  action_taken    String?
+  created_at      DateTime @default(now())
+  
+  // Relations
+  student         Student  @relation(fields: [student_id], references: [id])
+  reporter        User     @relation(fields: [reported_by_id], references: [id])
+  
+  @@index([school_id])
+  @@index([status])
+  @@schema("schoolmanagementsystem")
+}
+
+model ApprovalRequest {
+  id              String   @id @default(uuid())
+  school_id       String
+  
+  // What is being approved?
+  resource_type   String   // e.g., "RESULT_BATCH", "LEAVE_REQUEST", "DEMASK_PII"
+  resource_id     String   // ID of the target object (or composite key)
+  
+  // Context for the approver (avoiding heavy joins)
+  metadata        Json?    // e.g. { "teacherName": "...", "subject": "Math", "diffSummary": "..." }
+  
+  // Workflow
+  assigned_role   String   // "VICE_PRINCIPAL", "PRINCIPAL"
+  assigned_user_id String? // Optional: if delegated to a specific person
+  status          String   // "PENDING", "APPROVED", "REJECTED", "ESCALATED"
+  
+  // Requester Info
+  requester_id    String
+  requester       User     @relation("RequestedApprovals", fields: [requester_id], references: [id])
+  
+  // Decision Info
+  decision_by_id  String?
+  decision_by     User?    @relation("DecidedApprovals", fields: [decision_by_id], references: [id])
+  decision_at     DateTime?
+  decision_comment String?  // "Rejection reason" or "Edit notes"
+  
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@index([school_id, status, assigned_role])
   @@schema("schoolmanagementsystem")
 }

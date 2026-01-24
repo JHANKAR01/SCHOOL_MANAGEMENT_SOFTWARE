@@ -1,58 +1,127 @@
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useLanguage } from '../../provider/language-context';
+import { VicePrincipalLayout } from './VicePrincipalLayout';
+import { VicePrincipalStats } from './VicePrincipalStats';
+import { ApprovalsModule } from './ApprovalsModule';
+import { SubstitutionManager } from './SubstitutionManager';
+import { IncidentQueue } from './IncidentQueue';
+import { TeacherPerformanceTile } from './TeacherPerformanceTile';
 
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { SovereignTable, PageHeader, StatCard, SovereignBadge } from '../../components/SovereignComponents';
-import { Row, Col } from '../../components/Layout';
-import { Calendar, Users, AlertTriangle } from 'lucide-react';
-
-const MOCK_SUBSTITUTIONS = [
-  { id: 1, absentTeacher: 'Mrs. R. Iyer', period: 3, class: 'VIII-B', subject: 'History', assignedTo: 'Mr. T. Das (Free)' },
-  { id: 2, absentTeacher: 'Mr. P. Singh', period: 5, class: 'X-A', subject: 'PT', assignedTo: 'Library' },
-  { id: 3, absentTeacher: 'Ms. K. Sharma', period: 1, class: 'XII-Sci', subject: 'Physics', assignedTo: 'Self Study' },
-];
+type Tab = 'overview' | 'approvals' | 'substitutions' | 'incidents' | 'performance';
 
 export const VicePrincipalDashboard = () => {
-  const { data: substitutions, isLoading } = useQuery({
-    queryKey: ['substitutions'],
-    queryFn: async () => {
-      // Future: SOVEREIGN_GENESIS_DATA.substitutions
-      return MOCK_SUBSTITUTIONS;
-    }
-  });
+  const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
 
-  const columns = [
-    { header: "Period", accessor: "period" },
-    { header: "Class", accessor: "class" },
-    { header: "Subject", accessor: "subject" },
-    { header: "Absent Teacher", accessor: "absentTeacher" },
-    { header: "Assigned To", accessor: (row: any) => <span className="font-bold text-indigo-600">{row.assignedTo}</span> },
-  ];
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return (
+          <View>
+            <VicePrincipalStats />
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.quickActions}>
+              <TouchableOpacity style={styles.actionButton} onPress={() => setActiveTab('approvals')}>
+                <Text style={styles.actionText}>Review Approvals</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionButton} onPress={() => setActiveTab('substitutions')}>
+                <Text style={styles.actionText}>Manage Substitutions</Text>
+              </TouchableOpacity>
+            </View>
+            <TeacherPerformanceTile />
+          </View>
+        );
+      case 'approvals':
+        return <ApprovalsModule />;
+      case 'substitutions':
+        return <SubstitutionManager />;
+      case 'incidents':
+        return <IncidentQueue />;
+      case 'performance':
+        return <TeacherPerformanceTile />;
+      default:
+        return null;
+    }
+  };
+
+  const TabButton = ({ id, label }: { id: Tab, label: string }) => (
+    <TouchableOpacity
+      style={[styles.tab, activeTab === id && styles.activeTab]}
+      onPress={() => setActiveTab(id)}
+    >
+      <Text style={[styles.tabText, activeTab === id && styles.activeTabText]}>{label}</Text>
+    </TouchableOpacity>
+  );
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <PageHeader title="Vice Principal Operations" subtitle="Daily Academic Logistics" />
+    <VicePrincipalLayout activeTab={activeTab}>
+      <View style={styles.tabsContainer}>
+        <TabButton id="overview" label={t('vp_dashboard.tabs.overview')} />
+        <TabButton id="approvals" label={t('vp_dashboard.tabs.approvals')} />
+        <TabButton id="substitutions" label={t('vp_dashboard.tabs.substitutions')} />
+        <TabButton id="incidents" label={t('vp_dashboard.tabs.incidents')} />
+      </View>
 
-      <Row className="mb-8">
-        <Col className="w-full md:w-1/3">
-          <StatCard title="Staff on Leave" value="3" icon={<Users className="w-5 h-5" />} trend={{ value: 2, isPositive: false }} />
-        </Col>
-        <Col className="w-full md:w-1/3">
-          <StatCard title="Free Periods" value="12" icon={<Calendar className="w-5 h-5" />} subtitle="Available for Sub" />
-        </Col>
-        <Col className="w-full md:w-1/3">
-          <StatCard title="Critical Gaps" value="0" icon={<AlertTriangle className="w-5 h-5" />} subtitle="All classes covered" />
-        </Col>
-      </Row>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-          <h2 className="font-bold text-gray-700">Today's Substitution Plan</h2>
-          <SovereignBadge status="success">Auto-Generated</SovereignBadge>
-        </div>
-        {isLoading ? <div className="p-8 text-center">Loading Schedules...</div> :
-          <SovereignTable data={substitutions || []} columns={columns} />
-        }
-      </div>
-    </div>
+      <View style={styles.contentArea}>
+        {renderContent()}
+      </View>
+    </VicePrincipalLayout>
   );
 };
+
+const styles = StyleSheet.create({
+  tabsContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    paddingBottom: 8,
+    flexWrap: 'wrap',
+    gap: 8
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5'
+  },
+  activeTab: {
+    backgroundColor: '#1976d2',
+  },
+  tabText: {
+    color: '#666',
+    fontSize: 14,
+    fontWeight: '500'
+  },
+  activeTabText: {
+    color: 'white',
+    fontWeight: 'bold'
+  },
+  contentArea: {
+    flex: 1
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    marginTop: 8
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20
+  },
+  actionButton: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: 'center',
+    elevation: 2
+  },
+  actionText: {
+    color: '#1976d2',
+    fontWeight: 'bold'
+  }
+});

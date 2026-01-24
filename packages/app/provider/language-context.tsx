@@ -1,103 +1,108 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { LanguageCode } from '../../../types';
 import { Platform } from 'react-native';
+import { en as enTranslations } from '../translations/en';
+import { hi as hiTranslations } from '../translations/hi';
 
-// Embedded Dictionaries to avoid network calls for translations
-const DICTIONARIES: Record<LanguageCode, Record<string, string>> = {
+// Embedded Dictionaries + External Translations key merging
+const DICTIONARIES: Record<LanguageCode, Record<string, any>> = {
   en: {
-    "welcome": "Welcome",
-    "dashboard": "Dashboard",
-    "attendance": "Attendance",
-    "fees": "Fees",
-    "transport": "Transport",
-    "library": "Library",
-    "hostel": "Hostel",
-    "pay_now": "Pay Now",
-    "sync_status": "Sync Status",
-    "present": "Present",
-    "absent": "Absent",
-    "low_data": "Low Data Mode",
-    "mark": "Mark",
-    "route": "Route",
-    "logout": "Logout",
-    // Teacher Dashboard Keys
-    "today": "Today",
-    "my_classes": "My Classes",
-    "marks_entry": "Marks Entry",
-    "homework": "Homework",
-    "leave": "Leave",
-    "my_classes_today": "My Classes Today",
-    "period": "Period",
-    "submit": "Submit",
-    "save_draft": "Save Draft",
-    "submit_for_approval": "Submit for Approval",
-    "all_present": "All Present",
-    "queued": "Queued",
-    "synced": "Synced",
-    "offline": "Offline",
-    "online": "Online",
-    "pending_sync": "Pending Sync",
-    "start_live_class": "Start Live Class",
-    "end_live_class": "End Live Class",
-    "apply_leave": "Apply Leave",
-    "leave_balance": "Leave Balance",
-    "sick_leave": "Sick Leave",
-    "casual_leave": "Casual Leave",
-    "earned_leave": "Earned Leave",
-    "copy_to_class": "Copy to Class",
-    "due_date": "Due Date",
-    "student_roster": "Student Roster",
-    "not_started": "Not Started",
-    "in_progress": "In Progress",
-    "submitted": "Submitted"
+    ...enTranslations, ...{
+      "welcome": "Welcome",
+      "dashboard": "Dashboard",
+      "attendance": "Attendance",
+      "fees": "Fees",
+      "transport": "Transport",
+      "library": "Library",
+      "hostel": "Hostel",
+      "pay_now": "Pay Now",
+      "sync_status": "Sync Status",
+      "present": "Present",
+      "absent": "Absent",
+      "low_data": "Low Data Mode",
+      "mark": "Mark",
+      "route": "Route",
+      "logout": "Logout",
+      // Teacher Dashboard Keys
+      "today": "Today",
+      "my_classes": "My Classes",
+      "marks_entry": "Marks Entry",
+      "homework": "Homework",
+      "leave": "Leave",
+      "my_classes_today": "My Classes Today",
+      "period": "Period",
+      "submit": "Submit",
+      "save_draft": "Save Draft",
+      "submit_for_approval": "Submit for Approval",
+      "all_present": "All Present",
+      "queued": "Queued",
+      "synced": "Synced",
+      "offline": "Offline",
+      "online": "Online",
+      "pending_sync": "Pending Sync",
+      "start_live_class": "Start Live Class",
+      "end_live_class": "End Live Class",
+      "apply_leave": "Apply Leave",
+      "leave_balance": "Leave Balance",
+      "sick_leave": "Sick Leave",
+      "casual_leave": "Casual Leave",
+      "earned_leave": "Earned Leave",
+      "copy_to_class": "Copy to Class",
+      "due_date": "Due Date",
+      "student_roster": "Student Roster",
+      "not_started": "Not Started",
+      "in_progress": "In Progress",
+      "submitted": "Submitted"
+    }
   },
   hi: {
-    "welcome": "स्वागत हे",
-    "dashboard": "डैशबोर्ड",
-    "attendance": "उपस्थिति",
-    "fees": "शुल्क",
-    "transport": "परिवहन",
-    "library": "पुस्तकालय",
-    "hostel": "छात्रावास",
-    "pay_now": "अभी भुगतान करें",
-    "sync_status": "सिंक स्थिति",
-    "present": "उपस्थित",
-    "absent": "अनुपस्थित",
-    "low_data": "लो डेटा मोड",
-    "mark": "चिह्नित करें",
-    "route": "रूट",
-    "logout": "लॉग आउट",
-    // Teacher Dashboard Keys
-    "today": "आज",
-    "my_classes": "मेरी कक्षाएँ",
-    "marks_entry": "अंक प्रविष्टि",
-    "homework": "गृहकार्य",
-    "leave": "छुट्टी",
-    "my_classes_today": "आज की कक्षाएँ",
-    "period": "कालांश",
-    "submit": "जमा करें",
-    "save_draft": "ड्राफ्ट सहेजें",
-    "submit_for_approval": "अनुमोदन के लिए भेजें",
-    "all_present": "सभी उपस्थित",
-    "queued": "कतार में",
-    "synced": "सिंक हो गया",
-    "offline": "ऑफ़लाइन",
-    "online": "ऑनलाइन",
-    "pending_sync": "सिंक बाकी है",
-    "start_live_class": "लाइव क्लास शुरू करें",
-    "end_live_class": "लाइव क्लास समाप्त करें",
-    "apply_leave": "छुट्टी के लिए आवेदन करें",
-    "leave_balance": "छुट्टी शेष",
-    "sick_leave": "बीमारी की छुट्टी",
-    "casual_leave": "आकस्मिक छुट्टी",
-    "earned_leave": "अर्जित छुट्टी",
-    "copy_to_class": "कक्षा में कॉपी करें",
-    "due_date": "नियत तारीख",
-    "student_roster": "छात्र सूची",
-    "not_started": "शुरू नहीं हुआ",
-    "in_progress": "प्रगति पर है",
-    "submitted": "जमा किया गया"
+    ...hiTranslations, ...{
+      "welcome": "स्वागत हे",
+      "dashboard": "डैशबोर्ड",
+      "attendance": "उपस्थिति",
+      "fees": "शुल्क",
+      "transport": "परिवहन",
+      "library": "पुस्तकालय",
+      "hostel": "छात्रावास",
+      "pay_now": "अभी भुगतान करें",
+      "sync_status": "सिंक स्थिति",
+      "present": "उपस्थित",
+      "absent": "अनुपस्थित",
+      "low_data": "लो डेटा मोड",
+      "mark": "चिह्नित करें",
+      "route": "रूट",
+      "logout": "लॉग आउट",
+      // Teacher Dashboard Keys
+      "today": "आज",
+      "my_classes": "मेरी कक्षाएँ",
+      "marks_entry": "अंक प्रविष्टि",
+      "homework": "गृहकार्य",
+      "leave": "छुट्टी",
+      "my_classes_today": "आज की कक्षाएँ",
+      "period": "कालांश",
+      "submit": "जमा करें",
+      "save_draft": "ड्राफ्ट सहेजें",
+      "submit_for_approval": "अनुमोदन के लिए भेजें",
+      "all_present": "सभी उपस्थित",
+      "queued": "कतार में",
+      "synced": "सिंक हो गया",
+      "offline": "ऑफ़लाइन",
+      "online": "ऑनलाइन",
+      "pending_sync": "सिंक बाकी है",
+      "start_live_class": "लाइव क्लास शुरू करें",
+      "end_live_class": "लाइव क्लास समाप्त करें",
+      "apply_leave": "छुट्टी के लिए आवेदन करें",
+      "leave_balance": "छुट्टी शेष",
+      "sick_leave": "बीमारी की छुट्टी",
+      "casual_leave": "आकस्मिक छुट्टी",
+      "earned_leave": "अर्जित छुट्टी",
+      "copy_to_class": "कक्षा में कॉपी करें",
+      "due_date": "नियत तारीख",
+      "student_roster": "छात्र सूची",
+      "not_started": "शुरू नहीं हुआ",
+      "in_progress": "प्रगति पर है",
+      "submitted": "जमा किया गया"
+    }
   },
   mr: {
     "welcome": "स्वागत आहे",
@@ -151,7 +156,8 @@ const DICTIONARIES: Record<LanguageCode, Record<string, string>> = {
 interface LanguageContextType {
   language: LanguageCode;
   setLanguage: (lang: LanguageCode) => void;
-  t: (key: string) => string;
+  // Support nested keys or flat keys, but simple string return
+  t: (key: string) => any;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -177,7 +183,37 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const t = (key: string) => {
-    return DICTIONARIES[language][key] || DICTIONARIES['en'][key] || key;
+    // Basic dot notation support (e.g. "vp_dashboard.stats.pending_approvals")
+    const keys = key.split('.');
+    let value = DICTIONARIES[language];
+
+    // Fallback if top level missing
+    if (!value) value = DICTIONARIES['en'];
+
+    for (const k of keys) {
+      if (value && typeof value === 'object') {
+        value = value[k];
+      } else {
+        value = undefined;
+        break;
+      }
+    }
+
+    // Fallback to English if missing in current lang
+    if (value === undefined && language !== 'en') {
+      let enValue = DICTIONARIES['en'];
+      for (const k of keys) {
+        if (enValue && typeof enValue === 'object') {
+          enValue = enValue[k];
+        } else {
+          enValue = undefined;
+          break;
+        }
+      }
+      value = enValue;
+    }
+
+    return value || key;
   };
 
   return (
@@ -194,3 +230,6 @@ export const useTranslation = () => {
   }
   return context;
 };
+
+// Alias for compatibility with new code
+export const useLanguage = useTranslation;
