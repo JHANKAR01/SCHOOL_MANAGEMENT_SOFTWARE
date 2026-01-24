@@ -12,6 +12,7 @@ import { ThemeProvider } from './packages/app/provider/ThemeProvider';
 import { useLowDataMode } from './packages/hooks/useLowDataMode';
 import SchoolAdminDashboard from './apps/web/pages/school-admin/dashboard';
 import { PrincipalDashboard } from './packages/app/features/academics/PrincipalDashboard';
+import { VicePrincipalDashboard } from './packages/app/features/academics/VicePrincipalDashboard';
 import { NewTeacherDashboard } from './packages/app/features/dashboard/NewTeacherDashboard';
 import { NewParentDashboard } from './packages/app/features/dashboard/NewParentDashboard';
 import { StudentDashboard } from './packages/app/features/dashboard/StudentDashboard';
@@ -273,6 +274,17 @@ const App: React.FC = () => {
                         <PrincipalDashboard />
                       </div>
                     );
+                  }
+
+                  // 1.7 Vice Principal View (Web Only - DashboardShell managed)
+                  if (currentUser?.role === UserRole.VICE_PRINCIPAL) {
+                    if (Platform.OS === 'web') {
+                      return (
+                        <div className="relative">
+                          <VicePrincipalDashboard />
+                        </div>
+                      );
+                    }
                   }
                 }
 
