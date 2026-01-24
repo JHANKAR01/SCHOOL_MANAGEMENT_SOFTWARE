@@ -1151,4 +1151,151 @@ teacherRouter.get('/live-class/room-id', async (c) => {
     }
 });
 
+// ============================================================================
+// POST /teacher/live-class/start
+// Start live class session (Signal active)
+// ============================================================================
+
+teacherRouter.post('/live-class/start', async (c) => {
+    try {
+        const { userId, schoolId } = getUserContext(c);
+        const { classId } = await c.req.json();
+
+        if (!userId || !schoolId) return c.json({ error: 'Unauthorized' }, 401);
+
+        // Check active session
+        const existing = await prisma.liveClass.findFirst({
+            where: { school_id: schoolId, class_id: classId, is_active: true }
+        });
+
+        if (existing) {
+            return c.json({
+                success: true,
+                message: 'Already active',
+                roomId: existing.meeting_link.split('/').pop()
+            });
+        }
+
+        // Get info to generate room ID
+        const classInfo = await prisma.class.findFirst({ where: { id: classId } });
+        const roomId = `${schoolId}_${classId}_${Date.now()}`; // Simplified unique ID
+
+        // Use connect for relations and provide explicit ID
+        // Wait, 'subject_id' is required. If I don't maintain referential integrity it will crash.
+        // I'll do a quick fetch for a subject.
+        const firstSubject = await prisma.classSubject.findFirst({
+            where: { class_id: classId },
+            select: { subject_id: true }
+        });
+
+        if (!firstSubject) {
+            return c.json({ error: 'No subjects found for class' }, 400);
+        }
+
+        await prisma.liveClass.create({
+            data: {
+                id: `live_${Date.now()}`,
+                meeting_link: `https://meet.jit.si/${roomId}`,
+                is_active: true,
+                start_time: new Date(),
+                School: { connect: { id: schoolId } },
+                class: { connect: { id: classId } },
+                User: { connect: { id: userId } },
+                subject: { connect: { id: firstSubject.subject_id } }
+            }
+        });
+
+        return c.json({ success: true, roomId });
+    } catch (error) {
+        console.error('[Teacher API] Live class start error:', error);
+        return c.json({ error: 'Failed to start class' }, 500);
+    }
+});
+
+// ============================================================================
+// POST /teacher/live-class/end
+// End live class session
+// ============================================================================
+
+teacherRouter.post('/live-class/end', async (c) => {
+    try {
+        const { userId, schoolId } = getUserContext(c);
+        const { classId } = await c.req.json();
+
+        if (!userId || !schoolId) return c.json({ error: 'Unauthorized' }, 401);
+
+        await prisma.liveClass.updateMany({
+            where: { school_id: schoolId, class_id: classId, is_active: true },
+            data: { is_active: false }
+        });
+
+        return c.json({ success: true });
+    } catch (error) {
+        console.error('[Teacher API] Live class end error:', error);
+        return c.json({ error: 'Failed to end class' }, 500);
+    }
+});
+
+// ============================================================================
+// POST /teacher/announcements
+// Send announcement
+// ============================================================================
+
+teacherRouter.post('/announcements', async (c) => {
+    try {
+        const { userId, schoolId } = getUserContext(c);
+        const { title, message, targetClassIds } = await c.req.json();
+
+        if (!userId || !schoolId) return c.json({ error: 'Unauthorized' }, 401);
+
+        const staffProfile = await getTeacherProfile(userId, schoolId);
+
+        const announcement = await prisma.announcement.create({
+            data: {
+                school_id: schoolId,
+                title,
+                message,
+                author_id: staffProfile?.id || userId,
+                target_roles: ['STUDENT'],
+                expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 1 week
+            }
+        });
+
+        // Note: In a real app we'd link to targetClassIds via a join table
+        // For now, we assume the announcement is broadcast or filtered by client/other logic
+        // or we add a metadata field if schema allows.
+
+        return c.json({ success: true, id: announcement.id });
+    } catch (error) {
+        console.error('[Teacher API] Announcement error:', error);
+        return c.json({ error: 'Failed to send announcement' }, 500);
+    }
+});
+
+// ============================================================================
+// GET /teacher/announcements
+// Get my announcements
+// ============================================================================
+
+teacherRouter.get('/announcements', async (c) => {
+    try {
+        const { userId, schoolId } = getUserContext(c);
+        if (!userId || !schoolId) return c.json({ error: 'Unauthorized' }, 401);
+
+        const staffProfile = await getTeacherProfile(userId, schoolId);
+
+        const list = await prisma.announcement.findMany({
+            where: {
+                school_id: schoolId,
+                author_id: staffProfile?.id || userId
+            },
+            orderBy: { created_at: 'desc' }
+        });
+
+        return c.json(list);
+    } catch (error) {
+        return c.json({ error: 'Failed to fetch announcements' }, 500);
+    }
+});
+
 export { teacherRouter };

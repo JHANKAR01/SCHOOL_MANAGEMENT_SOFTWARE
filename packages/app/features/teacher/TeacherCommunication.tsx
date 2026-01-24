@@ -1,166 +1,177 @@
 // packages/app/features/teacher/TeacherCommunication.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { useTranslation } from '../../provider/language-context';
-import { useAnnouncements, useSendAnnouncement, useMyClassesToday } from '../../hooks/useTeacherData';
+import { NebulaCard } from '../../components/nebula/NebulaCard';
+import { NebulaButton } from '../../components/nebula/NebulaButton';
+import { NebulaInput } from '../../components/nebula/NebulaInput';
+import client from '../../api/client';
+import { useMyClassesToday } from '../../hooks/useTeacherData';
+
+interface Announcement {
+    id: string;
+    title: string;
+    message: string;
+    created_at: string;
+}
 
 export const TeacherCommunication = () => {
     const { t } = useTranslation();
-    const { data: announcements = [], isLoading } = useAnnouncements();
     const { data: classes = [] } = useMyClassesToday();
-    const sendMutation = useSendAnnouncement();
-
-    const [showForm, setShowForm] = useState(false);
     const [title, setTitle] = useState('');
     const [message, setMessage] = useState('');
-    const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+    const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
+    const [history, setHistory] = useState<Announcement[]>([]);
+    const [sending, setSending] = useState(false);
 
-    // Get unique classes for selection
+    // Get unique classes
     const uniqueClasses = Array.from(new Set(classes.map(c => c.classId)))
         .map(id => classes.find(c => c.classId === id))
         .filter(Boolean);
 
-    const handleSend = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!title || !message || selectedClasses.length === 0) return;
+    useEffect(() => {
+        loadHistory();
+    }, []);
 
-        await sendMutation.mutateAsync({
-            title,
-            message,
-            targetClassIds: selectedClasses
-        });
-
-        setShowForm(false);
-        setTitle('');
-        setMessage('');
-        setSelectedClasses([]);
-    };
-
-    const toggleClass = (id: string) => {
-        if (selectedClasses.includes(id)) {
-            setSelectedClasses(prev => prev.filter(c => c !== id));
-        } else {
-            setSelectedClasses(prev => [...prev, id]);
+    const loadHistory = async () => {
+        try {
+            const res = await client.get('/api/teacher/announcements');
+            setHistory(res.data);
+        } catch (e) {
+            console.error('Failed to load announcements', e);
         }
     };
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center py-20">
-                <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-        );
-    }
+    const handleSend = async () => {
+        if (!title || !message || selectedClassIds.length === 0) {
+            Alert.alert('Error', 'Please fill all fields and select at least one class');
+            return;
+        }
+
+        setSending(true);
+        try {
+            await client.post('/api/teacher/announcements', {
+                title,
+                message,
+                targetClassIds: selectedClassIds
+            });
+            Alert.alert('Success', 'Announcement sent successfully');
+            setTitle('');
+            setMessage('');
+            setSelectedClassIds([]);
+            loadHistory();
+        } catch (e) {
+            Alert.alert('Error', 'Failed to send announcement');
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const toggleClass = (id: string) => {
+        if (selectedClassIds.includes(id)) {
+            setSelectedClassIds(prev => prev.filter(c => c !== id));
+        } else {
+            setSelectedClassIds(prev => [...prev, id]);
+        }
+    };
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
-                    Announcements
-                </h2>
-                <button
-                    onClick={() => setShowForm(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"
-                >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
+        <ScrollView className="flex-1 p-4 bg-slate-50 dark:bg-slate-950">
+            <Text className="text-2xl font-bold text-slate-800 dark:text-white mb-6">
+                Announcements
+            </Text>
+
+            {/* Compose Card */}
+            <NebulaCard className="mb-6 p-4">
+                <Text className="text-lg font-bold text-slate-800 dark:text-white mb-4">
                     New Message
-                </button>
-            </div>
+                </Text>
 
-            {/* List */}
-            <div className="space-y-4">
-                {announcements.length === 0 ? (
-                    <div className="text-center py-12 text-slate-400">
-                        <p>No announcements sent yet.</p>
-                    </div>
-                ) : (
-                    announcements.map((a: any) => (
-                        <div key={a.id} className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                            <h3 className="font-bold text-lg text-slate-800 dark:text-white">{a.title}</h3>
-                            <p className="text-slate-600 dark:text-slate-300 mt-2 whitespace-pre-wrap">{a.message}</p>
-                            <div className="mt-3 text-xs text-slate-400">
-                                Sent on {new Date(a.created_at).toLocaleDateString()}
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
+                <View className="mb-4">
+                    <Text className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">
+                        Select Classes
+                    </Text>
+                    <View className="flex-row flex-wrap gap-2">
+                        {uniqueClasses.map((c: any) => (
+                            <TouchableOpacity
+                                key={c.classId}
+                                onPress={() => toggleClass(c.classId)}
+                                className={`px-3 py-2 rounded-full border ${selectedClassIds.includes(c.classId)
+                                    ? 'bg-indigo-600 border-indigo-600'
+                                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
+                                    }`}
+                            >
+                                <Text className={`text-sm font-medium ${selectedClassIds.includes(c.classId)
+                                    ? 'text-white'
+                                    : 'text-slate-600 dark:text-slate-400'
+                                    }`}>
+                                    {c.className}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
 
-            {/* Modal */}
-            {showForm && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
-                        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                            <h3 className="text-lg font-bold text-slate-800 dark:text-white">New Announcement</h3>
-                            <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600">
-                                ✕
-                            </button>
-                        </div>
+                <NebulaInput
+                    label="Title"
+                    value={title}
+                    onChange={setTitle}
+                    placeholder="e.g. Exam Schedule"
+                    className="mb-4"
+                />
 
-                        <form onSubmit={handleSend} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Select Classes</label>
-                                <div className="flex flex-wrap gap-2">
-                                    {uniqueClasses.map((c: any) => (
-                                        <button
-                                            key={c.classId}
-                                            type="button"
-                                            onClick={() => toggleClass(c.classId)}
-                                            className={`px-3 py-1.5 rounded-full text-sm font-medium transition
-                                                ${selectedClasses.includes(c.classId)
-                                                    ? 'bg-indigo-600 text-white'
-                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}
-                                        >
-                                            {c.className}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                {/* Custom Text Area since NebulaInput doesn't support multiline yet */}
+                <View className="mb-4 space-y-1.5">
+                    <Text className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                        Message
+                    </Text>
+                    <TextInput
+                        value={message}
+                        onChangeText={setMessage}
+                        placeholder="Type your message..."
+                        multiline
+                        numberOfLines={4}
+                        textAlignVertical="top"
+                        className="w-full rounded-lg border px-4 py-3 text-sm transition-all duration-200
+                        border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 
+                        text-slate-900 dark:text-white placeholder:text-slate-400"
+                        placeholderTextColor="#94a3b8"
+                    />
+                </View>
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Title</label>
-                                <input
-                                    value={title}
-                                    onChange={e => setTitle(e.target.value)}
-                                    required
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                                    placeholder="Important Notice..."
-                                />
-                            </div>
+                <NebulaButton
+                    onClick={handleSend}
+                    disabled={sending}
+                    variant="primary"
+                >
+                    {sending ? "Sending..." : "Send Announcement"}
+                </NebulaButton>
+            </NebulaCard>
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Message</label>
-                                <textarea
-                                    value={message}
-                                    onChange={e => setMessage(e.target.value)}
-                                    required
-                                    rows={4}
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 resize-none"
-                                    placeholder="Type your message here..."
-                                />
-                            </div>
+            {/* History */}
+            <Text className="text-lg font-bold text-slate-800 dark:text-white mb-4">
+                Recent Announcements
+            </Text>
 
-                            <div className="pt-2 flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowForm(false)}
-                                    className="px-4 py-2 text-slate-600"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={sendMutation.isPending}
-                                    className="px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50"
-                                >
-                                    {sendMutation.isPending ? 'Sending...' : 'Send Now'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+            {history.map(item => (
+                <NebulaCard key={item.id} className="mb-3 p-4">
+                    <Text className="font-bold text-slate-800 dark:text-white text-base">
+                        {item.title}
+                    </Text>
+                    <Text className="text-slate-600 dark:text-slate-300 mt-1">
+                        {item.message}
+                    </Text>
+                    <Text className="text-xs text-slate-400 mt-2">
+                        {new Date(item.created_at).toLocaleDateString()}
+                    </Text>
+                </NebulaCard>
+            ))}
+
+            {history.length === 0 && (
+                <Text className="text-center text-slate-400 py-8">
+                    No announcements sent yet
+                </Text>
             )}
-        </div>
+        </ScrollView>
     );
 };
