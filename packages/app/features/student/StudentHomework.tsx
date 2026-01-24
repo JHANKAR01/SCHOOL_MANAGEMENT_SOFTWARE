@@ -1,6 +1,6 @@
 // packages/app/features/student/StudentHomework.tsx
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useStudentHomework } from '../../../hooks/useStudentData';
 import { PageHeader, SovereignSkeleton, SovereignBadge, SovereignButton } from '../../components/SovereignComponents';
 import { BookOpen, CheckCircle, Clock, FileText, Upload } from 'lucide-react';
@@ -10,6 +10,48 @@ export const StudentHomework = () => {
     const { t } = useTranslation();
     const [filter, setFilter] = useState<'pending' | 'submitted' | 'graded'>('pending');
     const { data, isLoading, refetch } = useStudentHomework();
+
+    // Submission State
+    const [selectedHomework, setSelectedHomework] = useState<any>(null);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [submissionLink, setSubmissionLink] = useState('');
+    const [submissionText, setSubmissionText] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    const openSubmissionModal = (homework: any) => {
+        setSelectedHomework(homework);
+        setSubmissionLink('');
+        setSubmissionText('');
+        setModalVisible(true);
+    };
+
+    const handleSubmit = async () => {
+        if (!selectedHomework) return;
+        if (!submissionLink && !submissionText) {
+            alert(t('homework_submission_error_empty') || "Please provide a link or text comment.");
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            const { default: api } = await import('../../api/client');
+            const res = await api.post(`/student/homework/${selectedHomework.id}/submit`, {
+                submission_url: submissionLink,
+                submission_text: submissionText
+            });
+
+            if (res.data.success) {
+                alert(t('homework_submitted_success') || "Homework submitted successfully!");
+                setModalVisible(false);
+                refetch(); // Refresh list to show status change
+            }
+        } catch (error) {
+            console.error(error);
+            alert(t('homework_submit_failed') || "Failed to submit homework. Please try again.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     if (isLoading) {
         return (
@@ -104,7 +146,11 @@ export const StudentHomework = () => {
                                     </View>
 
                                     {hw.status === 'pending' && (
-                                        <SovereignButton variant="primary" className="flex-row gap-2">
+                                        <SovereignButton
+                                            variant="primary"
+                                            className="flex-row gap-2"
+                                            onPress={() => openSubmissionModal(hw)}
+                                        >
                                             <Upload className="w-4 h-4 text-white" />
                                             <Text className="text-white font-medium">Submit</Text>
                                         </SovereignButton>
@@ -115,6 +161,62 @@ export const StudentHomework = () => {
                     </View>
                 )}
             </ScrollView>
+
+            {/* Inline Modal for Submission */}
+            {modalVisible && (
+                <View className="absolute top-0 bottom-0 left-0 right-0 z-50 bg-black/50 justify-center items-center p-4">
+                    <View className="bg-white dark:bg-slate-900 w-full max-w-md rounded-xl p-6 shadow-2xl">
+                        <Text className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                            Submit Homework
+                        </Text>
+                        <Text className="text-gray-500 dark:text-gray-400 mb-6">
+                            {selectedHomework?.title}
+                        </Text>
+
+                        <Text className="font-bold text-gray-700 dark:text-gray-300 mb-2">
+                            Project/File Link (Drive, Dropbox, etc)
+                        </Text>
+                        <TextInput
+                            className="bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-4 text-gray-900 dark:text-white"
+                            placeholder="https://..."
+                            placeholderTextColor="#9ca3af"
+                            value={submissionLink}
+                            onChangeText={setSubmissionLink}
+                        />
+
+                        <Text className="font-bold text-gray-700 dark:text-gray-300 mb-2">
+                            Comments (Optional)
+                        </Text>
+                        <TextInput
+                            className="bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-6 text-gray-900 dark:text-white h-24"
+                            placeholder="Any notes for the teacher..."
+                            placeholderTextColor="#9ca3af"
+                            multiline
+                            textAlignVertical="top"
+                            value={submissionText}
+                            onChangeText={setSubmissionText}
+                        />
+
+                        <View className="flex-row gap-3 justify-end">
+                            <SovereignButton
+                                variant="ghost"
+                                onPress={() => setModalVisible(false)}
+                                disabled={submitting}
+                            >
+                                Cancel
+                            </SovereignButton>
+                            <SovereignButton
+                                variant="primary"
+                                onPress={handleSubmit}
+                                disabled={submitting}
+                                className={submitting ? "opacity-50" : ""}
+                            >
+                                {submitting ? "Submitting..." : "Submit Assignment"}
+                            </SovereignButton>
+                        </View>
+                    </View>
+                </View>
+            )}
         </View>
     );
 };

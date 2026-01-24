@@ -10,6 +10,29 @@ export const StudentResults = () => {
     const { t } = useTranslation();
     const { data: results, isLoading } = useStudentResults();
 
+    const handleDownload = async (resultId: string) => {
+        try {
+            // Dynamic import or use API client directly if available globally
+            // For now assuming api implementation from context/hooks is cleaner but let's just fetch
+            // We need to use the api client to get the PDF
+            const { default: api } = await import('../../api/client');
+            const res = await api.get(`/student/results/${resultId}/pdf`);
+            if (res.data.success) {
+                const { pdf_base64 } = res.data.data;
+                // Open PDF in new window/native viewer
+                // Note: On native, this might need Sharing or FileSystem, but Linking works for data URIs in many cases
+                // or best effort for MVP
+                const Link = await import('react-native').then(m => m.Linking);
+                Link.openURL(pdf_base64).catch(e => alert("Could not open PDF viewer"));
+            } else {
+                alert("Failed to generate PDF");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error downloading report card");
+        }
+    };
+
     if (isLoading) {
         return (
             <View className="flex-1 p-4 bg-gray-50 dark:bg-slate-900">
@@ -72,7 +95,11 @@ export const StudentResults = () => {
                                         <Text className="text-sm text-gray-600 dark:text-gray-300 font-medium">{result.remarks || 'Keep up the good work!'}</Text>
                                     </View>
 
-                                    <SovereignButton variant="ghost" className="flex-row gap-2">
+                                    <SovereignButton
+                                        variant="ghost"
+                                        className="flex-row gap-2"
+                                        onPress={() => handleDownload(result.id)}
+                                    >
                                         <Download className="w-4 h-4" />
                                         <Text className="dark:text-gray-200">Download PDF</Text>
                                     </SovereignButton>

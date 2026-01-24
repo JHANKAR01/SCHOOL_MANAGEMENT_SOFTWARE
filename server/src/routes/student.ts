@@ -684,6 +684,56 @@ studentRouter.get('/results',
 );
 
 // ============================================================================
+// GET /api/student/results/:id/pdf - Generate PDF Report Card
+// ============================================================================
+studentRouter.get('/results/:id/pdf',
+    requireRole([UserRole.STUDENT]),
+    async (c) => {
+        try {
+            const user = c.get('user');
+            const resultId = c.req.param('id');
+            const { generatePDFMarksheet } = await import('../services/pdf-service');
+
+            const student = await getStudentFromUser(user.id, user.school_id);
+            if (!student) {
+                return c.json({ success: false, error: 'Student profile not found' }, 404);
+            }
+
+            // Verify result belongs to student and is published
+            const result = await prisma.result.findFirst({
+                where: {
+                    id: resultId,
+                    student_id: student.id,
+                    school_id: user.school_id,
+                    status: 'PUBLISHED'
+                }
+            });
+
+            if (!result) {
+                return c.json({ success: false, error: 'Result not found or not published' }, 404);
+            }
+
+            const pdfBase64 = await generatePDFMarksheet(student.id, result.id);
+
+            if (!pdfBase64) {
+                return c.json({ success: false, error: 'Failed to generate PDF' }, 500);
+            }
+
+            return c.json({
+                success: true,
+                data: {
+                    pdf_base64: pdfBase64,
+                    filename: `ReportCard_${result.id.slice(0, 6)}.pdf`
+                }
+            });
+        } catch (error) {
+            console.error('[STUDENT_RESULT_PDF_ERROR]', error);
+            return c.json({ success: false, error: 'Internal server error' }, 500);
+        }
+    }
+);
+
+// ============================================================================
 // GET /api/student/live-classes - Active/upcoming live classes
 // ============================================================================
 studentRouter.get('/live-classes',
