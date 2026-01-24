@@ -49,7 +49,8 @@ export const VicePrincipalDashboard = () => {
             <VicePrincipalStats />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <NebulaCard title="Quick Actions" className="p-4">
+              <NebulaCard className="p-4">
+                <h3 className="text-lg font-semibold mb-4 text-slate-800 dark:text-white">Quick Actions</h3>
                 <div className="flex gap-4">
                   <NebulaButton onClick={() => setCurrentModule('approvals')}>
                     Review Approvals
