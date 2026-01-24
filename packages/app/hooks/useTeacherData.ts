@@ -23,6 +23,9 @@ export interface TeacherClass {
     endTime: string;
     attendanceMarked: boolean;
     isSubstitution?: boolean;
+    isLive?: boolean;
+    isCovered?: boolean;
+    coveredBy?: string;
 }
 
 export interface TeacherExam {
@@ -179,6 +182,9 @@ export function useMyClassesToday() {
                     startTime: slot.startTime,
                     endTime: slot.endTime,
                     attendanceMarked: false,
+                    isLive: false,
+                    isCovered: false,
+                    coveredBy: undefined
                 }));
             }
         },
@@ -517,6 +523,87 @@ export function useApplyLeave() {
             queryClient.invalidateQueries({ queryKey: ['teacher', 'leave'] });
             queryClient.invalidateQueries({ queryKey: ['teacher', 'leave-balances'] });
         },
+    });
+}
+
+
+/**
+ * Start Live Class
+ */
+export function useStartLiveClass() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (classId: string) => {
+            const headers = await getAuthHeaders();
+            const response = await fetch(`${API_BASE}/teacher/live-class/start`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ classId }),
+            });
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['teacher', 'classes-today'] });
+        }
+    });
+}
+
+/**
+ * End Live Class
+ */
+export function useEndLiveClass() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (classId: string) => {
+            const headers = await getAuthHeaders();
+            const response = await fetch(`${API_BASE}/teacher/live-class/end`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ classId }),
+            });
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['teacher', 'classes-today'] });
+        }
+    });
+}
+
+/**
+ * Fetch Announcements
+ */
+export function useAnnouncements() {
+    return useQuery({
+        queryKey: ['teacher', 'announcements'],
+        queryFn: async () => {
+            const headers = await getAuthHeaders();
+            const response = await fetch(`${API_BASE}/teacher/announcements`, { headers });
+            if (!response.ok) throw new Error('Failed to fetch announcements');
+            return response.json();
+        },
+        staleTime: 5 * 60 * 1000,
+    });
+}
+
+/**
+ * Send Announcement
+ */
+export function useSendAnnouncement() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (params: { title: string; message: string; targetClassIds: string[] }) => {
+            const headers = await getAuthHeaders();
+            const response = await fetch(`${API_BASE}/teacher/announcements`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(params),
+            });
+            if (!response.ok) throw new Error('Failed to send announcement');
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['teacher', 'announcements'] });
+        }
     });
 }
 

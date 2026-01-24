@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from '../../provider/language-context';
-import { useMyClassesToday, useSyncQueue, useLiveClassRoom } from '../../hooks/useTeacherData';
+import { useMyClassesToday, useSyncQueue, useLiveClassRoom, useStartLiveClass, useEndLiveClass } from '../../hooks/useTeacherData';
 
 // ============================================================================
 // CLASS CARD
@@ -19,21 +19,31 @@ interface ClassCardProps {
         startTime: string;
         endTime: string;
         attendanceMarked: boolean;
+        isCovered?: boolean;
+        coveredBy?: string;
+        isLive?: boolean;
     };
     onTap: (classId: string) => void;
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({ classData, onTap }) => {
     const { t } = useTranslation();
+    const isCovered = classData.isCovered;
 
     return (
         <button
-            onClick={() => onTap(classData.id)}
-            className="w-full p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98]"
+            onClick={() => !isCovered && onTap(classData.id)}
+            disabled={isCovered}
+            className={`w-full p-4 rounded-2xl border shadow-sm transition-all duration-200 text-left
+                ${isCovered
+                    ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 opacity-70 cursor-not-allowed'
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:shadow-md active:scale-[0.98]'
+                }`}
         >
             <div className="flex items-center gap-4">
                 {/* Period Badge */}
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                <div className={`w-14 h-14 rounded-xl flex items-center justify-center
+                    ${isCovered ? 'bg-slate-300 dark:bg-slate-700' : 'bg-gradient-to-br from-indigo-500 to-purple-600'}`}>
                     <span className="text-2xl font-bold text-white">{classData.period}</span>
                 </div>
 
@@ -50,15 +60,29 @@ const ClassCard: React.FC<ClassCardProps> = ({ classData, onTap }) => {
                     </p>
                 </div>
 
-                {/* Attendance Status */}
-                <div className={`
-          px-3 py-1.5 rounded-full text-xs font-bold
-          ${classData.attendanceMarked
-                        ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                        : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                    }
-        `}>
-                    {classData.attendanceMarked ? '✓ Marked' : 'Not Marked'}
+                <div className="flex flex-col items-end gap-2">
+                    {/* Status Badge */}
+                    {isCovered ? (
+                        <div className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
+                            Covered: {classData.coveredBy?.split(' ')[0]}
+                        </div>
+                    ) : (
+                        <div className={`
+                        px-3 py-1.5 rounded-full text-xs font-bold
+                        ${classData.attendanceMarked
+                                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                                : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                            }
+                        `}>
+                            {classData.attendanceMarked ? '✓ Marked' : 'Not Marked'}
+                        </div>
+                    )}
+
+                    {classData.isLive && (
+                        <div className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500 text-white animate-pulse">
+                            LIVE
+                        </div>
+                    )}
                 </div>
             </div>
         </button>
@@ -145,16 +169,42 @@ export const TeacherDailyConsole: React.FC<TeacherDailyConsoleProps> = ({
         currentClass?.period || 0
     );
 
+    const startLiveClassMutation = useStartLiveClass();
+    const endLiveClassMutation = useEndLiveClass();
+    const [processingLive, setProcessingLive] = useState(false);
+
     const handleStartLiveClass = () => {
-        setShowLiveClassModal(true);
+        if (currentClass?.isLive) {
+            // If already live, maybe just show option to join or end
+            // For now assume if active we show end button in main UI
+            window.open(`https://meet.jit.si/CLASS_${currentClass.id}`, '_blank');
+        } else {
+            setShowLiveClassModal(true);
+        }
     };
 
-    const confirmStartLiveClass = () => {
-        if (liveClassData?.roomId) {
-            const jitsiUrl = `https://meet.jit.si/${liveClassData.roomId}`;
-            window.open(jitsiUrl, '_blank');
+    const confirmStartLiveClass = async () => {
+        if (!currentClass) return;
+        setProcessingLive(true);
+        try {
+            const res = await startLiveClassMutation.mutateAsync(currentClass.id);
+            if (res.success) {
+                const jitsiUrl = `https://meet.jit.si/${res.roomId}`;
+                window.open(jitsiUrl, '_blank');
+            }
+        } catch (e) {
+            alert("Failed to start live class");
+        } finally {
+            setProcessingLive(false);
+            setShowLiveClassModal(false);
         }
-        setShowLiveClassModal(false);
+    };
+
+    const ENDLiveClass = async () => {
+        if (!currentClass) return;
+        if (confirm("End the current live session?")) {
+            await endLiveClassMutation.mutateAsync(currentClass.id);
+        }
     };
 
     if (isLoading) {
@@ -213,15 +263,24 @@ export const TeacherDailyConsole: React.FC<TeacherDailyConsoleProps> = ({
                             <p className="text-sm opacity-80">{currentClass.subjectName}</p>
                         </div>
                         <div className="flex gap-2">
-                            <button
-                                onClick={handleStartLiveClass}
-                                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-xl font-medium transition flex items-center gap-2"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                                Live Class
-                            </button>
+                            {currentClass.isLive ? (
+                                <button
+                                    onClick={ENDLiveClass}
+                                    className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-xl font-medium transition flex items-center gap-2 text-white"
+                                >
+                                    End Live Class
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleStartLiveClass}
+                                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-xl font-medium transition flex items-center gap-2"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                    Start Live Class
+                                </button>
+                            )}
                             <button
                                 onClick={() => handleClassTap(currentClass.id)}
                                 className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl font-medium transition"

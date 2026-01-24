@@ -87,19 +87,51 @@ teacherRouter.get('/my-classes-today', async (c) => {
             orderBy: { start_time: 'asc' },
         });
 
-        // Check attendance status for each class
+        const startOfDay = new Date(today);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(today);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Check for incoming substitutions (Am I being covered?)
+        const incomingSubstitutions = await prisma.substitution.findMany({
+            where: {
+                school_id: schoolId,
+                classId: { in: assignedClassIds },
+                date: { gte: startOfDay, lte: endOfDay },
+                status: 'ASSIGNED'
+            },
+            include: {
+                substituteTeacher: {
+                    include: { user: { select: { name: true } } }
+                }
+            }
+        });
+
+        // Check attendance and live status for each class
         const timetableClasses = await Promise.all(
             timetableEntries.map(async (entry: any) => {
-                // Calculate period from start_time if not available
                 const entryPeriod = entry.period ?? 1;
 
+                // Check attendance
                 const attendanceCount = await prisma.attendance.count({
                     where: {
-                        student_id: { in: [] }, // Will be updated when we have class-based lookup
-                        date: today,
+                        date: { gte: startOfDay, lte: endOfDay },
                         period: entryPeriod,
+                        student_id: { in: (await prisma.studentEnrollment.findMany({ where: { class_id: entry.class_id, status: 'ACTIVE' }, select: { student_id: true } })).map(e => e.student_id) }
                     },
                 });
+
+                // Check active live class
+                const liveClass = await prisma.liveClass.findFirst({
+                    where: {
+                        school_id: schoolId,
+                        class_id: entry.class_id,
+                        is_active: true
+                    }
+                });
+
+                // Check substitution
+                const sub = incomingSubstitutions.find(s => s.classId === entry.class_id && s.period === entryPeriod);
 
                 return {
                     id: entry.id,
@@ -114,17 +146,15 @@ teacherRouter.get('/my-classes-today', async (c) => {
                     endTime: entry.end_time || `${9 + entryPeriod}:00`,
                     attendanceMarked: attendanceCount > 0,
                     isSubstitution: false,
+                    isLive: !!liveClass,
+                    isCovered: !!sub,
+                    coveredBy: sub?.substituteTeacher?.user.name
                 };
             })
         );
 
         // Fetch Substitutions where I am the substitute teacher
-        const startOfDay = new Date(today);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(today);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        const substitutions = await prisma.substitution.findMany({
+        const outgoingSubstitutions = await prisma.substitution.findMany({
             where: {
                 school_id: schoolId,
                 substituteTeacherId: staffProfile.id,
@@ -140,14 +170,14 @@ teacherRouter.get('/my-classes-today', async (c) => {
         });
 
         const substitutionClasses = await Promise.all(
-            substitutions.map(async (sub) => {
+            outgoingSubstitutions.map(async (sub) => {
                 const subPeriod = sub.period;
 
                 const attendanceCount = await prisma.attendance.count({
                     where: {
-                        student_id: { in: [] },
-                        date: today,
+                        date: { gte: startOfDay, lte: endOfDay },
                         period: subPeriod,
+                        student_id: { in: (await prisma.studentEnrollment.findMany({ where: { class_id: sub.classId, status: 'ACTIVE' }, select: { student_id: true } })).map(e => e.student_id) }
                     },
                 });
 
@@ -164,6 +194,7 @@ teacherRouter.get('/my-classes-today', async (c) => {
                     endTime: `${9 + subPeriod}:00`,
                     attendanceMarked: attendanceCount > 0,
                     isSubstitution: true,
+                    isLive: false,
                 };
             })
         );
