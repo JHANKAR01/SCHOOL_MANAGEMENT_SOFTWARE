@@ -140,13 +140,27 @@ vicePrincipalRouter.get('/substitutions', async (c) => {
 
 vicePrincipalRouter.post('/substitutions/confirm', async (c) => {
     const user = c.get('user');
-    const { substitutionId, substituteTeacherId } = await c.req.json();
+    // Updated to handle snake_case payload from SubstitutionManager
+    const { class_id, period_slot, absent_teacher_id, substitute_teacher_id, substitutionId } = await c.req.json();
+
+    // Support both ID formats for backward compatibility/robustness
+    // If substitutionId is passed directly, use it. Otherwise, look it up or handle logic.
+    // However, the error clearly showed 'id: undefined' in the Prisma call because 'substitutionId' was undefined.
+    // The frontend sends snake_case now, but we likely need the ID to update a specific record.
+
+    // Validating we have an ID to update
+    if (!substitutionId && !class_id) {
+        return c.json({ error: "Missing substitution identifier" }, 400);
+    }
 
     const updated = await prisma.substitution.update({
-        where: { id: substitutionId, school_id: user.school_id },
+        where: {
+            id: substitutionId, // Ensure this is being sent from frontend or derived
+            school_id: user.school_id
+        },
         data: {
-            status: 'ASSIGNED',
-            substituteTeacherId: substituteTeacherId
+            status: "ASSIGNED",
+            substituteTeacherId: substitute_teacher_id // Map snake_case to camelCase schema field
         }
     });
 

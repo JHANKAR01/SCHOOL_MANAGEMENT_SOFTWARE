@@ -9,18 +9,16 @@ import { RefreshCw, UserCheck, Calendar, CheckCircle, ArrowRight } from 'lucide-
 interface Substitution {
     id: string;
     originalTeacherName: string;
+    originalTeacherId: string; // Added field
     className: string;
+    classId: string; // Added field
     date: string;
     period: number;
     reason: string;
     status: string;
 }
 
-const MOCK_TEACHERS = [
-    { id: 'user_1', name: 'Mr. Sharma (Math)' },
-    { id: 'user_2', name: 'Ms. Gupta (Science)' },
-    { id: 'user_3', name: 'Mrs. Khan (English)' },
-];
+// MOCK_TEACHERS removed in favor of API fetch
 
 export const SubstitutionManager = () => {
     const { t } = useLanguage();
@@ -29,6 +27,7 @@ export const SubstitutionManager = () => {
     const [selectedSub, setSelectedSub] = useState<Substitution | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [processing, setProcessing] = useState(false);
+    const [teachers, setTeachers] = useState<{ id: string, name: string }[]>([]);
 
     const fetchSubs = async () => {
         setLoading(true);
@@ -44,12 +43,26 @@ export const SubstitutionManager = () => {
         }
     };
 
+    const fetchTeachers = async () => {
+        try {
+            // Using the teacher-performance endpoint as it returns a list of teachers with IDs
+            const res = await api.get('/vice-principal/teacher-performance');
+            if (res.status === 200) {
+                setTeachers(res.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch teachers", error);
+        }
+    };
+
     useEffect(() => {
         fetchSubs();
     }, []);
 
     const handleAssign = (sub: Substitution) => {
         setSelectedSub(sub);
+        // Fetch teachers only when opening the modal to save resources
+        if (teachers.length === 0) fetchTeachers();
         setModalVisible(true);
     };
 
@@ -59,16 +72,20 @@ export const SubstitutionManager = () => {
         try {
             const res = await api.post('/vice-principal/substitutions/confirm', {
                 substitutionId: selectedSub.id,
-                substituteTeacherId: teacherId
+                class_id: selectedSub.classId,
+                period_slot: selectedSub.period,
+                absent_teacher_id: selectedSub.originalTeacherId,
+                substitute_teacher_id: teacherId
             });
 
             if (res.status === 200) {
-                alert("Substitution assigned");
+                alert("Substitution assigned successfully");
                 setModalVisible(false);
                 fetchSubs();
             }
         } catch (error) {
-            alert("Failed to assign");
+            console.error(error);
+            alert("Failed to assign substitute. Please try again.");
         } finally {
             setProcessing(false);
         }
@@ -152,22 +169,28 @@ export const SubstitutionManager = () => {
                         </View>
 
                         <ScrollView className="flex-1">
-                            {MOCK_TEACHERS.map(teacher => (
-                                <Pressable
-                                    key={teacher.id}
-                                    onPress={() => confirmAssignment(teacher.id)}
-                                    className="w-full p-4 border-b border-slate-100 dark:border-slate-800 flex-row items-center justify-between active:bg-slate-50 dark:active:bg-slate-800"
-                                >
-                                    <Text className="font-medium text-slate-700 dark:text-slate-300">
-                                        {teacher.name}
-                                    </Text>
-                                    {processing ? (
-                                        <Text className="text-xs text-slate-400">...</Text>
-                                    ) : (
-                                        <ArrowRight size={16} color="#6366f1" />
-                                    )}
-                                </Pressable>
-                            ))}
+                            {teachers.length === 0 ? (
+                                <View className="p-8 items-center">
+                                    <Text className="text-slate-400">Loading teachers...</Text>
+                                </View>
+                            ) : (
+                                teachers.map(teacher => (
+                                    <Pressable
+                                        key={teacher.id}
+                                        onPress={() => confirmAssignment(teacher.id)}
+                                        className="w-full p-4 border-b border-slate-100 dark:border-slate-800 flex-row items-center justify-between active:bg-slate-50 dark:active:bg-slate-800 hover:bg-slate-50"
+                                    >
+                                        <Text className="font-medium text-slate-700 dark:text-slate-300">
+                                            {teacher.name}
+                                        </Text>
+                                        {processing ? (
+                                            <Text className="text-xs text-slate-400">...</Text>
+                                        ) : (
+                                            <ArrowRight size={16} color="#6366f1" />
+                                        )}
+                                    </Pressable>
+                                ))
+                            )}
                         </ScrollView>
 
                         <View className="p-4 bg-slate-50 dark:bg-slate-900/50 flex-row justify-end">
