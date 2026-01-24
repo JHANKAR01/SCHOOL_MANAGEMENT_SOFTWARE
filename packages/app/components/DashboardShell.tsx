@@ -220,7 +220,7 @@ const Sidebar: React.FC<{
                 { id: 'finance', label: 'Finance', icon: Activity },
             ];
         }
-        if (role === 'PRINCIPAL') {
+        if (role === 'PRINCIPAL' || role === 'VICE_PRINCIPAL') {
             return [
                 { id: 'overview', label: 'Overview', icon: LayoutDashboard },
                 { id: 'admissions', label: 'Admissions', icon: UserPlus }, // No href - use SPA module switching

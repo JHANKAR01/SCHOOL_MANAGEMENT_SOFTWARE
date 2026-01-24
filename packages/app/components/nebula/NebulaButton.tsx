@@ -92,43 +92,52 @@ export const NebulaButton: React.FC<NebulaButtonProps> = ({
     );
 };
 
-export const NebulaIconButton: React.FC<{
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// NEBULA ICON BUTTON - Compact Icon-only Button
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+interface NebulaIconButtonProps extends Omit<NebulaButtonProps, 'children' | 'icon' | 'iconPosition' | 'fullWidth'> {
     icon: React.ReactNode;
-    onClick?: () => void;
-    variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
-    size?: 'sm' | 'md' | 'lg';
-    disabled?: boolean;
-    className?: string;
-}> = ({
+}
+
+export const NebulaIconButton: React.FC<NebulaIconButtonProps> = ({
     icon,
     onClick,
     variant = 'ghost',
     size = 'md',
     disabled = false,
+    loading = false,
     className = '',
 }) => {
-        const sizeClasses = {
-            sm: 'p-1.5',
-            md: 'p-2',
-            lg: 'p-3',
-        };
-
-        const variantClasses = {
-            primary: 'bg-indigo-600 rounded-lg hover:bg-indigo-700',
-            secondary: 'bg-white/10 rounded-lg hover:bg-white/20 border border-white/10',
-            ghost: 'bg-transparent hover:bg-black/5 dark:hover:bg-white/10 rounded-lg',
-            danger: 'bg-transparent hover:bg-red-50 text-red-500 rounded-lg',
-        };
-
-        return (
-            <Pressable
-                onPress={onClick}
-                disabled={disabled}
-                className={`items-center justify-center transition-all ${sizeClasses[size]} ${variantClasses[variant]} ${disabled ? 'opacity-50' : 'active:opacity-70'} ${className}`}
-            >
-                {icon}
-            </Pressable>
-        );
+    const sizeClasses = {
+        sm: 'p-1.5',
+        md: 'p-2',
+        lg: 'p-3',
     };
+
+    const variantClasses = {
+        primary: 'bg-indigo-600 text-white',
+        secondary: 'bg-white/10 text-slate-50 border border-white/10',
+        ghost: 'bg-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800',
+        danger: 'bg-rose-50 text-rose-600 hover:bg-rose-100',
+        warning: 'bg-amber-50 text-amber-600 hover:bg-amber-100',
+    };
+
+    return (
+        <Pressable
+            onPress={onClick}
+            disabled={disabled || loading}
+            className={`
+                rounded-full items-center justify-center transition-colors
+                ${sizeClasses[size]}
+                ${variantClasses[variant]}
+                ${disabled ? 'opacity-50' : 'active:opacity-80'}
+                ${className}
+            `}
+        >
+            {loading ? <ActivityIndicator size="small" /> : icon}
+        </Pressable>
+    );
+};
 
 export default NebulaButton;
