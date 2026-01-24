@@ -826,11 +826,13 @@ async function main() {
     student_id: result.student_id,
     total_percentage: result.total_percentage,
     grade: result.grade,
-    remarks: result.remarks
+    remarks: result.remarks,
+    status: 'PUBLISHED',
+    approved_at: new Date()
   }));
 
   const resultsResult = await prisma.result.createMany({
-    data: resultData,
+    data: resultData as any,
     skipDuplicates: true
   });
   console.log(`   ✅ ${resultsResult.count} results created`);

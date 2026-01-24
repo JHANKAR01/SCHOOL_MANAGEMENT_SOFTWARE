@@ -1568,28 +1568,34 @@ function generateTimetable(): DummyTimetable[] {
     { period: 6, start: '12:15', end: '13:00' }
   ];
 
-  // Generate timetable for Class 10-A (sample)
-  const classId = 'cls_10_A';
-  const classSubjects = DUMMY_CLASS_SUBJECTS.filter(cs => cs.class_id === classId);
+  // Generate timetable for ALL classes
   const teachers = DUMMY_STAFF_USERS.filter(s => s.role === UserRole.TEACHER);
 
-  for (let day = 1; day <= 5; day++) { // Monday to Friday
-    for (let p = 0; p < periods.length; p++) {
-      ttIndex++;
-      const subjectIndex = (day * 6 + p) % classSubjects.length;
-      const teacherIndex = (day * 6 + p) % teachers.length;
+  for (const cls of DUMMY_CLASSES) {
+    const classSubjects = DUMMY_CLASS_SUBJECTS.filter(cs => cs.class_id === cls.id);
 
-      timetable.push({
-        id: `tt_${ttIndex.toString().padStart(4, '0')}`,
-        school_id: SCHOOL_ID,
-        class_id: classId,
-        day_of_week: day,
-        start_time: periods[p].start,
-        end_time: periods[p].end,
-        period: periods[p].period,
-        subject_id: classSubjects[subjectIndex].subject_id,
-        teacher_id: teachers[teacherIndex].id
-      });
+    // Skip if no subjects linked
+    if (classSubjects.length === 0) continue;
+
+    for (let day = 1; day <= 5; day++) { // Monday to Friday
+      for (let p = 0; p < periods.length; p++) {
+        ttIndex++;
+        // Round-robin subjects and teachers to ensure variety
+        const subjectIndex = (day * 6 + p) % classSubjects.length;
+        const teacherIndex = (day * 6 + p + parseInt(cls.grade)) % teachers.length;
+
+        timetable.push({
+          id: `tt_${ttIndex.toString().padStart(5, '0')}`, // Increased padding
+          school_id: SCHOOL_ID,
+          class_id: cls.id,
+          day_of_week: day,
+          start_time: periods[p].start,
+          end_time: periods[p].end,
+          period: periods[p].period,
+          subject_id: classSubjects[subjectIndex].subject_id,
+          teacher_id: teachers[teacherIndex].id
+        });
+      }
     }
   }
 
