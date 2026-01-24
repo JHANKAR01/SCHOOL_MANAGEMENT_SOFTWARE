@@ -14,23 +14,26 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
+export const AuthProvider: React.FC<{ children: React.ReactNode; user?: User | null; onLogout?: () => void }> = ({ children, user: externalUser, onLogout }) => {
+    const [internalUser, setInternalUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    const activeUser = externalUser ?? internalUser;
+
     const checkAuth = async () => {
+        if (externalUser) {
+            setIsLoading(false);
+            return;
+        }
         try {
-            // Check for token in storage (client.ts handles this automatically for requests)
-            // Here we just verify if the session is valid by fetching /me
             const res = await api.get('/auth/me');
             if (res.status === 200) {
-                setUser(res.data);
+                setInternalUser(res.data);
             } else {
-                setUser(null);
+                setInternalUser(null);
             }
         } catch (error) {
-            // Token invalid or network error
-            setUser(null);
+            setInternalUser(null);
         } finally {
             setIsLoading(false);
         }
@@ -38,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     useEffect(() => {
         checkAuth();
-    }, []);
+    }, [externalUser]);
 
     const login = async (token: string, userData: User) => {
         if (Platform.OS === 'web') {
@@ -47,25 +50,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // SecureStore is handled in client.ts, but here we might need to set it explicitly
             // For now assuming client.ts interception handles it if we navigate
         }
-        setUser(userData);
+        setInternalUser(userData);
     };
 
     const logout = async () => {
-        if (Platform.OS === 'web') {
-            localStorage.removeItem('sovereign_token');
+        if (onLogout) {
+            onLogout();
         } else {
-            // handle native storage removal
+            if (Platform.OS === 'web') {
+                localStorage.removeItem('sovereign_token');
+            } else {
+                // handle native storage removal
+            }
+            setInternalUser(null);
         }
-        setUser(null);
     };
 
     const value = {
-        user,
-        currentUser: user, // Alias
+        user: activeUser,
+        currentUser: activeUser,
         isLoading,
         login,
         logout,
-        isAuthenticated: !!user
+        isAuthenticated: !!activeUser
     };
 
     return (

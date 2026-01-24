@@ -5,6 +5,7 @@ import SuperAdminDashboard from './apps/web/pages/super-admin/dashboard';
 import { SchoolConfig, UserRole, User, AuthResponse } from './packages/types';
 import { RoleBasedRouter } from './packages/app/features/dashboard/RoleBasedRouter';
 import { Sidebar } from './packages/app/components/Sidebar';
+import { AuthProvider } from './packages/app/provider/AuthContext';
 import { LanguageProvider, useTranslation } from './packages/app/provider/language-context';
 import { InteractionProvider } from './packages/app/provider/InteractionContext';
 import { ThemeProvider } from './packages/app/provider/ThemeProvider';
@@ -219,7 +220,7 @@ const App: React.FC = () => {
   // 2. Wrap everything in Providers at the Root Level, then conditionally render children
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <AuthProvider user={currentUser} onLogout={handleLogout}>
         <ThemeProvider primaryColor={currentSchool?.primary_color || '#000000'}>
           <InteractionProvider isAuthenticated={!!currentUser} role={currentUser?.role}>
             <LanguageProvider>
@@ -326,6 +327,7 @@ const App: React.FC = () => {
             </LanguageProvider>
           </InteractionProvider>
         </ThemeProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

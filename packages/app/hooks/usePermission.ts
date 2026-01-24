@@ -1,4 +1,4 @@
-import { useAuth } from '../provider/auth-context';
+import { useAuth } from '../provider/AuthContext';
 import { Permission, hasPermission as checkRolePermission } from '../../types/permissions';
 import { UserRole } from '../../types/user';
 

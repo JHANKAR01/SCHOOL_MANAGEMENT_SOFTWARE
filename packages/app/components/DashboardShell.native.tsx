@@ -5,7 +5,7 @@
 import React, { useState, ReactNode } from 'react';
 import { View, Text, Pressable, ScrollView, SafeAreaView, StyleSheet } from 'react-native';
 import { Menu, X, Home, Users, BookOpen, Settings, LogOut } from 'lucide-react';
-import { useAuth } from '../provider/auth-context';
+import { useAuth } from '../provider/AuthContext';
 import { useTheme } from '../provider/ThemeProvider';
 
 interface DashboardShellProps {

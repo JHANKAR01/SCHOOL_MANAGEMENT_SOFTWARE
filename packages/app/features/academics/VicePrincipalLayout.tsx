@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { useAuth } from '../../provider/auth-context';
+import { useAuth } from '../../provider/AuthContext';
 import { useLanguage } from '../../provider/language-context';
 import { UserRole } from '../../../types/user';
 
@@ -25,16 +25,7 @@ export const VicePrincipalLayout = ({ children, activeTab }: Props) => {
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <View>
-                    <Text style={styles.title}>{t('vp_dashboard.title')}</Text>
-                    <Text style={styles.subtitle}>{t('vp_dashboard.welcome')}{user.name}</Text>
-                </View>
-                <View style={styles.roleBadge}>
-                    <Text style={styles.roleText}>{user.role.replace('_', ' ')}</Text>
-                </View>
-            </View>
-
+            {/* Header removed to avoid duplication with MainLayout Sidebar/Header */}
             <ScrollView contentContainerStyle={styles.content}>
                 {children}
             </ScrollView>
