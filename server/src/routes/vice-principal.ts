@@ -193,8 +193,110 @@ vicePrincipalRouter.post('/incidents/:id/triage', async (c) => {
 // TEACHER PERFORMANCE
 // ============================================================================
 vicePrincipalRouter.get('/teacher-performance', async (c) => {
-    // Implementation in Phase 3
-    return c.json([]);
+    const user = c.get('user');
+
+    // Fetch all teachers in the school
+    const teachers = await prisma.user.findMany({
+        where: { school_id: user.school_id, role: 'TEACHER' },
+        select: { id: true, name: true }
+    });
+
+    // Mock logic for performance metrics
+    // In a real scenario, this would aggregate data from ExamResults, Attendance, etc.
+    const performanceData = await Promise.all(teachers.map(async (teacher) => {
+        // Mock: Late Submissions (randomized for demo)
+        const lateSubmissions = Math.floor(Math.random() * 5);
+
+        // Real: Substitution Load
+        const substitutionLoad = await prisma.substitution.count({
+            where: { school_id: user.school_id, substituteTeacherId: teacher.id }
+        });
+
+        return {
+            id: teacher.id,
+            name: teacher.name,
+            lateSubmissions, // Mocked for now until Exam Module is fully linked
+            substitutionLoad
+        };
+    }));
+
+    return c.json(performanceData);
+});
+
+// ============================================================================
+// STUDENT SEARCH (ROSTER)
+// ============================================================================
+vicePrincipalRouter.get('/students/search', async (c) => {
+    const user = c.get('user');
+    const query = c.req.query('query') || '';
+
+    if (query.length < 2) return c.json([]);
+
+    const students = await prisma.student.findMany({
+        where: {
+            school_id: user.school_id,
+            OR: [
+                { name: { contains: query, mode: 'insensitive' } },
+                { admission_no: { contains: query, mode: 'insensitive' } }
+            ]
+        },
+        take: 10,
+        select: {
+            id: true,
+            name: true,
+            admission_no: true,
+
+            enrollments: {
+                take: 1,
+                orderBy: { created_at: 'desc' },
+                select: {
+                    class: {
+                        select: {
+                            grade: true,
+                            section: true
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    return c.json(students);
+});
+
+// ============================================================================
+// COMMUNICATIONS (NOTIFICATIONS)
+// ============================================================================
+vicePrincipalRouter.post('/communications/send', async (c) => {
+    const user = c.get('user');
+    const { targetType, targetId, message } = await c.req.json();
+
+    // In a real implementation, this would trigger NotificationService
+    // For now, we'll log it or create a placeholder record if Notification model exists
+    // Assuming a simple success response for the MVP phase
+    console.log(`[Notification] VP ${user.name} sent to ${targetType} ${targetId || 'ALL'}: ${message}`);
+
+    return c.json({ success: true, message: 'Notification queued' });
+});
+
+// ============================================================================
+// ATTENDANCE MONITOR
+// ============================================================================
+vicePrincipalRouter.get('/attendance/monitor', async (c) => {
+    const user = c.get('user');
+
+    // enhance: authentic attendance logic would aggregate ClassAttendance records
+    // Returning mock trend data for the chart
+    const last5Days = Array.from({ length: 5 }).map((_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (4 - i));
+        return {
+            date: d.toISOString().split('T')[0],
+            percentage: 85 + Math.floor(Math.random() * 10) // Mock 85-95%
+        };
+    });
+
+    return c.json(last5Days);
 });
 
 export { vicePrincipalRouter };

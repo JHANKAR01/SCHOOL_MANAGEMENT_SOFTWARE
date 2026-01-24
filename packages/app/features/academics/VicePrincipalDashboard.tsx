@@ -1,91 +1,67 @@
 import React, { useState } from 'react';
+import { View, Text, ScrollView } from 'react-native';
 import {
   ClipboardList,
-  Users,
-  AlertTriangle,
-  RefreshCw,
-  FileText,
-  CheckCircle
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react';
 
-import { DashboardShell, Module } from '../../components/DashboardShell';
+import { DashboardShell } from '../../components/DashboardShell';
 import { useLanguage } from '../../provider/language-context';
 import { VicePrincipalStats } from './VicePrincipalStats';
 import { ApprovalsModule } from './ApprovalsModule';
 import { SubstitutionManager } from './SubstitutionManager';
 import { IncidentQueue } from './IncidentQueue';
-import { TeacherPerformanceTile } from './TeacherPerformanceTile';
-import { NebulaCard } from '../../components/nebula/NebulaCard';
-import { NebulaButton } from '../../components/nebula/NebulaButton';
+import { StudentRosterModule } from './StudentRosterModule';
+import { AttendanceMonitorModule } from './AttendanceMonitorModule';
+import { CommunicationsModule } from './CommunicationsModule';
 
 export const VicePrincipalDashboard = () => {
   const { t } = useLanguage();
-  const [currentModule, setCurrentModule] = useState<Module>('overview');
-
-  const vpNavItems = [
-    { id: 'overview', label: 'Overview', icon: ClipboardList },
-    { id: 'approvals', label: 'Approvals', icon: CheckCircle },
-    { id: 'substitutions', label: 'Substitutions', icon: RefreshCw },
-    { id: 'risk', label: 'Incidents', icon: AlertTriangle },
-    { id: 'staff', label: 'Staff Perf.', icon: Users }
-  ];
-
-  const getTitle = (): string => {
-    switch (currentModule) {
-      case 'overview': return "Vice Principal's Office";
-      case 'approvals': return "Approvals";
-      case 'substitutions': return "Substitution Management";
-      case 'risk': return "Incident Queue";
-      case 'staff': return "Teacher Performance";
-      default: return "Vice Principal's Office";
-    }
-  };
-
-  const renderContent = () => {
-    switch (currentModule) {
-      case 'overview':
-        return (
-          <div className="space-y-6">
-            <VicePrincipalStats />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <NebulaCard className="p-4">
-                <h3 className="text-lg font-semibold mb-4 text-slate-800 dark:text-white">Quick Actions</h3>
-                <div className="flex gap-4">
-                  <NebulaButton onClick={() => setCurrentModule('approvals')}>
-                    Review Approvals
-                  </NebulaButton>
-                  <NebulaButton variant="secondary" onClick={() => setCurrentModule('substitutions')}>
-                    Manage Substitutions
-                  </NebulaButton>
-                </div>
-              </NebulaCard>
-              <TeacherPerformanceTile />
-            </div>
-          </div>
-        );
-      case 'approvals':
-        return <ApprovalsModule />;
-      case 'substitutions':
-        return <SubstitutionManager />;
-      case 'risk':
-        return <IncidentQueue />;
-      case 'staff':
-        return <TeacherPerformanceTile />;
-      default:
-        return null;
-    }
-  };
 
   return (
-    <DashboardShell
-      role="VICE_PRINCIPAL"
-      title={getTitle()}
-      activeModule={currentModule}
-      onModuleChange={setCurrentModule}
-      navItems={vpNavItems}
-    >
-      {renderContent()}
+    <DashboardShell title="Vice Principal Dashboard" role="VICE_PRINCIPAL">
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 24 }}>
+        <View className="max-w-7xl mx-auto w-full gap-6">
+
+          {/* 1. KEY STATS */}
+          <VicePrincipalStats />
+
+          {/* 2. MAIN GRID LAYOUT */}
+          <View className="flex-col xl:flex-row gap-6">
+
+            {/* LEFT COLUMN: CRITICAL OPERATIONS (2/3 width) */}
+            <View className="xl:flex-[2] gap-6">
+              {/* APPROVALS QUEUE */}
+              <View className="gap-4">
+                <Text className="text-xl font-bold text-slate-800 dark:text-white">Pending Requests</Text>
+                <ApprovalsModule />
+              </View>
+
+              {/* STUDENT ROSTER & SEARCH */}
+              <StudentRosterModule />
+
+              {/* SUBSTITUTION MANAGEMENT */}
+              <SubstitutionManager />
+            </View>
+
+            {/* RIGHT COLUMN: MONITORING & COMMS (1/3 width) */}
+            <View className="xl:flex-1 gap-6">
+              {/* ATTENDANCE CHART */}
+              <AttendanceMonitorModule />
+
+              {/* INCIDENT QUEUE */}
+              <View>
+                <Text className="text-xl font-bold text-slate-800 dark:text-white mb-4">Incident Queue</Text>
+                <IncidentQueue />
+              </View>
+
+              {/* COMMUNICATIONS */}
+              <CommunicationsModule />
+            </View>
+          </View>
+        </View>
+      </ScrollView>
     </DashboardShell>
   );
 };

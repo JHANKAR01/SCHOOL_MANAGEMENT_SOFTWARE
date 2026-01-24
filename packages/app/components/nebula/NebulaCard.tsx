@@ -1,4 +1,5 @@
 import React from 'react';
+import { View, Text, Pressable } from 'react-native';
 import { useTheme } from '../../provider/ThemeProvider';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -21,32 +22,34 @@ export const NebulaCard: React.FC<NebulaCardProps> = ({
     onClick,
 }) => {
     const { isDarkMode } = useTheme();
-    // Detect if we should use solid bg (mobile) or blur (desktop)
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
     const baseClasses = `
     rounded-2xl border transition-all duration-200
     ${noPadding ? '' : 'p-6'}
-    ${onClick ? 'cursor-pointer hover:border-slate-300 dark:hover:border-white/20' : ''}
+    ${onClick ? 'active:opacity-90' : ''}
   `;
 
     // LIGHT MODE: Clean Paper (White + Shadow + Thin Grey Border)
     // DARK MODE: Glass (Translucent + Blur)
+    // Note: 'backdrop-blur-xl' works on Web. For Native, we might need BlurView, 
+    // but for now we'll stick to simple BG colors for "Universal" simplicity.
     const themeClasses = isDarkMode
-        ? (isMobile ? 'bg-slate-900/95 border-white/10' : 'bg-slate-900/60 backdrop-blur-xl border-white/10')
+        ? 'bg-slate-900 border-white/10 shadow-sm'
         : 'bg-white border-slate-200 shadow-sm';
 
     const modifyClasses = modifyMode
-        ? 'border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.15)]'
+        ? 'border-amber-500/50'
         : '';
 
+    const Container = onClick ? Pressable : View;
+
     return (
-        <div
+        <Container
             className={`${baseClasses} ${themeClasses} ${modifyClasses} ${className}`}
-            onClick={onClick}
+            onPress={onClick}
         >
             {children}
-        </div>
+        </Container>
     );
 };
 
@@ -90,38 +93,38 @@ export const NebulaStatCard: React.FC<NebulaStatCardProps> = ({
 
     return (
         <NebulaCard className="relative overflow-hidden">
-            {/* Background accent - Dark Mode Only */}
+            {/* Background accent - Dark Mode Only (Simplified for Universal) */}
             {isDarkMode && (
-                <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/10 to-violet-500/5 blur-2xl" />
+                <View className="absolute top-0 right-0 w-24 h-24 rounded-full bg-indigo-500/10 opacity-50" />
             )}
 
-            <div className="relative z-10">
-                <div className="flex items-start justify-between mb-4">
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <View className="relative z-10 w-full">
+                <View className="flex-row items-center justify-between mb-4 w-full">
+                    <Text className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                         {label}
-                    </span>
+                    </Text>
                     {icon && (
-                        <div className={`p-2 rounded-lg border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'}`}>
+                        <View className={`p-2 rounded-lg border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'}`}>
                             {icon}
-                        </div>
+                        </View>
                     )}
-                </div>
+                </View>
 
-                <div className={`text-3xl font-bold font-mono ${statusColors[status]}`}>
+                <Text className={`text-3xl font-bold ${statusColors[status]}`}>
                     {value}
-                </div>
+                </Text>
 
-                <div className="flex items-center justify-between mt-2">
+                <View className="flex-row items-center justify-between mt-2 w-full">
                     {subValue && (
-                        <span className="text-sm text-slate-500">{subValue}</span>
+                        <Text className="text-sm text-slate-500">{subValue}</Text>
                     )}
                     {trend && trendValue && (
-                        <span className={`text-xs font-medium ${trendColors[trend]}`}>
+                        <Text className={`text-xs font-medium ${trendColors[trend]}`}>
                             {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'} {trendValue}
-                        </span>
+                        </Text>
                     )}
-                </div>
-            </div>
+                </View>
+            </View>
         </NebulaCard>
     );
 };

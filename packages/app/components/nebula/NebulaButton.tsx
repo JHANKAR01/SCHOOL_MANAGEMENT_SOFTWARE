@@ -1,4 +1,5 @@
 import React from 'react';
+import { Pressable, Text, ActivityIndicator } from 'react-native';
 import { Loader2 } from 'lucide-react';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -19,7 +20,7 @@ interface NebulaButtonProps {
     iconPosition?: 'left' | 'right';
     fullWidth?: boolean;
     className?: string;
-    type?: 'button' | 'submit';
+    type?: 'button' | 'submit'; // Kept for prop compat, unused in Native
 }
 
 export const NebulaButton: React.FC<NebulaButtonProps> = ({
@@ -33,120 +34,101 @@ export const NebulaButton: React.FC<NebulaButtonProps> = ({
     iconPosition = 'left',
     fullWidth = false,
     className = '',
-    type = 'button',
 }) => {
     const isDisabled = disabled || loading;
 
-    const sizeClasses = {
-        sm: 'px-3 py-1.5 text-xs',
-        md: 'px-4 py-2.5 text-sm',
-        lg: 'px-6 py-3 text-base',
+    const sizeContainerClasses = {
+        sm: 'px-3 py-2',
+        md: 'px-4 py-3',
+        lg: 'px-6 py-4',
     };
 
-    const variantClasses = {
-        primary: `
-      bg-gradient-to-r from-indigo-600 to-violet-600 text-white
-      hover:from-indigo-500 hover:to-violet-500
-      shadow-lg shadow-indigo-500/20
-      border border-indigo-500/20
-    `,
-        secondary: `
-      bg-white/10 text-slate-50 border border-white/10
-      hover:bg-white/15 hover:border-white/20
-    `,
-        ghost: `
-      bg-transparent text-slate-300
-      hover:bg-white/10 hover:text-slate-50
-    `,
-        danger: `
-      bg-red-600 text-white border border-red-500/20
-      hover:bg-red-500
-      shadow-lg shadow-red-500/20
-    `,
-        warning: `
-      bg-amber-600 text-white border border-amber-500/20
-      hover:bg-amber-500
-      shadow-lg shadow-amber-500/20
-    `,
+    const sizeTextClasses = {
+        sm: 'text-xs',
+        md: 'text-sm',
+        lg: 'text-base',
+    };
+
+    const variantContainerClasses = {
+        primary: 'bg-indigo-600 rounded-lg shadow-sm border border-indigo-500',
+        secondary: 'bg-white/10 rounded-lg border border-white/20',
+        ghost: 'bg-transparent',
+        danger: 'bg-red-600 rounded-lg border border-red-500',
+        warning: 'bg-amber-600 rounded-lg border border-amber-500',
+    };
+
+    const variantTextClasses = {
+        primary: 'text-white font-medium',
+        secondary: 'text-slate-50 font-medium',
+        ghost: 'text-slate-300 font-medium',
+        danger: 'text-white font-medium',
+        warning: 'text-white font-medium',
     };
 
     return (
-        <button
-            type={type}
-            onClick={onClick}
+        <Pressable
+            onPress={onClick}
             disabled={isDisabled}
             className={`
-        inline-flex items-center justify-center gap-2
-        rounded-lg font-medium
+        flex-row items-center justify-center gap-2
         transition-all duration-200
-        focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:ring-offset-2 focus:ring-offset-slate-900
-        disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:opacity-50
-        ${sizeClasses[size]}
-        ${variantClasses[variant]}
+        ${isDisabled ? 'opacity-50' : 'active:opacity-80'}
+        ${sizeContainerClasses[size]}
+        ${variantContainerClasses[variant]}
         ${fullWidth ? 'w-full' : ''}
         ${className}
       `}
         >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {loading && <ActivityIndicator size="small" color="#ffffff" />}
+
             {!loading && icon && iconPosition === 'left' && icon}
-            {children}
+
+            <Text className={`${sizeTextClasses[size]} ${variantTextClasses[variant]}`}>
+                {children}
+            </Text>
+
             {!loading && icon && iconPosition === 'right' && icon}
-        </button>
+        </Pressable>
     );
 };
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// NEBULA ICON BUTTON - Compact Icon-only Button
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-interface NebulaIconButtonProps {
+export const NebulaIconButton: React.FC<{
     icon: React.ReactNode;
     onClick?: () => void;
-    variant?: 'default' | 'danger' | 'warning';
-    size?: 'sm' | 'md';
+    variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+    size?: 'sm' | 'md' | 'lg';
     disabled?: boolean;
-    tooltip?: string;
     className?: string;
-}
-
-export const NebulaIconButton: React.FC<NebulaIconButtonProps> = ({
+}> = ({
     icon,
     onClick,
-    variant = 'default',
+    variant = 'ghost',
     size = 'md',
     disabled = false,
-    tooltip,
     className = '',
 }) => {
-    const sizeClasses = {
-        sm: 'p-1.5',
-        md: 'p-2',
-    };
+        const sizeClasses = {
+            sm: 'p-1.5',
+            md: 'p-2',
+            lg: 'p-3',
+        };
 
-    const variantClasses = {
-        default: 'text-slate-400 hover:text-slate-200 hover:bg-white/10',
-        danger: 'text-red-400 hover:text-red-300 hover:bg-red-500/10',
-        warning: 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10',
-    };
+        const variantClasses = {
+            primary: 'bg-indigo-600 rounded-lg hover:bg-indigo-700',
+            secondary: 'bg-white/10 rounded-lg hover:bg-white/20 border border-white/10',
+            ghost: 'bg-transparent hover:bg-black/5 dark:hover:bg-white/10 rounded-lg',
+            danger: 'bg-transparent hover:bg-red-50 text-red-500 rounded-lg',
+        };
 
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            disabled={disabled}
-            title={tooltip}
-            className={`
-        rounded-lg transition-all duration-200
-        focus:outline-none focus:ring-2 focus:ring-indigo-500/40
-        disabled:opacity-50 disabled:cursor-not-allowed
-        ${sizeClasses[size]}
-        ${variantClasses[variant]}
-        ${className}
-      `}
-        >
-            {icon}
-        </button>
-    );
-};
+        return (
+            <Pressable
+                onPress={onClick}
+                disabled={disabled}
+                className={`items-center justify-center transition-all ${sizeClasses[size]} ${variantClasses[variant]} ${disabled ? 'opacity-50' : 'active:opacity-70'} ${className}`}
+            >
+                {icon}
+            </Pressable>
+        );
+    };
 
 export default NebulaButton;

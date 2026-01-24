@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput } from 'react-native';
 import { useLanguage } from '../../provider/language-context';
 import api from '../../api/client';
 import { UserRole } from '../../../types/user';
+import { NebulaCard } from '../../components/nebula/NebulaCard';
+import { NebulaButton } from '../../components/nebula/NebulaButton';
+import { Check, X, Clock } from 'lucide-react';
 
 interface ApprovalRequest {
     id: string;
@@ -61,183 +64,123 @@ export const ApprovalsModule = () => {
             });
 
             if (res.status === 200) {
-                Alert.alert("Success", t('vp_dashboard.approvals.success_message'));
                 setModalVisible(false);
                 setComment('');
                 fetchApprovals(); // Refresh list
             } else {
-                Alert.alert("Error", "Failed to update request");
+                alert("Failed to update request");
             }
         } catch (error) {
-            Alert.alert("Error", "Network error");
+            alert("Network error");
         } finally {
             setProcessing(false);
         }
     };
 
-    const renderItem = ({ item }: { item: ApprovalRequest }) => (
-        <View style={styles.card}>
-            <View style={styles.cardHeader}>
-                <Text style={styles.resourceType}>{item.resource_type.replace('_', ' ')}</Text>
-                <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
+    if (loading) {
+        return (
+            <View className="p-8 items-center">
+                <Text className="text-slate-500">Loading requests...</Text>
             </View>
-            <Text style={styles.requester}>From: {item.requester.name} ({item.requester.role})</Text>
-
-            {item.metadata?.reason && (
-                <Text style={styles.reason}>Reason: {item.metadata.reason}</Text>
-            )}
-
-            <View style={styles.actions}>
-                <TouchableOpacity
-                    style={[styles.button, styles.rejectButton]}
-                    onPress={() => handleDecision(item, 'REJECTED')}
-                >
-                    <Text style={styles.buttonText}>{t('vp_dashboard.approvals.reject')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.button, styles.approveButton]}
-                    onPress={() => handleDecision(item, 'APPROVED')}
-                >
-                    <Text style={styles.buttonText}>{t('vp_dashboard.approvals.approve')}</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
-
-    if (loading) return <ActivityIndicator size="large" color="#1976d2" />;
+        );
+    }
 
     return (
-        <View style={styles.container}>
-            <FlatList
-                data={requests}
-                renderItem={renderItem}
-                keyExtractor={item => item.id}
-                contentContainerStyle={{ padding: 4 }}
-            />
+        <View className="gap-4">
+            {requests.length === 0 && (
+                <View className="p-8 items-center justify-center border-2 border-dashed border-slate-200 rounded-xl">
+                    <Text className="text-slate-400">No pending approval requests</Text>
+                </View>
+            )}
 
-            <Modal
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>
-                            {decision === 'APPROVED' ? t('vp_dashboard.approvals.approve') : t('vp_dashboard.approvals.reject')} Request
-                        </Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder={t('vp_dashboard.approvals.reason_placeholder')}
-                            value={comment}
-                            onChangeText={setComment}
-                            multiline
-                        />
-                        <View style={styles.modalActions}>
-                            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.modalButton}>
-                                <Text style={styles.modalButtonText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={submitDecision}
-                                style={[styles.modalButton, { backgroundColor: decision === 'APPROVED' ? '#4caf50' : '#f44336' }]}
-                                disabled={processing}
-                            >
-                                <Text style={[styles.modalButtonText, { color: 'white' }]}>
-                                    {processing ? '...' : t('vp_dashboard.approvals.confirm_decision')}
+            {requests.map(item => (
+                <NebulaCard key={item.id} className="flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <View className="flex-1">
+                        <View className="flex-row items-center gap-2 mb-1">
+                            <View className="bg-blue-100 px-2 py-0.5 rounded">
+                                <Text className="text-blue-800 text-xs font-bold uppercase">
+                                    {item.resource_type.replace('_', ' ')}
                                 </Text>
-                            </TouchableOpacity>
+                            </View>
+                            <View className="flex-row items-center gap-1">
+                                <Clock size={12} color="#94a3b8" />
+                                <Text className="text-slate-400 text-xs text-xs">
+                                    {new Date(item.created_at).toLocaleDateString()}
+                                </Text>
+                            </View>
+                        </View>
+                        <Text className="font-semibold text-slate-800 dark:text-white mb-1">
+                            {item.requester.name} <Text className="text-slate-400 font-normal">({item.requester.role})</Text>
+                        </Text>
+                        {item.metadata?.reason && (
+                            <Text className="text-sm text-slate-600 dark:text-slate-300 italic">
+                                "{item.metadata.reason}"
+                            </Text>
+                        )}
+                    </View>
+
+                    <View className="flex-row gap-2 w-full md:w-auto">
+                        <NebulaButton
+                            variant="secondary"
+                            className="bg-rose-50 border-rose-200"
+                            onClick={() => handleDecision(item, 'REJECTED')}
+                        >
+                            <X size={16} color="#e11d48" className="mr-2" />
+                            <Text className="text-rose-600 ml-2">Reject</Text>
+                        </NebulaButton>
+                        <NebulaButton
+                            className="bg-emerald-600 border-transparent"
+                            onClick={() => handleDecision(item, 'APPROVED')}
+                        >
+                            <Check size={16} color="white" className="mr-2" />
+                            <Text className="text-white ml-2">Approve</Text>
+                        </NebulaButton>
+                    </View>
+                </NebulaCard>
+            ))}
+
+            {/* Universal Modal Overlay */}
+            {modalVisible && (
+                <View className="absolute top-0 bottom-0 left-0 right-0 bg-black/50 z-50 items-center justify-center p-4">
+                    <View className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+                        <View className={`p-4 border-b ${decision === 'APPROVED' ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+                            <Text className={`font-bold text-lg ${decision === 'APPROVED' ? 'text-emerald-800' : 'text-rose-800'}`}>
+                                {decision === 'APPROVED' ? 'Approve Request' : 'Reject Request'}
+                            </Text>
+                        </View>
+
+                        <View className="p-6">
+                            <Text className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                {decision === 'APPROVED' ? 'Approval Note (Optional)' : 'Rejection Reason (Required)'}
+                            </Text>
+                            <TextInput
+                                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-3 min-h-[100px] bg-white dark:bg-slate-800 text-slate-900 dark:text-white align-top"
+                                placeholder="Add a note..."
+                                value={comment}
+                                onChangeText={setComment}
+                                multiline
+                                numberOfLines={4}
+                            />
+                        </View>
+
+                        <View className="p-4 border-t border-slate-100 dark:border-slate-800 flex-row justify-end gap-3 bg-slate-50 dark:bg-slate-900/50">
+                            <NebulaButton
+                                variant="ghost"
+                                onClick={() => setModalVisible(false)}
+                            >
+                                Cancel
+                            </NebulaButton>
+                            <NebulaButton
+                                onClick={submitDecision}
+                                disabled={processing}
+                                className={decision === 'APPROVED' ? 'bg-emerald-600' : 'bg-rose-600'}
+                            >
+                                {processing ? 'Processing...' : `Confirm ${decision === 'APPROVED' ? 'Approval' : 'Rejection'}`}
+                            </NebulaButton>
                         </View>
                     </View>
                 </View>
-            </Modal>
+            )}
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    container: { flex: 1 },
-    card: {
-        backgroundColor: 'white',
-        borderRadius: 8,
-        padding: 16,
-        marginBottom: 12,
-        elevation: 2
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 8
-    },
-    resourceType: {
-        fontWeight: 'bold',
-        fontSize: 16,
-        color: '#333'
-    },
-    date: {
-        color: '#999',
-        fontSize: 12
-    },
-    requester: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 4
-    },
-    reason: {
-        fontSize: 14,
-        fontStyle: 'italic',
-        color: '#444',
-        marginBottom: 12
-    },
-    actions: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        gap: 12
-    },
-    button: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 4
-    },
-    approveButton: { backgroundColor: '#4caf50' },
-    rejectButton: { backgroundColor: '#f44336' },
-    buttonText: { color: 'white', fontWeight: 'bold' },
-
-    // Modal
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        padding: 24
-    },
-    modalContent: {
-        backgroundColor: 'white',
-        borderRadius: 8,
-        padding: 20
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 16
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 4,
-        padding: 12,
-        height: 100,
-        textAlignVertical: 'top',
-        marginBottom: 20
-    },
-    modalActions: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        gap: 12
-    },
-    modalButton: {
-        padding: 10,
-        borderRadius: 4
-    },
-    modalButtonText: {
-        fontWeight: 'bold',
-        color: '#555'
-    }
-});

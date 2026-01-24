@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Pressable } from 'react-native';
 import { useLanguage } from '../../provider/language-context';
 import api from '../../api/client';
+import { NebulaCard } from '../../components/nebula/NebulaCard';
+import { NebulaButton } from '../../components/nebula/NebulaButton';
+import { AlertCircle, FileText, CheckCircle, ArrowRight } from 'lucide-react';
 
 interface Incident {
     id: string;
@@ -57,170 +60,170 @@ export const IncidentQueue = () => {
             });
 
             if (res.status === 200) {
-                Alert.alert("Success", "Incident updated");
+                alert("Incident updated");
                 setModalVisible(false);
                 setNote('');
                 fetchIncidents();
             }
         } catch (error) {
-            Alert.alert("Error", "Failed to update");
+            alert("Failed to update");
         } finally {
             setProcessing(false);
         }
     };
 
-    const getSeverityColor = (severity: string) => {
-        switch (severity) {
-            case 'CRITICAL': return '#d32f2f';
-            case 'MAJOR': return '#f57c00';
-            default: return '#fbc02d';
-        }
+    const getSeverityBadge = (severity: string) => {
+        const styles: Record<string, string> = {
+            'CRITICAL': 'bg-red-100 border-red-200',
+            'MAJOR': 'bg-orange-100 border-orange-200',
+            'MINOR': 'bg-yellow-100 border-yellow-200',
+        };
+
+        const textStyles: Record<string, string> = {
+            'CRITICAL': 'text-red-800',
+            'MAJOR': 'text-orange-800',
+            'MINOR': 'text-yellow-800',
+        };
+
+        return (
+            <View className={`px-2 py-0.5 rounded-full border ${styles[severity] || styles['MINOR']}`}>
+                <Text className={`text-xs font-bold ${textStyles[severity] || textStyles['MINOR']}`}>
+                    {severity}
+                </Text>
+            </View>
+        );
     };
 
-    const renderItem = ({ item }: { item: Incident }) => (
-        <View style={styles.card}>
-            <View style={styles.header}>
-                <View style={[styles.badge, { backgroundColor: getSeverityColor(item.severity) }]}>
-                    <Text style={styles.badgeText}>{item.severity}</Text>
-                </View>
-                <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
+    if (loading) {
+        return (
+            <View className="p-8 items-center">
+                <Text className="text-slate-500">Loading incidents...</Text>
             </View>
-
-            <Text style={styles.studentName}>{item.student.name} ({item.student.admission_no})</Text>
-            <Text style={styles.reporter}>Reported by: {item.reporter.name}</Text>
-            <Text style={styles.desc}>{item.description}</Text>
-
-            <TouchableOpacity style={styles.triageButton} onPress={() => openTriage(item)}>
-                <Text style={styles.triageText}>Triage / Review</Text>
-            </TouchableOpacity>
-        </View>
-    );
-
-    if (loading) return <ActivityIndicator size="large" color="#1976d2" />;
+        );
+    }
 
     return (
-        <View style={styles.container}>
-            <FlatList
-                data={incidents}
-                renderItem={renderItem}
-                keyExtractor={item => item.id}
-            />
+        <View className="gap-4">
+            {incidents.length === 0 && (
+                <View className="p-8 items-center justify-center border-2 border-dashed border-slate-200 rounded-xl">
+                    <CheckCircle color="#94a3b8" size={32} opacity={0.5} />
+                    <Text className="text-slate-400 mt-2">No new incidents reported</Text>
+                </View>
+            )}
 
-            <Modal
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Update Status</Text>
+            {incidents.map(item => (
+                <NebulaCard key={item.id} className="border-slate-200">
+                    <View className="flex-col md:flex-row justify-between md:items-start gap-4">
+                        <View className="flex-1">
+                            <View className="flex-row items-center gap-3 mb-2">
+                                {getSeverityBadge(item.severity)}
+                                <Text className="text-xs text-slate-400">
+                                    {new Date(item.created_at).toLocaleDateString()}
+                                </Text>
+                            </View>
 
-                        <View style={styles.statusRow}>
-                            {['UNDER_REVIEW', 'RESOLVED', 'ESCALATED'].map(s => (
-                                <TouchableOpacity
-                                    key={s}
-                                    style={[styles.statusOption, status === s && styles.statusActive]}
-                                    onPress={() => setStatus(s)}
-                                >
-                                    <Text style={[styles.statusText, status === s && styles.textActive]}>{s}</Text>
-                                </TouchableOpacity>
-                            ))}
+                            <View className="flex-row items-center gap-2 mb-1">
+                                <Text className="font-bold text-slate-900 dark:text-white">
+                                    {item.student.name}
+                                </Text>
+                                <View className="bg-slate-100 dark:bg-slate-800 px-2 rounded">
+                                    <Text className="text-sm font-normal text-slate-500">
+                                        {item.student.admission_no}
+                                    </Text>
+                                </View>
+                            </View>
+
+                            <View className="border-l-2 border-slate-200 pl-3 mb-3">
+                                <Text className="text-sm text-slate-600 dark:text-slate-300">
+                                    {item.description}
+                                </Text>
+                            </View>
+
+                            <View className="flex-row items-center gap-1">
+                                <AlertCircle size={12} color="#94a3b8" />
+                                <Text className="text-xs text-slate-400">
+                                    Reported by {item.reporter.name}
+                                </Text>
+                            </View>
                         </View>
 
-                        <Text style={styles.label}>{t('vp_dashboard.incidents.confidential_note')}</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={note}
-                            onChangeText={setNote}
-                            multiline
-                            placeholder="Add notes..."
-                        />
+                        <NebulaButton onClick={() => openTriage(item)}>
+                            <Text className="text-white mr-2">Triage Incident</Text>
+                            <ArrowRight size={16} color="white" />
+                        </NebulaButton>
+                    </View>
+                </NebulaCard>
+            ))}
 
-                        <View style={styles.actions}>
-                            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.button}>
-                                <Text>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={submitTriage}
-                                style={[styles.button, styles.confirmButton]}
-                                disabled={processing}
+            {/* Triage Modal (Universal Overlay) */}
+            {modalVisible && (
+                <View className="absolute top-0 bottom-0 left-0 right-0 bg-black/50 z-50 items-center justify-center p-4">
+                    <View className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+                        <View className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex-row items-center gap-2">
+                            <FileText size={20} color="#6366f1" />
+                            <Text className="font-bold text-lg text-slate-800 dark:text-white">
+                                Update Incident Status
+                            </Text>
+                        </View>
+
+                        <View className="p-6 gap-6">
+                            <View>
+                                <Text className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+                                    Select New Status
+                                </Text>
+                                <View className="flex-row gap-2">
+                                    {['UNDER_REVIEW', 'RESOLVED', 'ESCALATED'].map(s => (
+                                        <Pressable
+                                            key={s}
+                                            onPress={() => setStatus(s)}
+                                            className={`flex-1 py-2 px-3 rounded-lg border items-center ${status === s
+                                                ? 'bg-indigo-600 border-indigo-600'
+                                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                                                }`}
+                                        >
+                                            <Text className={`text-sm font-medium ${status === s ? 'text-white' : 'text-slate-600 dark:text-slate-400'}`}>
+                                                {s.replace('_', ' ')}
+                                            </Text>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                            </View>
+
+                            <View>
+                                <Text className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    {t('vp_dashboard.incidents.confidential_note') || "Confidential Notes"}
+                                </Text>
+                                <TextInput
+                                    className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-3 min-h-[100px] bg-white dark:bg-slate-800 text-slate-900 dark:text-white align-top"
+                                    value={note}
+                                    onChangeText={setNote}
+                                    placeholder="Add internal notes for staff..."
+                                    multiline
+                                    numberOfLines={4}
+                                />
+                            </View>
+                        </View>
+
+                        <View className="p-4 border-t border-slate-100 dark:border-slate-800 flex-row justify-end gap-3 bg-slate-50 dark:bg-slate-900/50">
+                            <NebulaButton
+                                variant="ghost"
+                                onClick={() => setModalVisible(false)}
                             >
-                                <Text style={styles.confirmText}>Update</Text>
-                            </TouchableOpacity>
+                                <Text className="text-slate-600">Cancel</Text>
+                            </NebulaButton>
+                            <NebulaButton
+                                onClick={submitTriage}
+                                disabled={processing}
+                                className="bg-indigo-600"
+                            >
+                                <Text className="text-white">
+                                    {processing ? 'Updating...' : 'Update Status'}
+                                </Text>
+                            </NebulaButton>
                         </View>
                     </View>
                 </View>
-            </Modal>
+            )}
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    container: { flex: 1 },
-    card: {
-        backgroundColor: 'white',
-        borderRadius: 8,
-        padding: 16,
-        marginBottom: 12,
-        elevation: 2
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 8
-    },
-    badge: {
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 12
-    },
-    badgeText: { color: 'white', fontSize: 10, fontWeight: 'bold' },
-    date: { color: '#999', fontSize: 12 },
-    studentName: { fontSize: 16, fontWeight: 'bold' },
-    reporter: { fontSize: 12, color: '#666', marginBottom: 8 },
-    desc: { color: '#333', marginBottom: 16 },
-    triageButton: {
-        backgroundColor: '#424242',
-        padding: 10,
-        borderRadius: 4,
-        alignItems: 'center'
-    },
-    triageText: { color: 'white', fontWeight: 'bold' },
-
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        padding: 24
-    },
-    modalContent: {
-        backgroundColor: 'white',
-        borderRadius: 8,
-        padding: 20
-    },
-    modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 16 },
-    statusRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-    statusOption: {
-        padding: 8,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 4
-    },
-    statusActive: { backgroundColor: '#1976d2', borderColor: '#1976d2' },
-    statusText: { fontSize: 12 },
-    textActive: { color: 'white' },
-    label: { marginBottom: 4, fontWeight: 'bold' },
-    input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 4,
-        padding: 8,
-        height: 80,
-        textAlignVertical: 'top',
-        marginBottom: 20
-    },
-    actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
-    button: { padding: 10 },
-    confirmButton: { backgroundColor: '#1976d2', borderRadius: 4 },
-    confirmText: { color: 'white', fontWeight: 'bold' }
-});
